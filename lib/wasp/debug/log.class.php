@@ -114,7 +114,7 @@ class Log
 
         $fmt = "[" . date('Y-m-d H:i:s') . '][' . $module . ']';
         
-        if (class_exists("\\WASP\\Request"), false)
+        if (class_exists("\\WASP\\Request", false))
         {
             if (isset(\WASP\Request::$remote_ip))
                 $fmt .= '[' . \WASP\Request::$remote_ip . ']';
@@ -142,7 +142,7 @@ function trace()
     $args = func_get_args();
 
     array_unshift($args, TRACE);
-    call_user_func_array(array('Debug\\Log', 'log'), $args);
+    call_user_func_array(array('\\WASP\\Debug\\Log', 'log'), $args);
 }
 
 function debug()
@@ -150,7 +150,7 @@ function debug()
     $args = func_get_args();
 
     array_unshift($args, DEBUG);
-    call_user_func_array(array('Debug\\Log', 'log'), $args);
+    call_user_func_array(array('\\WASP\\Debug\\Log', 'log'), $args);
 }
 
 function info()
@@ -158,7 +158,7 @@ function info()
     $args = func_get_args();
 
     array_unshift($args, INFO);
-    call_user_func_array(array('Debug\\Log', 'log'), $args);
+    call_user_func_array(array('\\WASP\\Debug\\Log', 'log'), $args);
 }
 
 function warn()
@@ -166,7 +166,7 @@ function warn()
     $args = func_get_args();
 
     array_unshift($args, WARN);
-    call_user_func_array(array('Debug\\Log', 'log'), $args);
+    call_user_func_array(array('\\WASP\\Debug\\Log', 'log'), $args);
 }
 
 function warning()
@@ -174,7 +174,7 @@ function warning()
     $args = func_get_args();
 
     array_unshift($args, WARN);
-    call_user_func_array(array('Debug\\Log', 'log'), $args);
+    call_user_func_array(array('\\WASP\\Debug\\Log', 'log'), $args);
 }
 
 function error()
@@ -182,7 +182,7 @@ function error()
     $args = func_get_args();
 
     array_unshift($args, ERROR);
-    call_user_func_array(array('Debug\\Log', 'log'), $args);
+    call_user_func_array(array('\\WASP\\Debug\\Log', 'log'), $args);
 }
 
 function critical()
@@ -190,5 +190,5 @@ function critical()
     $args = func_get_args();
 
     array_unshift($args, CRITICAL);
-    call_user_func_array(array('Debug\\Log', 'log'), $args);
+    call_user_func_array(array('\\WASP\\Debug\\Log', 'log'), $args);
 }

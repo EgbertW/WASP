@@ -45,7 +45,7 @@ class Redirection
 
     public static function checkRedirect()
     {
-        $config = \WASP\Config::load();
+        $config = \WASP\Config::getConfig();
 
         $host = Request::$host;
         $https = Request::$secure;

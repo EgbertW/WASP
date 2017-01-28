@@ -109,7 +109,7 @@ function escape($str)
 
 function fmtdate(\DateTime $date)
 {
-    $conf = WASP\Config::load();
+    $conf = WASP\Config::getConfig();
     $fmt = $conf->get('date', 'format');
     if (!$fmt)
         $fmt = "d-m-Y H:i:s";

@@ -59,11 +59,11 @@ namespace WASP
                 $tpl_file = $path . "/" . $name . ".php";
                 if (file_exists($tpl_file) && is_file($tpl_file))
                 {
-                    \Debug\info("WASP.Template", "Resolved template file to {}", $tpl_file);
+                    Debug\info("WASP.Template", "Resolved template file to {}", $tpl_file);
                     return array($path, $tpl_file);
                 }
                 else
-                    \Debug\info("WASP.Template", "Template file does not exist: {}", $tpl_file);
+                    Debug\info("WASP.Template", "Template file does not exist: {}", $tpl_file);
                     
             }
 
@@ -74,7 +74,7 @@ namespace WASP
         {
             extract($this->arguments);
             $language = Request::$language;
-            $config = Config::load();
+            $config = Config::getConfig();
             $dev = $config->get('site', 'dev');
 
             ob_start();
@@ -93,7 +93,7 @@ namespace WASP
                 throw new HttpError(400, "No supported response type requested");
             }
 
-            \Debug\debug("WASP.Template", "*** Finished processing {} request to {}", Request::$method, Request::$uri);
+            Debug\debug("WASP.Template", "*** Finished processing {} request to {}", Request::$method, Request::$uri);
             exit();
         }
 
@@ -172,7 +172,7 @@ namespace WASP
                     if (is_array($value))
                         $this->writeXMLRecursive($writer, $value);
                     else
-                        $this->text(\Debug\Log::str($value));
+                        $this->text(Debug\Log::str($value));
                     $writer->endElement();
                 }
             }

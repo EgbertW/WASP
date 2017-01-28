@@ -50,7 +50,7 @@ class Request
     
     public static function setupSession()
     {
-        $conf = Config::load();
+        $conf = Config::getConfig();
         
         $domain = self::$domain;
         $sub = self::$subdomain;
@@ -201,7 +201,7 @@ class Request
         
         self::$url_args = new Arguments($remaining);
         
-        \Debug\debug("WASP.Request", "Including {}", $path);
+        Debug\debug("WASP.Request", "Including {}", $path);
         include $path;
 
         if (Template::$last_template === null)
@@ -217,7 +217,7 @@ class Request
 
     public static function handleError($errno, $errstr, $errfile, $errline, $errcontext)
     {
-        \Debug\error("WASP.Request", "PHP Error {}: {} on {}({})", $errno, $errstr, $errfile, $errline);
+        Debug\error("WASP.Request", "PHP Error {}: {} on {}({})", $errno, $errstr, $errfile, $errline);
     }
 
     public static function handleException($exception)
@@ -254,10 +254,10 @@ class Request
         if (!headers_sent())
             http_response_code($code);
 
-        \Debug\error("WASP.Request", "Exception: {}: {}", get_class($exception), $exception->getMessage());
-        \Debug\error("WASP.Request", "In: {}({})", $exception->getFile(), $exception->getLine());
-        \Debug\error("WASP.Request", $exception->getTraceAsString());
-        \Debug\info("WASP.Request", "*** [{}] Failed processing {} request to {}", $code, self::$method, self::$uri);
+        Debug\error("WASP.Request", "Exception: {}: {}", get_class($exception), $exception->getMessage());
+        Debug\error("WASP.Request", "In: {}({})", $exception->getFile(), $exception->getLine());
+        Debug\error("WASP.Request", $exception->getTraceAsString());
+        Debug\info("WASP.Request", "*** [{}] Failed processing {} request to {}", $code, self::$method, self::$uri);
 
         try
         {
@@ -267,9 +267,9 @@ class Request
         }
         catch (HttpError $ex)
         {
-            \Debug\critical("WASP.Request", "An exception of type {} (code: {}, message: {}) occurred. Additionally, the error template ({}) cannot be loaded", get_class($exception), $exception->getCode(), $exception->getMessage(), $tpl);
-            \Debug\critical("WASP.Request", "The full stacktrace follows: {}", $exception);
-            \Debug\critical("WASP.Request", "The full stacktrace of the failed template is: {}", $ex);
+            Debug\critical("WASP.Request", "An exception of type {} (code: {}, message: {}) occurred. Additionally, the error template ({}) cannot be loaded", get_class($exception), $exception->getCode(), $exception->getMessage(), $tpl);
+            Debug\critical("WASP.Request", "The full stacktrace follows: {}", $exception);
+            Debug\critical("WASP.Request", "The full stacktrace of the failed template is: {}", $ex);
             if (!headers_sent())
                 header("Content-type: text/html");
 
@@ -279,14 +279,14 @@ class Request
             $dev = false;
             try
             {
-                $conf = Config::load();
+                $conf = Config::getConfig();
                 $dev = $conf->get('site', 'dev', false);
             }
             catch (\Exception $e)
             {}
 
             if ($dev)
-                echo "<pre>" . \Debug\Log::str($exception) . "</pre>";
+                echo "<pre>" . Debug\Log::str($exception) . "</pre>";
             else
                 echo "<p>Something is going wrong on the server. Please check back later - an administrator will have been notified</p>";
             echo "</body></html>";

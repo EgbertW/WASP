@@ -33,19 +33,19 @@ class Config
     private function __construct($scope)
     {
         $path = Path::$CONFIG . '/' . $scope . '.ini';
-        \Debug\debug("WASP.Config", "Loading config from {}", $path);
+        Debug\debug("WASP.Config", "Loading config from {}", $path);
         if (!file_exists($path))
         {
-            \Debug\critical("WASP.Config", "Failed to load config file {}", $path);
+            Debug\critical("WASP.Config", "Failed to load config file {}", $path);
             if (!class_exists("WASP\\HttpError"))
-                require_once WASP_LIB . '/cms/httperror.class.php';
+                require_once WASP_LIB . '/wasp/httperror.class.php';
 
             throw new HttpError(500, "Configuration file is missing");
         }
         $this->config = parse_ini_file(Path::$CONFIG . '/' . $scope . '.ini', true);
     }
 
-    public static function load($scope = 'main')
+    public static function getConfig($scope = 'main')
     {
         if (!isset(self::$repository[$scope]))
             self::$repository[$scope] = new Config($scope);
@@ -60,7 +60,7 @@ class Config
 
     public function get($section, $setting, $default = null)
     {
-        //\Debug\error("WASP", "{}", $this->config);
+        //Debug\error("WASP", "{}", $this->config);
         if (!$this->has($section, $setting))
             return $default;
  

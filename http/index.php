@@ -23,18 +23,10 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-define('WASP_INDEX', __FILE__);
-define('WASP_HTTP', dirname(__FILE__));
-define('WASP_ROOT', dirname(WASP_HTTP));
-chdir(WASP_ROOT);
-
-// Set up logging
-ini_set('log_errors', '1');
-ini_set('error_log', WASP_ROOT . '/log/error-php.log');
-
-// Start main script
+// Initialize WASP
 require "sys/init.php";
 
+// Dispatch the request
 WASP\Request::dispatch();
 
 die();

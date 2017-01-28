@@ -37,7 +37,7 @@ class DB
             if (self::$default_db)
                 return self::$default_db;
 
-            $config = Config::load();
+            $config = Config::getConfig();
             $default = true;
         }
 

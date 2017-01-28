@@ -25,7 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace Sys;
 
-use Debug;
+use WASP\Debug;
 
 class AutoLoader
 {
@@ -44,7 +44,7 @@ class AutoLoader
         self::$apps = array(WASP_APP);
         self::$assets = array(WASP_ASSETS);
         
-        $config = \WASP\Config::load();
+        $config = \WASP\Config::getConfig();
         $lib_path = $config->get('path', 'lib');
         $app_path = $config->get('path', 'app');
         $tpl_path = $config->get('path', 'template');

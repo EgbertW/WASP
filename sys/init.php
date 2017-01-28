@@ -26,7 +26,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ini_set('default_charset', 'utf-8');
 mb_internal_encoding('utf-8');
 
-require_once WASP_ROOT . "/lib/debug/log.class.php";
+use WASP\Debug;
+
+if (!defined('WASP_ROOT'))
+{
+    $root = dirname(realpath(dirname(__FILE__)));
+    define('WASP_ROOT', $root);
+    chdir(WASP_ROOT);
+}
+
+// Set up logging
+ini_set('log_errors', '1');
+ini_set('error_log', WASP_ROOT . '/log/error-php.log');
+
+require_once WASP_ROOT . "/lib/wasp/debug/log.class.php";
 if (isset($_SERVER['REQUEST_URI']))
     Debug\info("Sys.init", "*** Starting processing for {} request to {}", $_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
 
@@ -35,7 +48,7 @@ require_once WASP_ROOT . "/sys/functions.php";
 
 WASP\Request::setErrorHandler();
 WASP\Path::setup();
-$config = WASP\Config::load('core');
+$config = WASP\Config::getConfig();
 
 // Set up connection
 $db = WASP\DB::get($config);
