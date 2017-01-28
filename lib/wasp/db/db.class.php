@@ -25,6 +25,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\DB;
 
+use WASP\Config;
+use WASP\Debug;
+use PDO;
+
 class DB
 {
     private static $default_db = null;
@@ -55,13 +59,13 @@ class DB
                 if ($type === "mysql")
                 {
                     $dsn = "mysql:host=" . $host . ";dbname=" . $database;
-                    \Debug\info("WASP.DB", "Generated DSN: {}", $dsn);
+                    Debug\info("WASP.DB", "Generated DSN: {}", $dsn);
                 }
             }
             
-            $pdo = new \PDO($dsn, $username, $password);
-            $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-            $pdo->setAttribute(\PDO::ATTR_DEFAULT_FETCH_MODE, \PDO::FETCH_ASSOC);
+            $pdo = new PDO($dsn, $username, $password);
+            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
             
             $config->set('sql', 'pdo', $pdo);
             if ($default)

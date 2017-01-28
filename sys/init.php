@@ -51,5 +51,5 @@ WASP\Path::setup();
 $config = WASP\Config::getConfig();
 
 // Set up connection
-$db = WASP\DB::get($config);
+$db = WASP\DB\DB::get($config);
 unset($db);

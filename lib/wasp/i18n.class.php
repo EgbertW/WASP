@@ -45,6 +45,8 @@ class I18N
     private $datetime_format = null;
     private $time_format = null;
     private $timezone = null;
+    private $thousand_separator;
+    private $decimal_point;
 
     public function __construct($locale)
     {
@@ -53,6 +55,10 @@ class I18N
         $this->time_format = self::defaultTimeFormat();
         $this->datetime_format = self::defaultDateTimeFormat();
         $this->timezone = self::defaultTimezone();
+        $this->number_formatter = new NumberFormatter($this->locale, NumberFormatter::DECIMAL);
+        $pattern = trim($this->number_formatter->getPattern(), "#");
+        $this->thousand_separator = substr($pattern, 0, 1);
+        $this->decimal_point = substr($pattern, -1, 1);
     }
 
     public static function defaultCurrency()
@@ -85,17 +91,16 @@ class I18N
         return $cfg->get('localization', 'dateformat', 'H:i:s');
     }
 
-    public function formatNumber($number)
+    public function formatNumber($number, $decimals = false)
     {
-        if ($this->number_formatter === null)
-            $this->number_formatter = new NumberFormatter($this->locale, NumberFormatter::DECIMAL);
+        if ($decimals !== false)
+            return number_format($number, $decimals, $this->thousand_separator, $this->decimal_point);
+
         return $this->number_formatter->format($number);
     }
 
     public function parseNumber($str)
     {
-        if ($this->number_formatter === null)
-            $this->number_formatter = new NumberFormatter($this->locale, NumberFormatter::DECIMAL);
         return $this->number_formatter->parse($number);
     }
 
@@ -105,7 +110,7 @@ class I18N
             $this->currency_formatter = new NumberFormatter($this->locale, NumberFormatter::CURRENCY);
         if ($currency === null)
             $currency = self::defaultCurrency();
-        return $this->currency_formatter->format($number, $currency);
+        return $this->currency_formatter->formatCurrency($number, $currency);
     }
 
     public function parseCurrency($str, $currency = null)
