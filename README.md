@@ -1,2 +1,2 @@
 # WASP
-WASP (Web Application Software Platform)
+WASP (Web Application Software Platform).
