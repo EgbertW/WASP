@@ -70,7 +70,7 @@ class I18N
     public static function defaultTimezone()
     {
         $cfg = Config::getConfig();
-        return $cfg->get('localization', 'timezone', 'UTC');
+        return new DateTimeZone($cfg->get('localization', 'timezone', 'UTC'));
     }
 
     public function defaultDateFormat()
@@ -206,3 +206,5 @@ class I18N
         return $this;
     }
 }
+
+check_extension('intl', 'Locale');

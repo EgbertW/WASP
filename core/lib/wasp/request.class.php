@@ -25,10 +25,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP;
 
+use WASP\File\Resolve;
+
 class Request
 {
     public static $host;
     public static $uri;
+    public static $app;
+    public static $route;
     public static $query;
     public static $protocol;
     public static $secure;
@@ -113,7 +117,7 @@ class Request
         self::$cookie = new Arguments($_COOKIE);
         self::$method = $_SERVER['REQUEST_METHOD'];
 
-        \Util\Redirection::checkRedirect();
+        Util\Redirection::checkRedirect();
         self::setupSession();
 
         $qpos = strpos(self::$uri, "?");
@@ -122,87 +126,17 @@ class Request
             self::$query = substr(self::$uri, $qpos);
             self::$uri = substr(self::$uri, 0, $qpos);
         }
-        $parts = explode("/", self::$uri);
-        $parts = array_filter($parts);
-        if (count($parts) == 0)
-            $parts = array("");
 
-        $path = "";
-        $app_paths = \Sys\AutoLoader::$apps;
+        $resolved = Resolve::app(self::$uri);
+        if ($resolved === null)
+            throw new HttpError(404, 'Could not resolve ' . self::$uri);
 
-        $remaining = array();
-        $idx = 0;
-        $done = false;
-        $candidates = array();
-        foreach ($parts as $part)
-        {
-            $found_any = false;
-            foreach ($app_paths as $oidx => $app_path)
-            {
-                $mpath = $app_path . $path . "/" . $part; 
-                $midx = $mpath . "/index.php";
-                $mfile = $mpath . ".php";
-                $mindex = $app_path . $path . "/index.php";
+        self::$route = $resolved['route'];
+        self::$url_args = new Arguments($resolved['remainder']);
+        self::$app = $resolved['path'];
 
-                if ($part !== "" && file_exists($mpath) && is_dir($mpath))
-                    $found_any = true;
-
-                if ($part !== "" && file_exists($midx))
-                {
-                    $candidates[] = array($midx, $path . "/" . $part, $oidx);
-                    $found_any = true;
-                }
-
-                if ($part !== "" && file_exists($mfile))
-                {
-                    $candidates[] = array($mfile, $path . "/" . $part, $oidx);
-                    $found_any = true;
-                }
-
-                if (file_exists($mindex))
-                {
-                    $candidates[] = array($mindex, $path, $oidx);
-                    $found_any = true;
-                }
-            }
-
-            $path = $path . "/" . $part;
-
-            if ($found_any === false)
-                break;
-        }
-
-        // Find the best match: the longest consumed part of the path
-        usort($candidates, function ($l, $r) {
-            $ll = strlen($l[1]);
-            $lr = strlen($r[1]);
-            if ($ll > $lr)
-                return -1;
-            if ($ll < $lr)
-                return 1;
-
-            // Prefer last mentioned
-            if ($l[2] < $r[2])
-                return -1;
-            if ($l[2] > $r[2])
-                return 1;
-
-            // Alphabetically on full path
-            return strcmp($l[0], $r[0]);
-        });
-
-        if (count($candidates) === 0)
-            throw new HttpError(404, "Path not found: " . self::$uri);
-
-        $selected = reset($candidates);
-        $consumed = count(array_filter(explode("/", $selected[1])));
-        $remaining = array_filter(array_slice($parts, $consumed));
-        $path = $selected[0];
-        
-        self::$url_args = new Arguments($remaining);
-        
-        Debug\debug("WASP.Request", "Including {}", $path);
-        include $path;
+        Debug\debug("WASP.Request", "Including {}", $resolved['path']);
+        include $resolved['path'];
 
         if (Template::$last_template === null)
             throw new HttpError(400, self::$uri);

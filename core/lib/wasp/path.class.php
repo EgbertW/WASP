@@ -40,6 +40,7 @@ class Path
 
     public static function setup()
     {
+        define('WASP_HTTP', WASP_ROOT . '/http');
         define('WASP_CONFIG', WASP_ROOT . '/config');
         define('WASP_TEMPLATE', WASP_ROOT . '/template');
         define('WASP_APP', WASP_ROOT . '/app');

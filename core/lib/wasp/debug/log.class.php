@@ -37,8 +37,17 @@ class Log
 {
     private $module;
     private static $level = TRACE;
-    private static $filename = WASP_ROOT . '/log/cms.log';
+    private static $filename = WASP_ROOT . '/var/log/cms.log';
     private static $file = NULL;
+
+    private static $LEVEL_NAMES = array(
+        TRACE => 'TRACE',
+        DEBUG => 'DEBUG',
+        INFO => 'INFO',
+        WARN => 'WARNING',
+        ERROR => 'ERROR',
+        CRITICAL => 'CRITICAL'
+    );
 
     public function __construct($module)
     {
@@ -94,13 +103,33 @@ class Log
         return $str;
     }
 
-    public static function log($level, $module, $message)
+    public static function log($level, $module, $message = null)
     {
         if ($level < self::$level)
             return;
 
-        $parameters = func_get_args();
-        array_splice($parameters, 0, 3);
+        if (is_array($level) && $module === null)
+        {
+            $module = $level;
+            $level = array_shift($module);
+        }
+
+        if (is_array($module) && $message === null)
+        {
+            $message = $module;
+            $module = array_shift($message);
+        }
+
+        if (is_array($message))
+        {
+            $parameters = $message;
+            $message = array_shift($parameters);
+        }
+        else
+        { 
+            $parameters = func_get_args();
+            array_splice($parameters, 0, 3);
+        }
 
         while (count($parameters))
         {
@@ -123,6 +152,8 @@ class Log
                 $fmt .= '[' . \WASP\Request::$remote_host . ']';
         }
 
+        $fmt .= ' ' . self::$LEVEL_NAMES[$level] . ': ';
+
         $fmt .= ' ' . $message;
         self::write($fmt);
     }
@@ -135,60 +166,74 @@ class Log
         if (self::$file)
             fwrite(self::$file, $str . "\n");
     }
+
+    public function trace()
+    {
+        self::log(TRACE, $this->module, func_get_args());
+    }
+
+    public function debug()
+    {
+        self::log(DEBUG, $this->module, func_get_args());
+    }
+
+    public function info()
+    {
+        self::log(INFO, $this->module, func_get_args());
+    }
+
+    public function warn()
+    {
+        self::log(WARN, $this->module, func_get_args());
+    }
+
+    public function warning()
+    {
+        self::log(WARN, $this->module, func_get_args());
+    }
+
+    public function error()
+    {
+        self::log(ERROR, $this->module, func_get_args());
+    }
+
+    public function critical()
+    {
+        self::log(CRITICAL, $this->module, func_get_args());
+    }
 }
 
 function trace()
 {
-    $args = func_get_args();
-
-    array_unshift($args, TRACE);
-    call_user_func_array(array('\\WASP\\Debug\\Log', 'log'), $args);
+    Log::log(TRACE, func_get_args());
 }
 
 function debug()
 {
-    $args = func_get_args();
-
-    array_unshift($args, DEBUG);
-    call_user_func_array(array('\\WASP\\Debug\\Log', 'log'), $args);
+    Log::log(DEBUG, func_get_args());
 }
 
 function info()
 {
-    $args = func_get_args();
-
-    array_unshift($args, INFO);
-    call_user_func_array(array('\\WASP\\Debug\\Log', 'log'), $args);
+    Log::log(INFO, func_get_args());
 }
 
 function warn()
 {
-    $args = func_get_args();
-
-    array_unshift($args, WARN);
-    call_user_func_array(array('\\WASP\\Debug\\Log', 'log'), $args);
+    Log::log(WARN, func_get_args());
 }
 
 function warning()
 {
-    $args = func_get_args();
-
-    array_unshift($args, WARN);
-    call_user_func_array(array('\\WASP\\Debug\\Log', 'log'), $args);
+    Log::log(WARN, func_get_args());
 }
 
 function error()
 {
-    $args = func_get_args();
-
-    array_unshift($args, ERROR);
-    call_user_func_array(array('\\WASP\\Debug\\Log', 'log'), $args);
+    Log::log(ERROR, func_get_args());
 }
 
 function critical()
 {
-    $args = func_get_args();
-
-    array_unshift($args, CRITICAL);
-    call_user_func_array(array('\\WASP\\Debug\\Log', 'log'), $args);
+    Log::log(CRITICAL, func_get_args());
 }

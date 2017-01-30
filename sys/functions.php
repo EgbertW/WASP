@@ -121,3 +121,12 @@ function currency_format($amount)
 {
 	return number_format($amount, 2, ',', '.');
 }
+
+function check_extension($extension, $class = null, $function = null)
+{
+    if ($class !== null && !class_exists($class, false))
+        throw new WASP\HttpError(500, "A required class does not exist: {$class}. Check if the extension $extension is installed and enabled");
+
+    if ($function !== null && !function_exists($function, false))
+        throw new WASP\HttpError(500, "A required function does not exist: {$class}. Check if the extension $extension is installed and enabled");
+}

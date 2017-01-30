@@ -25,6 +25,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP
 {
+    use WASP\File\Resolve;
+
     class Template
     {
         private $arguments = array();
@@ -36,12 +38,13 @@ namespace WASP
 
         public function __construct($name)
         {
-            $tpl = $this->resolve($name);
-            $this->dir = $tpl[0];
-            $this->path = $tpl[1];
+            $tpl = Resolve::template($name);
+            
+            $this->path = $tpl;
+            $this->dir = dirname($tpl);
 
             if (!file_exists($this->path))
-                throw new HttpError(500, "Template does not exist");
+                throw new HttpError(500, "Template does not exist: " . $name);
 
             self::$last_template = $this;
         }
@@ -53,21 +56,11 @@ namespace WASP
 
         public function resolve($name)
         {
-            $tpl_path = \Sys\AutoLoader::$templates;
-            foreach ($tpl_path as $path)
-            {
-                $tpl_file = $path . "/" . $name . ".php";
-                if (file_exists($tpl_file) && is_file($tpl_file))
-                {
-                    Debug\info("WASP.Template", "Resolved template file to {}", $tpl_file);
-                    return array($path, $tpl_file);
-                }
-                else
-                    Debug\info("WASP.Template", "Template file does not exist: {}", $tpl_file);
-                    
-            }
+            $path = File\Resolve::template($name);
 
-            throw new HttpError(500, "Template file could not be found");
+            if ($path === null)
+                throw new HttpError(500, "Template file could not be found: " . $name);
+            return $path;
         }
 
         public function render()
@@ -190,7 +183,7 @@ namespace
     function tpl($name)
     {
         $tpl = WASP\Template::$last_template->resolve($name);
-        return $tpl[1];
+        return $tpl;
     }
 
     function tl()

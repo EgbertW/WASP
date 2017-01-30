@@ -26,6 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP\Util;
 
 use WASP\Request;
+use WASP\Debug;
 
 class Redirection
 {
@@ -80,7 +81,7 @@ class Redirection
         if ($domain === null)
         {
             // Unknown domain name - log and possibly redirect
-            \Debug\info("Util.Redirection", "Unknown domain name in use: {}", $host);
+            Debug\info("Util.Redirection", "Unknown domain name in use: {}", $host);
             $subdomain = null;
             
             if ($config->get('site', 'redirect_unknown'))
@@ -145,9 +146,9 @@ class Redirection
 
         // All is well
         if ($domain !== null)
-            \Debug\debug("Util.Redirection", "Detected subdomain '{}' and domain '{}'", $subdomain, $domain);
+            Debug\debug("Util.Redirection", "Detected subdomain '{}' and domain '{}'", $subdomain, $domain);
 
-        \Debug\debug("Util.Redirection", "Setting language to '{}'", $language);
+        Debug\debug("Util.Redirection", "Setting language to '{}'", $language);
         Request::$language = $language;
         Request::$domain = $domain;
         Request::$subdomain = $subdomain;

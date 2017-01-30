@@ -24,7 +24,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 // Initialize WASP
-require "sys/init.php";
+require "../sys/init.php";
 
 // Dispatch the request
 WASP\Request::dispatch();

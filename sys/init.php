@@ -33,23 +33,32 @@ if (!defined('WASP_ROOT'))
     $root = dirname(realpath(dirname(__FILE__)));
     define('WASP_ROOT', $root);
     chdir(WASP_ROOT);
+
+    define('WASP_CACHE', $root . '/var/cache');
+    if (!file_exists(WASP_CACHE))
+        mkdir(WASP_CACHE);
 }
 
 // Set up logging
 ini_set('log_errors', '1');
-ini_set('error_log', WASP_ROOT . '/log/error-php.log');
+ini_set('error_log', WASP_ROOT . '/var/log/error-php.log');
 
-require_once WASP_ROOT . "/lib/wasp/debug/log.class.php";
+// Check required modules
+require_once WASP_ROOT . "/core/lib/wasp/debug/log.class.php";
 if (isset($_SERVER['REQUEST_URI']))
     Debug\info("Sys.init", "*** Starting processing for {} request to {}", $_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
 
-require_once WASP_ROOT . "/sys/autoloader.php";
+// Some general utility functions. Move to class?
 require_once WASP_ROOT . "/sys/functions.php";
+
+// Set up the autoloader
+require_once WASP_ROOT . "/core/lib/wasp/file/resolve.class.php";
 
 WASP\Request::setErrorHandler();
 WASP\Path::setup();
+
+// Load the configuration file
 $config = WASP\Config::getConfig();
 
-// Set up connection
-$db = WASP\DB\DB::get($config);
-unset($db);
+// Save the cache if configured so
+WASP\File\Resolve::setHook($config);
