@@ -25,7 +25,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 if ($this->wantHTML()):
 require tpl('parts/header');
-require tpl('parts/main');
+?>
+<h1>It works</h1/>
+<p>If you are seeing this, it means the WASP platform managed to resolve your route and output this sample page.</p>
+<?php
 require tpl('parts/footer');
 endif;
 ?>
