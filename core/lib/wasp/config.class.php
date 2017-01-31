@@ -42,16 +42,21 @@ class Config
             if (!class_exists("WASP\\HttpError"))
                 require_once WASP_LIB . '/wasp/httperror.class.php';
 
-            throw new HttpError(500, "Configuration file is missing");
+            throw new HttpError(500, "Configuration file is missing", "Configuration could not be loaded");
         }
         $this->filename = Path::$CONFIG . '/' . $scope . '.ini';
         $this->config = parse_ini_file($this->filename, true, INI_SCANNER_TYPED);
     }
 
-    public static function getConfig($scope = 'main')
+    public static function getConfig($scope = 'main', $fail_safe = false)
     {
         if (!isset(self::$repository[$scope]))
+        {
+            if ($fail_safe)
+                return null;
+
             self::$repository[$scope] = new Config($scope);
+        }
 
         return self::$repository[$scope];
     }

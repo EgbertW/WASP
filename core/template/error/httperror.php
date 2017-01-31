@@ -23,8 +23,9 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-$type = $this->chooseResponse(array("application/json", "text/html", "text/xml"));
+$type = $this->chooseResponse(array("text/html", "application/json", "text/xml"));
 
+\WASP\Debug\info("WASP", "Request ype: {}", $type);
 $error_code = 500;
 if ($exception instanceof HttpError)
     $error_code = (int)$exception->getCode();
@@ -53,9 +54,15 @@ if ($dev)
         "\nDescription: " . $exception->getMessage() . "\n";
         $exception->getTraceAsString();
 }
+elseif (method_exists($exception, 'getUserMessage'))
+{
+    $error_description .= "\nDescription: " . $exception->getUserMessage();
+}
 
 $type_name = str_replace("/", "_" ,$type) . ".php";
-if (file_exists($type_name))
+
+$path = WASP\File\Resolve::template($type_name);
+if ($type !== null)
     require $type_name;
 else
     require tpl('error/text_html');

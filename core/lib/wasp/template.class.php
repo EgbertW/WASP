@@ -67,14 +67,13 @@ namespace WASP
         {
             extract($this->arguments);
             $language = Request::$language;
-            $config = Config::getConfig();
-            $dev = $config->get('site', 'dev');
+            $config = Config::getConfig('main', true);
+            $dev = $config === null ? true : $config->get('site', 'dev');
 
             ob_start();
             include $this->path;
             $output = ob_get_contents();
             ob_end_clean();
-
 
             if ($this->mime !== null)
             {

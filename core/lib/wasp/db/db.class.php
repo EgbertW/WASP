@@ -29,10 +29,65 @@ use WASP\Config;
 use WASP\Debug;
 use PDO;
 
+/**
+ * The DB class wraps a PDO allowing for lazy connecting.
+ * The configuration is passed at initialization time,
+ * but the connection is not established until the first method
+ * call on the database. This behavior can be altered by setting
+ * [sql][lazy] = false in the configuration, in which case
+ * the PDO will be connected directly on construction.
+ */
 class DB
 {
     private static $default_db = null;
+    private $pdo;
+    private $config;
 
+    /**
+     * Create a new DB object for a specific configuration set.
+     */
+    private function __construct($config)
+    {
+        $this->config = $config;
+        if ($this->config->get('sql', 'lazy', true) == false)
+            $this->connect();
+    }
+
+    /**
+     * Connect to the database: actually initialize the PDO and connect it.
+     * @throws PDOException If the connection fails
+     */
+    private function connect()
+    {
+        if ($this->pdo !== null)
+            return true;
+
+        $username = $this->config->get('sql', 'username');
+        $password = $this->config->get('sql', 'password');
+        $host = $this->config->get('sql', 'hostname');
+        $database = $this->config->get('sql', 'database');
+        $dsn = $this->config->get('sql', 'dsn');
+            
+        if (!$dsn)
+        {
+            $type = $this->config->get('sql', 'type');
+            if ($type === "mysql")
+            {
+                $dsn = "mysql:host=" . $host . ";dbname=" . $database;
+                Debug\info("WASP.DB", "Generated DSN: {}", $dsn);
+            }
+        }
+            
+        $pdo = new PDO($dsn, $username, $password);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+            
+        $this->pdo = $pdo;
+    }
+
+    /**
+     * Get a DB object for the provided configuration
+     */
     public static function get(Config $config = null)
     {
         $default = false;
@@ -47,31 +102,36 @@ class DB
 
         if (!$config->has('sql', 'pdo'))
         {
-            $username = $config->get('sql', 'username');
-            $password = $config->get('sql', 'password');
-            $host = $config->get('sql', 'hostname');
-            $database = $config->get('sql', 'database');
-            $dsn = $config->get('sql', 'dsn');
-            
-            if (!$dsn)
-            {
-                $type = $config->get('sql', 'type');
-                if ($type === "mysql")
-                {
-                    $dsn = "mysql:host=" . $host . ";dbname=" . $database;
-                    Debug\info("WASP.DB", "Generated DSN: {}", $dsn);
-                }
-            }
-            
-            $pdo = new PDO($dsn, $username, $password);
-            $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-            $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-            
-            $config->set('sql', 'pdo', $pdo);
-            if ($default)
-                self::$default_db = $pdo;
+            $db = new DB($config);
+            $config->set('sql', 'pdo', $db);
         }
+        else
+            $db = $config->get('sql', 'pdo');
 
-        return $config->get('sql', 'pdo');
+        return $db;
+    }
+
+    
+    /**
+     * @return PDO The PDO object of this connection. Can be used to extract the unwrapped PDO, should the need arise.
+     */
+    public function getPDO()
+    {
+        if ($this->pdo === null)
+            $this->connect();
+
+        return $this->pdo;
+    }
+
+    /**
+     * Wrap methods of the PDO. This is implemented this way
+     * to allow lazy connecting to the database - the object
+     * is always initialized but only connected once requested.
+     */
+    public function __call($func, $args)
+    {
+        if ($this->pdo === null)
+            $this->connect();
+        return call_user_func_array(array($this->pdo, $func), $args);
     }
 }

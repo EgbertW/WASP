@@ -69,6 +69,9 @@ class Log
 
     public static function str($obj, $html = false)
     {
+        if (is_null($obj))
+            return "NULL";
+
         if (is_string($obj))
             return $obj;
 

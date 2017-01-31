@@ -26,6 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP;
 
 use WASP\File\Resolve;
+use WASP\DB\DB;
 
 class Request
 {
@@ -135,8 +136,20 @@ class Request
         self::$url_args = new Arguments($resolved['remainder']);
         self::$app = $resolved['path'];
 
-        Debug\debug("WASP.Request", "Including {}", $resolved['path']);
-        include $resolved['path'];
+        self::execute($resolved['path']);
+    }
+
+    private static function execute($path)
+    {
+        // Prepare some variables that come in handy in apps
+        $config = Config::getConfig();
+        $db = DB::get();
+        $get = self::$get;
+        $post = self::$post;
+        $url_args = self::$url_args;
+
+        Debug\debug("WASP.Request", "Including {}", $path);
+        include $path;
 
         if (Template::$last_template === null)
             throw new HttpError(400, self::$uri);
@@ -159,20 +172,23 @@ class Request
         if (!headers_sent())
             header("Content-type: text/plain");
 
-        $tpl = "error/http500";
+        $tpl = "error/httperror";
         $code = 500;
         if ($exception instanceof \WASP\HttpError)
         {
             $code = $exception->getCode();
 
-            $tpln = "error/http" . $exception->getCode();
-            $gtpln = "error/httperror";
-            $fn = $tpln . ".php";
-            $gfn = $gtpln . ".php";
-            if (file_exists(Path::$TEMPLATE . "/" . $fn))
-                $tpl = $tpln;
-            elseif (file_exists(Path::$TEMPLATE . "/" . $gfn))
-                $tpl = $gtpln;
+            try
+            {
+                $tpln = "error/http" . $exception->getCode();
+                $path = Resolve::template($tpln);
+                if ($path !== null)
+                    $tpl = $tpln;
+            }
+            catch (Exception $e2)
+            {
+                Debug\error("WASP.Request", "Exception while resolving error template: {}: {}", get_class($exception), $exception->getMessage());
+            }
         }
         else
         {
@@ -181,7 +197,9 @@ class Request
             $class = end($parts);
             $tpln = "error/" . $class;
             $fn = $tpln . ".php";
-            if (file_exists(Path::$TEMPLATE . "/" . $fn))
+
+            $path = Resolve::template($tpln);
+            if ($path !== null)
                 $tpl = $tpln;
         }
 
@@ -195,13 +213,14 @@ class Request
 
         try
         {
+            $tpln = $tpl;
             $tpl = new Template($tpl);
             $tpl->assign('exception', $exception);
             $tpl->render();
         }
         catch (HttpError $ex)
         {
-            Debug\critical("WASP.Request", "An exception of type {} (code: {}, message: {}) occurred. Additionally, the error template ({}) cannot be loaded", get_class($exception), $exception->getCode(), $exception->getMessage(), $tpl);
+            Debug\critical("WASP.Request", "An exception of type {} (code: {}, message: {}) occurred. Additionally, the error template ({}) cannot be loaded", get_class($exception), $exception->getCode(), $exception->getMessage(), $tpln);
             Debug\critical("WASP.Request", "The full stacktrace follows: {}", $exception);
             Debug\critical("WASP.Request", "The full stacktrace of the failed template is: {}", $ex);
             if (!headers_sent())
@@ -223,6 +242,8 @@ class Request
                 echo "<pre>" . Debug\Log::str($exception) . "</pre>";
             else
                 echo "<p>Something is going wrong on the server. Please check back later - an administrator will have been notified</p>";
+            if (method_exists($exception, 'getUserMessage'))
+                echo "<p>Explanation: " . htmlentities($exception->getUserMessage()) . "</p>";
             echo "</body></html>";
 
             die();
@@ -231,6 +252,9 @@ class Request
 
     public static function isAccepted($mime)
     {
+        if (empty(self::$accept))
+            return true;
+
         foreach (self::$accept as $type => $priority)
         {
             if (strpos($type, "*") !== false)

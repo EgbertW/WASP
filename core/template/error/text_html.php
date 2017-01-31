@@ -23,21 +23,25 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-    require tpl('parts/header');
-    ?>
-            <div class="large-9 medium-9 columns">
-                <h5><?=$error_code;?> - <?=escape($error_title);?></h5>
-                <p>
-                    <?=escape($error_title);?>
-                </p>
-                <div class="row">
-                    <div class="large-12 columns">
-                        <div class="callout">
-                            <pre><?=escape($error_description);?></pre>
-                        </div>
+    ?><!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title><?=$error_code;?> - <?=escape($error_title);?></title>
+    </head>
+    <body>
+        <div class="large-9 medium-9 columns">
+            <h1><?=$error_code;?> - <?=escape($error_title);?></h1>
+            <p>
+                <?=escape($error_title);?>
+            </p>
+            <div class="row">
+                <div class="large-12 columns">
+                    <div class="callout">
+                        <pre><?=escape($error_description);?></pre>
                     </div>
                 </div>
             </div>
-    <?php
-    require tpl('parts/footer');
-?>
+        </div>
+    </body>
+</html>

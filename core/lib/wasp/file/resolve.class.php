@@ -56,6 +56,15 @@ namespace WASP\File
             if (!$config->get('site', 'dev', false))
             {
                 register_shutdown_function(array('WASP\\File\\Resolve', 'saveCache'));
+
+                $timeout = $config->get('resolve', 'expire', 600); // 10 minutes
+                $st = isset(self::$cache['_timestamp']) ? self::$cache['_timestamp'] : 0;
+            
+                if (time() - $st > $timeout)
+                {
+                    Debug\info("WASP.File.Resolve", "Cache is more than {} seconds old ({}), invalidating", $timeout, $st);
+                    self::$cache = array('_timestamp' => time());
+                }
             }
             else
             {
@@ -217,29 +226,45 @@ namespace WASP\File
             return array("route" => $r, "path" => $route['path'], 'module' => $route['module'], 'remainder' => $remain);
         }
 
-        private static function listDir($dir)
+        private static function listDir($dir, $recursive = true)
         {
             $contents = array();
+            $subdirs = array();
             foreach (glob($dir . "/*") as $entry)
             {
-                if (substr($entry, -4) === ".php")
+                if (substr($entry, -4) === ".php" || substr($entry, -5) === ".wasp")
                 {
                     $contents[] = $entry;
                 }
-                elseif (is_dir($entry))
+                elseif (is_dir($entry) && $recursive)
                 {
-                    $contents = array_merge($contents, self::listDir($entry));
+                    $subdirs = array_merge($subdirs, self::listDir($entry));
                 }
             }
 
+            // Sort the direct contents of the directory so that .wasp and index.php come first
             usort($contents, function ($a, $b) {
                 $sla = strlen($a);
                 $slb = strlen($b);
-                if ($sla !== $slb)
-                    return $sla - $slb;
-                return strcmp($a, $b);
+                
+                // .wasp files come first
+                $a_wasp = substr($a, -10) === "/.wasp";
+                $b_wasp = substr($b, -10) === "/.wasp";
+                if ($a_wasp !== $b_wasp)
+                    return $a_wasp ? -1 : 1;
+
+                // index files come second
+                $a_idx = substr($a, -10) === "/index.php";
+                $b_idx = substr($b, -10) === "/index.php";
+                if ($a_idx !== $b_idx)
+                    return $a_idx ? -1 : 1;
+
+                // Finally, sort alphabetically
+                return strncmp($a, $b);
             });
-            return $contents;
+    
+            // Add the contents of subdirectories to the direct contents
+            return array_merge($contents, $subdirs);
         }
 
         public static function getRoutes()
@@ -300,23 +325,35 @@ namespace WASP\File
             if (substr($template, -4) != ".php")
                 $template .= ".php";
 
-            if (isset(self::$cache['template'][$template]))
+            return self::resolve('template', $template, true);
+        }
+
+        public static function asset($asset)
+        {
+            return self::resolve('assets', $asset, true);
+        }
+
+        private static function resolve($type, $file, $reverse = false)
+        {
+            if (isset(self::$cache[$type][$file]))
             {
-                $cached = self::$cache['template'][$template];
+                $cached = self::$cache[$type][$file];
                 if (file_exists($cached['path']) && is_readable($cached['path']))
                 {
-                    Debug\debug("WASP.File.Resolve", "Resolved template {} to path {} (module: {}) (cached)", $template, $cached['path'], $cached['module']);
-                    return $cached['path'];            
+                    Debug\debug("WASP.File.Resolve", "Resolved {} {} to path {} (module: {}) (cached)", $type, $file, $cached['path'], $cached['module']);
+                    return $cached['path'];
                 }
                 else
-                    Debug\error("WASP.File.Resolve", "Cached path for template {} from module {} cannot be read: {}", $template, $cached['module'], $cached['path']);
+                    Debug\error("WASP.File.Resolve", "Cached path for {} {} from module {} cannot be read: {}", $type, $file, $cached['module'], $cached['path']);
             }
 
             $path = null;
             $found_module = null;
-            foreach (self::$modules as $module => $location)
+            $mods = $reverse ? array_reverse(self::$modules) : self::$modules;
+
+            foreach ($mods as $module => $location)
             {
-                $path = $location . '/template/' . $template;
+                $path = $location . '/' . $type . '/' . $file;
                 if (file_exists($path) && is_readable($path))
                 {
                     $found_module = $module;
@@ -326,16 +363,15 @@ namespace WASP\File
 
             if ($found_module !== null)
             {
-                Debug\debug("WASP.File.Resolve", "Resolved template {} to path {} (module: {}) (cached)", $template, $path, $found_module);
+                Debug\debug("WASP.File.Resolve", "Resolved {} {} to path {} (module: {})", $type, $file, $path, $found_module);
                 if (self::$cache !== null)
                 {
-                    self::$cache['template'][$template] = array("module" => $found_module, "path" => $path);
+                    self::$cache[$type][$file] = array("module" => $found_module, "path" => $path);
                     self::$cacheChanged = true;
                 }
                 return $path;
             }
-
-            // Nothing was found
+        
             return null;
         }
     }

@@ -27,8 +27,16 @@ namespace WASP;
 
 class HttpError extends \RuntimeException
 {
-    public function __construct($code, $error)
+    private $user_message;
+
+    public function __construct($code, $error, $user_message = null)
     {
         parent::__construct($error, $code);
+        $this->user_message = $user_message;
+    }
+
+    public function getUserMessage()
+    {
+        return $this->user_message;
     }
 }
