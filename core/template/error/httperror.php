@@ -23,9 +23,8 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-$type = $this->chooseResponse(array("text/html", "application/json", "text/xml"));
+$type = $this->chooseResponse(array("text/html", "application/json", "text/xml", "text/plain"));
 
-\WASP\Debug\info("WASP", "Request ype: {}", $type);
 $error_code = 500;
 if ($exception instanceof HttpError)
     $error_code = (int)$exception->getCode();
@@ -48,7 +47,7 @@ switch ($error_code)
         break;
 }
 
-if ($dev)
+if ($dev || $cli)
 {
     $error_description .= 
         "\nDescription: " . $exception->getMessage() . "\n";

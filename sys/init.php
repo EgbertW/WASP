@@ -27,6 +27,8 @@ ini_set('default_charset', 'utf-8');
 mb_internal_encoding('utf-8');
 
 use WASP\Debug;
+use WASP\Request;
+use WASP\Path;
 
 if (!defined('WASP_ROOT'))
 {
@@ -54,11 +56,21 @@ require_once WASP_ROOT . "/sys/functions.php";
 // Set up the autoloader
 require_once WASP_ROOT . "/core/lib/wasp/file/resolve.class.php";
 
-WASP\Request::setErrorHandler();
-WASP\Path::setup();
+Request::setErrorHandler();
+Path::setup();
 
 // Load the configuration file
 $config = WASP\Config::getConfig();
+
+// Change settings for CLI
+if (Request::cli())
+{
+    ini_set('error_log', WASP_ROOT . '/var/log/error-php-cli.log');
+    ini_set('max_execution_time', 0);
+
+    $limit = (int)$config->get('cli', 'memory_limit', 1024);
+    ini_set('memory_limit', $limit . 'M');
+}
 
 // Save the cache if configured so
 WASP\File\Resolve::setHook($config);

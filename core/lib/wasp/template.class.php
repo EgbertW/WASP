@@ -69,6 +69,7 @@ namespace WASP
             $language = Request::$language;
             $config = Config::getConfig('main', true);
             $dev = $config === null ? true : $config->get('site', 'dev');
+            $cli = array_key_exists('argv', $_SERVER);
 
             ob_start();
             include $this->path;

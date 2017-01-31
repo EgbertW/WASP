@@ -30,6 +30,14 @@ use WASP\DB\DB;
 
 class Request
 {
+    public static $CLI_MIME = array(
+        'text/plain' => 1.0,
+        'text/html' => 0.9,
+        'application/json' => 0.8,
+        'application/xml' => 0.7,
+        '*/*' => 0.5
+    );
+
     public static $host;
     public static $uri;
     public static $app;
@@ -157,6 +165,14 @@ class Request
 
     public static function setErrorHandler()
     {
+        // Don't attach error handlers when running from CLI
+        if (self::cli())
+        {
+            ini_set('error_reporting', E_ALL);
+            ini_set('display_errors', 'On');
+            return;
+        }
+
         // We're processing a HTTP request, so set up Exception handling for better output
         set_exception_handler(array("WASP\\Request", "handleException"));
         set_error_handler(array("WASP\\Request", "handleError"), E_ALL | E_STRICT);
@@ -269,10 +285,18 @@ class Request
         return false;
     }
 
+    public static function cli()
+    {
+        return array_key_exists('argv', $_SERVER);
+    }
+
 	public static function getBestResponseType(array $types)
 	{
         $best_priority = null;
         $best_type = null;
+
+        if (self::cli())
+            self::$accept = self::$CLI_MIME;
 
         foreach ($types as $type)
         {
