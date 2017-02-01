@@ -28,7 +28,7 @@ namespace WASP\File
     use WASP\Debug;
     use WASP\HttpError;
     use WASP\Autoloader;
-
+    use WASP\I18N;
 
     class Resolve
     {
@@ -37,7 +37,7 @@ namespace WASP\File
         private static $cacheChanged = false;
         private static $logger;
 
-        public static function initCache()
+        public static function init()
         {
             $cache_file = WASP_CACHE . '/' . 'resolve.cache';
             self::$cache = array();
@@ -59,7 +59,10 @@ namespace WASP\File
                 Debug\info("WASP.File.Resolve", "Cache is more than {} seconds old ({}), invalidating", $timeout, $st);
                 self::$cache = array('_timestamp' => time());
             }
+        }
 
+        public static function findModules($config)
+        {
             $module_path = realpath($config->get('site', 'module_path', WASP_ROOT . '/modules'));
             $dirs = glob($module_path . '/*');
             foreach ($dirs as $dir)
@@ -92,6 +95,8 @@ namespace WASP\File
                 Debug\info("WASP.File.Resolve", "Found module {} in path {}", $mod_name, $dir);
                 self::$modules[$mod_name] = $dir;
                 call_user_func(array($class_name, "init"));
+
+                I18N::setupTranslation($mod_name, $dir, $class_name);
             }
         }
 
@@ -395,6 +400,6 @@ namespace WASP\File
         }
     }
 
-    Resolve::initCache();
+    Resolve::init();
     spl_autoload_register(array('WASP\\File\\Resolve', 'autoload'));
 }

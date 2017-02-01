@@ -23,12 +23,13 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP;
+namespace WASP {
 
 use DateTime;
 use DateTimeZone;
 use Locale;
 use NumberFormatter;
+use WASP\Debug;
 
 class I18N
 {
@@ -205,6 +206,38 @@ class I18N
         }
         return $this;
     }
+
+    public static function setupTranslation($module, $path, $classname)
+    {
+        $domains = $classname::getTextDomains();
+        if (!is_array($domains) && !($domains instanceof \Iterator))
+            $domains = array();
+
+        if (count($domains) === 0)
+            return;
+
+        $lang_path = $path . "/language";
+        if (!file_exists($lang_path) || !is_dir($lang_path))
+        {
+            Debug\error("WASP.I18N", "Language directory does not exist for module {}", $module);
+            return;
+        }
+
+        // Bind all text domains for this module
+        foreach ($domains as $domain)
+        {
+            if (is_string($domain))
+            {
+                bindtextdomain($domain, $lang_path);
+                Debug\debug("WASP.I18N", "Bound text domain {} to path {}", $domain, $lang_path);
+            }
+        }
+    }
 }
 
 check_extension('intl', 'Locale');
+}
+
+namespace {
+    
+}

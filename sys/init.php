@@ -77,3 +77,6 @@ if (Request::cli())
 
 // Save the cache if configured so
 WASP\File\Resolve::setHook($config);
+
+// Find installed modules and initialize them
+WASP\File\Resolve::findModules($config);
