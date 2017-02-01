@@ -45,36 +45,54 @@ namespace WASP\File
             {
                 self::loadCache();
             }
-            elseif (file_exists($cache_file))
-            {
-                unlink($cache_file);
-            }
         }
 
         public static function setHook($config)
         {
-            if (!$config->get('site', 'dev', false))
-            {
-                register_shutdown_function(array('WASP\\File\\Resolve', 'saveCache'));
+            register_shutdown_function(array('WASP\\File\\Resolve', 'saveCache'));
 
-                $timeout = $config->get('resolve', 'expire', 600); // 10 minutes
-                $st = isset(self::$cache['_timestamp']) ? self::$cache['_timestamp'] : 0;
-            
-                if (time() - $st > $timeout)
-                {
-                    Debug\info("WASP.File.Resolve", "Cache is more than {} seconds old ({}), invalidating", $timeout, $st);
-                    self::$cache = array('_timestamp' => time());
-                }
-            }
-            else
+            $timeout = $config->get('resolve', 'expire', 60); // Clear out cache every minute by default
+            $st = isset(self::$cache['_timestamp']) ? self::$cache['_timestamp'] : 0;
+        
+            if (time() - $st > $timeout)
             {
-                $cache_file = WASP_CACHE . '/' . 'resolve.cache';
-                if (file_exists($cache_file) && is_writable($cache_file))
+                Debug\info("WASP.File.Resolve", "Cache is more than {} seconds old ({}), invalidating", $timeout, $st);
+                self::$cache = array('_timestamp' => time());
+            }
+
+            $module_path = realpath($config->get('site', 'module_path', WASP_ROOT . '/modules'));
+            $dirs = glob($module_path . '/*');
+            foreach ($dirs as $dir)
+            {
+                if (!is_dir($dir))
+                    continue;
+
+                $mod_name = basename($dir);
+                $init_file = $dir . '/lib/' . $mod_name . '/module.class.php';
+                $class_name = $mod_name . '\\Module';
+                if (!file_exists($init_file) || !is_readable($init_file))
                 {
-                    unlink($cache_file);
-                    Debug\info("WASP.File.Resolve", "Removing {} because caching is disabled", $cache_file);
+                    Debug\info("WASP.File.Resolve", "Path {} does not contain init_file {}", $dir, $init_file);
+                    continue;
                 }
-                self::$cache = null;
+
+                require_once $init_file;
+                if (!class_exists($class_name))
+                {
+                    Debug\debug("WASP.File.Resolve", "Path {} does have init file {} but it does not contain class {}", $dir, $init_file, $class_name);
+                    continue;
+                }
+
+                $ifaces = class_implements($class_name);
+                if (!isset($ifaces['WASP\\Module']))
+                {
+                    Debug\debug("WASP.File.Resolve", "Init file {} contans class {} but it does not implement WASP\Module", $init_file, $class_name);
+                    continue;
+                }
+
+                Debug\info("WASP.File.Resolve", "Found module {} in path {}", $mod_name, $dir);
+                self::$modules[$mod_name] = $dir;
+                call_user_func(array($class_name, "init"));
             }
         }
 

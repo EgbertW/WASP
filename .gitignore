@@ -2,3 +2,4 @@ config/*.ini
 var/log/*.log
 var/upload/*
 var/cache
+modules/*

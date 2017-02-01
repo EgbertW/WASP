@@ -38,7 +38,10 @@ if (!defined('WASP_ROOT'))
 
     define('WASP_CACHE', $root . '/var/cache');
     if (!file_exists(WASP_CACHE))
+    {
         mkdir(WASP_CACHE);
+        chmod(770, WASP_CACHE);
+    }
 }
 
 // Set up logging
