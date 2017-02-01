@@ -209,9 +209,16 @@ class I18N
 
     public static function setupTranslation($module, $path, $classname)
     {
-        $domains = $classname::getTextDomains();
-        if (!is_array($domains) && !($domains instanceof \Iterator))
-            $domains = array();
+        if ($classname !== null)
+        {
+            $domains = $classname::getTextDomains();
+            if (!is_array($domains) && !($domains instanceof \Iterator))
+                $domains = array();
+        }
+        elseif ($module === "core")
+            $domains = array("core");
+        else
+            return;
 
         if (count($domains) === 0)
             return;
@@ -235,6 +242,7 @@ class I18N
     }
 }
 
+I18N::setupTranslation('core', WASP_ROOT . '/core/language', null);
 check_extension('intl', 'Locale');
 }
 
