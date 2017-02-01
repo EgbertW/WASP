@@ -83,8 +83,7 @@ namespace WASP\File
                     continue;
                 }
 
-                $ifaces = class_implements($class_name);
-                if (!isset($ifaces['WASP\\Module']))
+                if (!is_subclass_of($class_name, 'WASP\\Module'))
                 {
                     Debug\debug("WASP.File.Resolve", "Init file {} contans class {} but it does not implement WASP\Module", $init_file, $class_name);
                     continue;
@@ -372,8 +371,10 @@ namespace WASP\File
             foreach ($mods as $module => $location)
             {
                 $path = $location . '/' . $type . '/' . $file;
+                Debug\error("RESOLVE", "Trying path: {}", $path);
                 if (file_exists($path) && is_readable($path))
                 {
+                    Debug\error("RESOLVE", "Found path: {}", $path);
                     $found_module = $module;
                     break;
                 }

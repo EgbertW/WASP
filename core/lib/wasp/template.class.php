@@ -29,6 +29,8 @@ namespace WASP
 
     class Template
     {
+        protected static $log = null;
+
         private $arguments = array();
         public $dir;
         public $path;
@@ -36,8 +38,14 @@ namespace WASP
         public static $last_template = null;
         public $mime = null;
 
+        public static $js = array();
+        public static $css = array();
+
         public function __construct($name)
         {
+            if (self::$log === null)
+                self::$log = new Debug\Log("WASP.Template");
+
             $tpl = Resolve::template($name);
             
             $this->path = $tpl;
@@ -86,7 +94,7 @@ namespace WASP
                 throw new HttpError(400, "No supported response type requested");
             }
 
-            Debug\debug("WASP.Template", "*** Finished processing {} request to {}", Request::$method, Request::$uri);
+            self::$log->debug("WASP.Template", "*** Finished processing {} request to {}", Request::$method, Request::$uri);
             exit();
         }
 
@@ -177,6 +185,83 @@ namespace WASP
         {
             $this->translations = func_get_args();
         }
+
+        public static function registerJS($script)
+        {
+            if (substr($script, -3) === ".js")
+                $script = substr($script, 0, -3);
+            if (substr($script, -4) === ".min")
+                $script = substr($script, 0, -4);
+
+            if (!in_array($script, self::$js))
+                self::$js[] = $script;
+        }
+
+        public static function registerCSS($stylesheet)
+        {
+            if (substr($stylesheet, -4) === ".css")
+                $stylesheet = substr($stylesheet, 0, -4);
+            if (substr($stylesheet, -4) === ".min")
+                $stylesheet = substr($stylesheet, 0, -4);
+
+            if (!in_array($stylesheet, self::$css))
+                self::$css[] = $stylesheet;
+        }
+
+        public function getJS()
+        {
+            $list = array();
+            $cfg = Config::getConfig();
+            $dev = $cfg->get('site', 'dev', true);
+            foreach (self::$js as $l)
+            {
+                $relpath = "js/" . $l;
+                $devpath = $relpath . ".js";
+                $prodpath = $relpath . ".min.js";
+                self::$log->info("Development js path: {}", $devpath);
+                self::$log->info("Production js path: {}", $prodpath);
+                $dev_file = Resolve::asset($devpath);
+                $prod_file = Resolve::asset($prodpath);
+                self::$log->info("Development js file: {}", $dev_file);
+                self::$log->info("Production js file: {}", $prod_file);
+
+                if ($dev && $dev_file)
+                    $list[] = "/assets/" .$devpath;
+                elseif ($prod_file)
+                    $list[] = "/assets/" . $prodpath;
+                elseif ($dev_file)
+                    $list[] = "/assets/" . $devpath;
+                else
+                    self::$log->error("Requested javascript {} could not be resolved", $l);
+            }
+            return $list;
+        }
+
+        public function getCSS()
+        {
+            $list = array();
+            $cfg = Config::getConfig();
+            $dev = $cfg->get('site', 'dev', true);
+            foreach (self::$css as $l)
+            {
+                $relpath = "css/" . $l;
+                $devpath = $relpath . ".css";
+                $prodpath = $relpath . ".min.css";
+
+                $dev_file = Resolve::asset($devpath);
+                $prod_file = Resolve::asset($prodpath);
+
+                if ($dev && $dev_file)
+                    $list[] = "/assets/" . $devpath;
+                elseif ($prod_file)
+                    $list[] = "/assets/" . $prodpath;
+                elseif ($dev_file)
+                    $list[] = "/assets/" . $devpath;
+                else
+                    self::$log->error("Requested stylesheet {} could not be resolved", $l);
+            }
+            return $list;
+        }
     }
 }
 
@@ -206,5 +291,15 @@ namespace
         //if (strpos(WASP\Template::$last_template->mime, "text/html") !== false)
         //    return htmlentities($text);
         return $text;
+    }
+
+    function js($script)
+    {
+        WASP\Template::registerJS($script);
+    }
+
+    function css($stylesheet)
+    {
+        WASP\Template::registerCSS($stylesheet);
     }
 }

@@ -55,26 +55,21 @@ $ext = null;
 if ($extpos !== false)
     $ext = strtolower(substr($path, $extpos + 1));
 
-$assets_paths = Sys\AutoLoader::$assets;
+$full_path = WASP\File\Resolve::asset($path);
 
-foreach ($assets_paths as $asset_path)
+if ($path)
 {
-    $full_path = $asset_path . "/" . $path;
-    if (file_exists($full_path))
-    {
-        if ($ext === "css")
-            $mime = "text/css";
-        elseif ($ext === "js")
-            $mime = "text/javascript";
-        else
-            $mime = mime_content_type($full_path);
+    if ($ext === "css")
+        $mime = "text/css";
+    elseif ($ext === "js")
+        $mime = "text/javascript";
+    else
+        $mime = mime_content_type($full_path);
 
-        header("Content-type: " . $mime);
-        $h = fopen($full_path, "r");
-        fpassthru($h);
-        fclose($h);
-        die();
-    }
+    header("Content-type: " . $mime);
+    $h = fopen($full_path, "r");
+    fpassthru($h);
+    fclose($h);
+    die();
 }
-
 throw new WASP\HttpError(404, "File {$path} could not be found!");
