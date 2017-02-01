@@ -135,7 +135,9 @@ namespace WASP
 
         public function writeJSON(array $data)
         {
-            echo json_encode($data);
+            WASP\JSON::init();
+            WASP\JSON::add($data);
+            WASP\JSON::output();
         }
 
         public function writeXML(array $data, $root = "Response")
