@@ -31,7 +31,7 @@ include tpl('parts/header');
             </p>
             <div class="row">
                 <div class="large-12 columns">
-                    <div class="callout">
+                    <div class="callout" style="max-width: 100%; overflow: auto;">
                         <pre><?=txt($error_description);?></pre>
                     </div>
                 </div>

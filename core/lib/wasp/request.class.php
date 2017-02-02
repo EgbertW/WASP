@@ -181,6 +181,7 @@ class Request
     public static function handleError($errno, $errstr, $errfile, $errline, $errcontext)
     {
         Debug\error("WASP.Request", "PHP Error {}: {} on {}({})", $errno, $errstr, $errfile, $errline);
+        throw new \ErrorException($errstr, 0, $errno, $errfile, $errline);
     }
 
     public static function handleException($exception)

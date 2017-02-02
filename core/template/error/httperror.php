@@ -50,8 +50,8 @@ switch ($error_code)
 if ($dev || $cli)
 {
     $error_description .= 
-        "\nDescription: " . $exception->getMessage() . "\n";
-        $exception->getTraceAsString();
+        "\nDescription: " . $exception->getMessage() . "\n" 
+        . $exception->getTraceAsString();
 }
 elseif (method_exists($exception, 'getUserMessage'))
 {
