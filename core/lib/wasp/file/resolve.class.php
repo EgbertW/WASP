@@ -28,7 +28,7 @@ namespace WASP\File
     use WASP\Debug;
     use WASP\HttpError;
     use WASP\Autoloader;
-    use WASP\I18N;
+    use WASP\Translate;
 
     class Resolve
     {
@@ -96,7 +96,7 @@ namespace WASP\File
                 self::$modules[$mod_name] = $dir;
                 call_user_func(array($class_name, "init"));
 
-                I18N::setupTranslation($mod_name, $dir, $class_name);
+                Translate::setupTranslation($mod_name, $dir, $class_name);
             }
         }
 

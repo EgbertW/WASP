@@ -273,26 +273,6 @@ namespace
         return $tpl;
     }
 
-    function tl()
-    {
-        $texts = func_get_args();
-        $langs = WASP\Template::$last_template->translations;
-
-        if (count($texts) < count($langs))
-            $langs = array_slice($langs, 0, count($texts));
-        elseif (count($texts) > count($langs))
-            $texts = array_slice($texts, 0, count($langs));
-
-        $translations = array_combine($langs, $texts);
-        $language = WASP\Request::$language;
-
-        $text = isset($translations[$language]) ? $translations[$language] : reset($translations);
-
-        //if (strpos(WASP\Template::$last_template->mime, "text/html") !== false)
-        //    return htmlentities($text);
-        return $text;
-    }
-
     function js($script)
     {
         WASP\Template::registerJS($script);
@@ -301,5 +281,10 @@ namespace
     function css($stylesheet)
     {
         WASP\Template::registerCSS($stylesheet);
+    }
+
+    function txt($str)
+    {
+        return htmlentities($str, ENT_HTML5 | ENT_SUBSTITUTE | ENT_QUOTES);
     }
 }

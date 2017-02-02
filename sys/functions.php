@@ -102,11 +102,6 @@ function parse_bool($val)
     return true;
 }
 
-function escape($str)
-{
-    return htmlentities($str);
-}
-
 function fmtdate(\DateTime $date)
 {
     $conf = WASP\Config::getConfig();

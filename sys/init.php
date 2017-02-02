@@ -23,8 +23,8 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-ini_set('default_charset', 'utf-8');
-mb_internal_encoding('utf-8');
+ini_set('default_charset', 'UTF-8');
+mb_internal_encoding('UTF-8');
 
 use WASP\Debug;
 use WASP\Request;

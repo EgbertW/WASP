@@ -206,43 +206,8 @@ class I18N
         }
         return $this;
     }
-
-    public static function setupTranslation($module, $path, $classname)
-    {
-        if ($classname !== null)
-        {
-            $domains = $classname::getTextDomains();
-            if (!is_array($domains) && !($domains instanceof \Iterator))
-                $domains = array();
-        }
-        elseif ($module === "core")
-            $domains = array("core");
-        else
-            return;
-
-        if (count($domains) === 0)
-            return;
-
-        $lang_path = $path . "/language";
-        if (!file_exists($lang_path) || !is_dir($lang_path))
-        {
-            Debug\error("WASP.I18N", "Language directory does not exist for module {}", $module);
-            return;
-        }
-
-        // Bind all text domains for this module
-        foreach ($domains as $domain)
-        {
-            if (is_string($domain))
-            {
-                bindtextdomain($domain, $lang_path);
-                Debug\debug("WASP.I18N", "Bound text domain {} to path {}", $domain, $lang_path);
-            }
-        }
-    }
 }
 
-I18N::setupTranslation('core', WASP_ROOT . '/core/language', null);
 check_extension('intl', 'Locale');
 }
 
