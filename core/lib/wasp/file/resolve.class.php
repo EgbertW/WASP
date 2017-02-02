@@ -30,23 +30,39 @@ namespace WASP\File
     use WASP\Autoloader;
     use WASP\Translate;
 
+    /**
+     * Resolve templates, routes, clases and assets from the core and modules.
+     */
     class Resolve
     {
+        /** A list of installed modules */
         private static $modules = array('core' => WASP_ROOT . '/core');
+
+        /** The cache of templates, assets, routes */
         private static $cache = null;
+
+        /** Whether the cache has changed, so it needs to be saved */
         private static $cacheChanged = false;
+        
+        /** The logger instance */
         private static $logger;
 
+        /**
+         * Load the cache file on initialization
+         */
         public static function init()
         {
             $cache_file = WASP_CACHE . '/' . 'resolve.cache';
             self::$cache = array();
             if (file_exists($cache_file))
-            {
                 self::loadCache();
-            }
         }
 
+        /**
+         * Add the hook after the configuration has been loaded, and apply invalidation to the
+         * cache once it times out.
+         * @param $config WAS\Config The configuration to load settings from
+         */
         public static function setHook($config)
         {
             register_shutdown_function(array('WASP\\File\\Resolve', 'saveCache'));
@@ -61,6 +77,10 @@ namespace WASP\File
             }
         }
 
+        /** 
+         * Find installed modules in the module path
+         * @param $config WASP\Config The configuration from which to obtain the module path
+         */
         public static function findModules($config)
         {
             $module_path = realpath($config->get('site', 'module_path', WASP_ROOT . '/modules'));
@@ -70,36 +90,39 @@ namespace WASP\File
                 if (!is_dir($dir))
                     continue;
 
+                $has_lib = is_dir($dir . '/lib');
+                $has_template = is_dir($dir . '/template');
+                $has_app = is_dir($dir . '/app');
+                $has_assets = is_dir($dir . '/assets');
+
+                if (!($has_lib || $has_template || $has_app || $has_assets))
+                {
+                    Debug\info("WASP.File.Resolve", "Path {} does not contain any usable elements", $dir);
+                    continue;
+                }
+
                 $mod_name = basename($dir);
+                Debug\info("WASP.File.Resolve", "Found module {} in path {}", $mod_name, $dir);
+                self::$modules[$mod_name] = $dir;
+
+                // Check for an initialization module
                 $init_file = $dir . '/lib/' . $mod_name . '/module.class.php';
                 $class_name = $mod_name . '\\Module';
                 if (!file_exists($init_file) || !is_readable($init_file))
-                {
-                    Debug\info("WASP.File.Resolve", "Path {} does not contain init_file {}", $dir, $init_file);
                     continue;
-                }
 
                 require_once $init_file;
-                if (!class_exists($class_name))
-                {
-                    Debug\debug("WASP.File.Resolve", "Path {} does have init file {} but it does not contain class {}", $dir, $init_file, $class_name);
+                if (!class_exists($class_name) && !is_subclass_of($class_name, 'WASP\\Module'))
                     continue;
-                }
 
-                if (!is_subclass_of($class_name, 'WASP\\Module'))
-                {
-                    Debug\debug("WASP.File.Resolve", "Init file {} contans class {} but it does not implement WASP\Module", $init_file, $class_name);
-                    continue;
-                }
-
-                Debug\info("WASP.File.Resolve", "Found module {} in path {}", $mod_name, $dir);
-                self::$modules[$mod_name] = $dir;
                 call_user_func(array($class_name, "init"));
-
                 Translate::setupTranslation($mod_name, $dir, $class_name);
             }
         }
 
+        /**
+         * Load the cache from the file
+         */
         public static function loadCache()
         {
             $cache_file = WASP_CACHE . '/' . 'resolve.cache';
@@ -124,6 +147,9 @@ namespace WASP\File
             self::$cache = $cache;
         }
 
+        /**
+         * Save the cache once the script terminates.
+         */
         public static function saveCache()
         {
             if (!self::$cacheChanged)
@@ -144,6 +170,10 @@ namespace WASP\File
             Debug\info("WASP.File.Resolve", "Saved {} bytes resolve cache data from: {}", strlen($data), $cache_file);
         }
 
+        /**
+         * Remove a module from the cache
+         * @param $module string The name of the module to uncache
+         */
         public static function purgeModuleFromCache($module)
         {
             if (self::$cache === null)
@@ -154,7 +184,7 @@ namespace WASP\File
             {
                 foreach ($data as $idx => $cached)
                 {
-                    if ($cached['module'] === $module)
+                    if (isset($cached['module']) && $cached['module'] === $module)
                     {
                         unset(self::$cache[$ctype][$idx]);
                         ++$cnt;
@@ -167,6 +197,9 @@ namespace WASP\File
             Debug\info("WASP.Util.Resolve", "Removed {} elements from cache for module {}", $cnt, $module);
         }
 
+        /**
+         * The spl_autoloader that loads classes from the core and installed modules
+         */
         public static function autoload($class_name)
         {
             // Check the cache first
@@ -206,7 +239,7 @@ namespace WASP\File
             }
 
             if (class_exists($class_name))
-            {
+            { // SUCCESS!
                 \WASP\Debug\info("WASP.File.Resolve", "Resolved class {} to {} (module: {})", $class_name, $path, $found_module);
                 if (self::$cache !== null && $path !== null)
                 {
@@ -216,6 +249,15 @@ namespace WASP\File
             }
         }
 
+        /**
+         * Resolve an controller / route.
+         * @param $request string The incoming request
+         * @return array An array containing:
+         *               'path' => The file that best matches the route
+         *               'route' => The part of the request that matches
+         *               'module' => The source module for the controller
+         *               'remainder' => Arguments object with the unmatched part of the request
+         */
         public static function app($request)
         {
             $parts = array_filter(explode("/", $request));
@@ -247,7 +289,15 @@ namespace WASP\File
             Debug\info("WASP.Util.Resolve", "Resolved route for {} to {} (module: {})", $r, $route['path'], $route['module']);
             return array("route" => $r, "path" => $route['path'], 'module' => $route['module'], 'remainder' => $remain);
         }
-
+        
+        /**
+         * Find files and directories in a directory. The contents are filtered on
+         * .php files and .wasp files.
+         *
+         * @param $dir string The directory to list
+         * @param $recursive boolean Whether to also scan subdirectories
+         * @return array The contents of the directory.
+         */
         private static function listDir($dir, $recursive = true)
         {
             $contents = array();
@@ -289,6 +339,10 @@ namespace WASP\File
             return array_merge($contents, $subdirs);
         }
 
+        /**
+         * Get all routes available from all modules
+         * @return array The available routes and the associated controller
+         */
         public static function getRoutes()
         {
             if (isset(self::$cache['routes']))
@@ -319,6 +373,8 @@ namespace WASP\File
                                 if (empty($ptr['_']) || substr($ptr['_']['path'], -9) !== "index.php")
                                     $ptr['_'] = array('module' => $module, 'path' => $path);
                             }
+                            elseif ($part === ".wasp")
+                                continue; // TODO: NOT IMPLEMENTED
                             else
                             {
                                 $app_name = substr($part, 0, -4);
@@ -337,11 +393,22 @@ namespace WASP\File
                     }
                 }
             }
+
+            // Update the cache
             if (self::$cache !== null)
                 self::$cache['routes'] = $routes;
             return $routes;
         }
 
+        /**
+         * Resolve a template file. This method will traverse the installed
+         * modules in reversed order. The files are ordered alphabetically, and
+         * core always comes first.  By reversing the order, it becomes
+         * possible to override templates by modules coming later.
+         *
+         * @param $template string The template identifier. 
+         * @return string The location of a matching template.
+         */
         public static function template($template)
         {
             if (substr($template, -4) != ".php")
@@ -350,11 +417,29 @@ namespace WASP\File
             return self::resolve('template', $template, true);
         }
 
+        /**
+         * Resolve a asset file. This method will traverse the installed
+         * modules in reversed order. The files are ordered alphabetically, and
+         * core always comes first.  By reversing the order, it becomes
+         * possible to override assets by modules coming later.
+         *
+         * @param $asset string The name of the asset file
+         * @return string The location of a matching asset
+         */
         public static function asset($asset)
         {
             return self::resolve('assets', $asset, true);
         }
 
+        /**
+         * Helper method that searches the core and modules for a specific type of file. 
+         * The files are evaluated in alphabetical order, and core always comes first.
+         *
+         * @param $type string The type to find, template or asset
+         * @param $file string The file to locate
+         * @param $reverse boolean Whether to return the first matching or the last matching.
+         * @return string A matching file
+         */
         private static function resolve($type, $file, $reverse = false)
         {
             if (isset(self::$cache[$type][$file]))
@@ -400,6 +485,7 @@ namespace WASP\File
         }
     }
 
+    // Initialize the cache
     Resolve::init();
     spl_autoload_register(array('WASP\\File\\Resolve', 'autoload'));
 }

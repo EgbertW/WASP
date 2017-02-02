@@ -2,8 +2,13 @@
 
 namespace WASP;
 
-interface Module
+abstract class Module
 {
-    public static function init();
-    public static function getTextDomains();
+    public static function init()
+    {}
+
+    public static function getTextDomains()
+    {
+        return array();
+    }
 }
