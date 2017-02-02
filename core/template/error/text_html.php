@@ -25,14 +25,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 include tpl('parts/header');
 ?>
         <div class="large-12 medium-12 columns callout">
-            <h1><?=$error_code;?> - <?=escape($error_title);?></h1>
+            <h1><?=$error_code;?> - <?=txt($error_title);?></h1>
             <p>
-                <?=escape($error_title);?>
+                <?=txt($error_title);?>
             </p>
             <div class="row">
                 <div class="large-12 columns">
                     <div class="callout">
-                        <pre><?=escape($error_description);?></pre>
+                        <pre><?=txt($error_description);?></pre>
                     </div>
                 </div>
             </div>
