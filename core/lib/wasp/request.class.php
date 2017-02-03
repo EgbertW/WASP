@@ -288,7 +288,7 @@ class Request
 
     public static function cli()
     {
-        return array_key_exists('argv', $_SERVER);
+        return PHP_SAPI === "cli";
     }
 
 	public static function getBestResponseType(array $types)
