@@ -25,6 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\DB\Table;
 
+use WASP\DB\Table\DBException;
 use WASP\DB\Table\Column\Column;
 use WASP\DB\Table\Index\Index;
 
@@ -34,6 +35,7 @@ class Table
     protected $columns = array();
     protected $indexes = array();
     protected $foreign_keys = array();
+    protected $primary = null;
 
     public function __construct($name)
     {
@@ -42,7 +44,51 @@ class Table
 
     public function addColumn(Column $column)
     {
+        if (isset($this->columns[$column->getName()]))
+            throw new DBException("Duplicate column name '" . $column->getName() . "'");
+
         $this->columns[$column->getName()] = $column;
+        $column->setTable($this);
+        return $this;
+    }
+
+    public function getColumn($name)
+    {
+        if (isset($this->columns[$name]))
+            return $this->columns[$name];
+        throw new DBException("Unknown column: " . $name);
+    }
+
+    public function removeColumn(Column $column)
+    {
+        // Check if it exists
+        if (!isset($this->columns[$column->getName()]))
+            throw new DBException("Column is not part of this table");
+
+        // Check if it's used in any index
+        $remain = array();
+        foreach ($this->indexes as $k => $idx)
+        {
+            foreach ($idx->getColumns() as $c)
+            {
+                if ($c->getName() === $column->getName())
+                    throw new DBException("Cannot remove column that is in an index");
+            }
+        }
+
+
+        // Check if it's used in any foreign key
+        foreach ($this->foreign_keys as $k => $fk)
+        {
+            foreach ($fk->getColumns() as $c)
+            {
+                if ($c->getName() === $column->getName())
+                    throw new DBException("Cannot remove column that is in a foreign key");
+            }
+        }
+
+        // All well
+        unset($this->columns[$column->getName()]);
         return $this;
     }
 
@@ -52,9 +98,65 @@ class Table
         return $this;
     }
 
+    public function getForeignKey($name)
+    {
+        foreach ($this->foreign_keys as $fk)
+            if ($fk->getName() === $name)
+                return $fk;
+        throw new DBException("Unknown foreign key: " . $name);
+    }
+
+    public function removeForeignKey(ForeignKey $fkey)
+    {
+        foreach ($this->foreign_keys as $key => $fk)
+        {
+            if ($fk->getName() === $fkey->getName())
+            {
+                unset($this->foreign_keys[$key]);
+                break;
+            }
+        }
+        return $this;
+    }
+
     public function addIndex(Index $idx)
     {
+        if ($idx->getType() === Index::PRIMARY)
+        {
+            if ($this->primary !== null)
+                throw new DBException("A table can have only one primary key");
+            $this->primary = $idx;
+        }
+
         $this->indexes[] = $idx;
+        return $this;
+    }
+
+    public function getIndex($name)
+    {
+        foreach ($this->indexes as $idx)
+            if ($idx->getName() === $name)
+                return $idx;
+        throw new DBException("Unknown index: " . $name);
+    }
+
+    public function removeIndex(Index $index)
+    {
+        if ($index->getType() === Index::PRIMARY)
+        {
+            if ($this->primary !== $index)
+                throw new DBException("Cannot remove primary - it is not");
+            $this->primary = null;
+        }
+
+        foreach ($this->indexes as $key => $idx)
+        {
+            if ($idx->getName() === $index->getName())
+            {
+                unset($this->indexes[$key]);
+                break;
+            }
+        }
         return $this;
     }
 

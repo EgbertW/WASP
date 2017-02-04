@@ -30,9 +30,9 @@ use WASP\DB\DBException;
 
 class Index
 {
+    const PRIMARY = 3;
     const INDEX = 1;
     const UNIQUE = 2;
-    const PRIMARY = 3;
 
     protected $table;
     protected $name;

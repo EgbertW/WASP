@@ -31,7 +31,7 @@ class ForeignKey
 {
     const DO_CASCADE = 1;
     const DO_UPDATE = 2;
-    const DO_DELETE = 3;
+    const DO_NULL = 3;
 
     protected $name;
     protected $table;
@@ -42,9 +42,22 @@ class ForeignKey
     protected $on_update = null;
     protected $on_delete = null;
 
-    public function __construct($name)
+    public function __construct($name = null)
     {
         $this->name = $name;
+    }
+
+    public function getName()
+    {
+        if ($this->name === null)
+        {
+            $this->name = $this->table->getName() . "_";
+            $names = array();
+            foreach ($this->columns as $col)
+                $names[] = $col->getName();
+            $this_name .= implode("_", $names) . "_fkey";
+        }
+        return $this->name;
     }
 
     public function setReferringColumn(Column $column)

@@ -59,7 +59,9 @@ class Column
 
     protected $default = null;
 
-    public function __construct($name, $type, $max_length, $numeric_scale, $numeric_precision, $nullable, $default)
+    protected $serial = null;
+
+    public function __construct($name, $type, $max_length, $numeric_precision, $numeric_scale, $nullable, $default)
     {
         $this->name = $name;
         $this->type = $type;
@@ -70,6 +72,20 @@ class Column
         $this->default = $default;
     }
 
+    public function setSerial($serial = true)
+    {
+        $serial = $serial == true;
+        if ($serial && $this->type !== Column::INT && $this->type !== Column::BIGINT)
+            throw new DBException("A serial column must be of type integer");
+
+        $this->serial = $serial == true;
+    }
+
+    public function getSerial()
+    {
+        return $serial;
+    }
+
     public function getTable()
     {
         return $this->table;
@@ -77,6 +93,13 @@ class Column
 
     public function setTable(Table $table)
     {
+        if ($this->serial)
+        {
+            foreach ($table->getColumns() as $c)
+                if ($c->name !== $this->name && $c->serial)
+                    throw new DBException("There can be only one serial column in a table");
+        }
+
         $this->table = $table;
     }
 
@@ -125,6 +148,7 @@ class Column
             "numeric_precision" => $this->numeric_precision,
             "numeric_scale" => $this->numeric_scale,
             "character_maximum_length" => $this->max_length,
+            "serial" => $this->serial
         );
     }
 }

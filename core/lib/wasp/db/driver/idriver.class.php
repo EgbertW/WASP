@@ -25,6 +25,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\DB\Driver;
 
+use WASP\DB\Table\Table;
+use WASP\DB\Table\Column\Column;
+
 class IDriver
 {
     public function identQuote($name);
@@ -34,9 +37,13 @@ class IDriver
     public function delete($table, $where);
     public function getWhere($where, &$col_idx, array &$params);
     public function getOrder($order);
-    public function getColumns($table);
 
-    public function createTable($table, $columns);
-    public function addColumn($table, array $column);
-    public function removeColumn($table, array $column);
+    public function createTable(Table $table);
+    public function addColumn(Table $Table, Column $column);
+    public function removeColumn(Table $Table, Column $column);
+    public function getColumns($table);
+    public function loadTable($table_name);
+
+    public function getColumnDefinition(Column $column);
 }
+

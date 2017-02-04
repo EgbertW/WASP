@@ -39,6 +39,7 @@ use PDO;
  */
 class DB
 {
+    private $logger;
     private static $default_db = null;
     private $pdo;
     private $qdriver;
@@ -49,6 +50,7 @@ class DB
      */
     private function __construct($config)
     {
+        $this->logger = new Debug\Log("WASP.DB.DB");
         $this->config = $config;
         if ($this->config->get('sql', 'lazy', true) == false)
             $this->connect();
@@ -148,6 +150,12 @@ class DB
     {
         if ($this->pdo === null)
             $this->connect();
+
+        if ($func === "exec")
+            $this->logger->info("Executing query: {}", $args[0]);
+        elseif ($func === "prepare")
+            $this->logger->info("Preparing query: {}", $args[0]);
+            
         return call_user_func_array(array($this->pdo, $func), $args);
     }
 }
