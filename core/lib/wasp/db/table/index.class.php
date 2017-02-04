@@ -1,0 +1,91 @@
+<?php
+/*
+This is part of WASP, the Web Application Software Platform.
+It is published under the MIT Open Source License.
+
+Copyright 2017, Egbert van der Wal
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+
+namespace WASP\DB\Table;
+
+use WASP\DB\Table\Column\Column;
+use WASP\DB\DBException;
+
+class Index
+{
+    const INDEX = 1;
+    const UNIQUE = 2;
+    const PRIMARY = 3;
+
+    protected $table;
+    protected $name;
+    protected $columns = array();
+
+    public function __construct($type, $name = null)
+    {
+        $this->type = $type;
+        $this->name = $name;
+    }
+
+    public function addColumn(Column $column)
+    {
+        $t = $column->getTable();
+        if ($this->table === null)
+            $this->table = $t;
+
+        if ($t !== $this->table)
+            throw new DBException("All columns in an index must be in the same table");
+
+        $this->columns[] = $column;
+    }
+
+    public function getName()
+    {
+        if ($this->type === Index::PRIMARY)
+            return "PRIMARY";
+
+        if ($this->name === null)
+        {
+            $this->name = $this->table->getName();
+            $cols = array();
+            foreach ($this->columns as $c)
+                $cols[] = $c->getName();
+            $this->name .= "_" . implode("_", $cols);
+
+            $this->name .= ($this->type === Index::UNIQUE) ? "_uidx" : "_idx";
+        }
+        return $this->name;
+    }
+
+    public function getColumns()
+    {
+        return $this->columns;
+    }
+
+    public function getType()
+    {
+        return $this->type;
+    }
+
+    public function getTable()
+    {
+        return $this->table;
+    }
+}
