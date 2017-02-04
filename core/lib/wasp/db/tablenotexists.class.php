@@ -1,4 +1,5 @@
 <?php
+
 /*
 This is part of WASP, the Web Application Software Platform.
 It is published under the MIT Open Source License.
@@ -25,5 +26,5 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\DB;
 
-class DAOException extends DBException
+class TableNotExists extends DBException
 {}

@@ -33,6 +33,8 @@ class CLIException extends \RuntimeException
  */
 class CLI
 {
+    const MAX_LINE_LENGTH = 80;
+
     private $arguments = array();
     private $parameters = array();
 
@@ -120,7 +122,7 @@ class CLI
                 $res[$k] = $v;
         }
 
-        return $res;
+        return new Arguments($res);
     }
 
     /**
@@ -152,14 +154,34 @@ class CLI
         return trim($ret);
     }
 
+    public static function formatText($indent, $max_width, $text, $ostr = STDOUT)
+    {
+        $parts = explode(" ", $text);
+        $str_part = "";
+        $first = true;
+        foreach ($parts as $p)
+        {
+            if (strlen($str_part) + ($first ? $indent : 0) + strlen($p) > $max_width && strlen($str_part) != $indent)
+            {
+                fprintf($ostr, $str_part . "\n");
+                $first = false;
+                $str_part = str_pad("", $indent);
+            }
+            $str_part .= $p . " ";
+        }
+        if (trim($str_part) !== "")
+            fprintf($ostr, $str_part . "\n");
+    }
+
     /**
      * Show the help text, generated based on the configured options
      */
-    public function syntax($stderr = true)
+    public function syntax($error = "Please specify valid options")
     {
-        $ostr = $stderr ? STDERR : STDOUT;
+        $ostr = (!$error) ? STDOUT : STDERR;
+        if (is_string($error))
+            fprintf($ostr, "Error: %s\n", $error);
         fprintf($ostr, "Syntax: php " . $_SERVER['argv'][0] . " <options> <action>\n\n");
-        $max = 80;
         fprintf($ostr, "Options: \n");
         $max_opt_length = 0;
         $max_arg_length = 0;
@@ -189,21 +211,8 @@ class CLI
             $indent = strlen($pstr) + 4;
             fprintf($ostr, $pstr);
 
-            $first = true;
-            $parts = explode(" ", $param[3]);
-            $str_part = "";
-            foreach ($parts as $p)
-            {
-                if (strlen($str_part) + ($first ? $indent : 0) + strlen($p) > $max && strlen($str_part) != $indent)
-                {
-                    fprintf($ostr, $str_part . "\n");
-                    $first = false;
-                    $str_part = str_pad("", $indent);
-                }
-                $str_part .= $p . " ";
-            }
-            if (trim($str_part) !== "")
-                fprintf($ostr, $str_part . "\n");
+            self::formatText($indent, self::MAX_LINE_LENGTH, $param[3], $ostr);
         }
+        exit($error === false ? 0 : 1);
     }
 }

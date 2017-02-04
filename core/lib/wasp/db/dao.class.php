@@ -23,7 +23,10 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace Model;
+namespace WASP\DB\DAO;
+
+use WASP\Config;
+use PDOException;
 
 class DAO
 {
@@ -37,6 +40,12 @@ class DAO
 
     /** Override to set the name of the table */
     protected static $table = null;
+
+    /** A prefix to prepend to the table name */
+    protected static $prefix = null;
+
+    /** The columns defined in the database */
+    protected static $columns = null;
 
     /** The quote character for identifiers */
     protected static $ident_quote = '`';
@@ -145,7 +154,7 @@ class DAO
     protected static function select($where = array(), $order = array(), array $params = array())
     {
         $db = DB::get();
-        $q = "SELECT * FROM " . self::identQuote(static::$table);
+        $q = "SELECT * FROM " . self::identQuote(static::tablename());
         
         $col_idx = 0;
         $q .= static::getWhere($where, $col_idx, $params);
@@ -164,7 +173,7 @@ class DAO
         if (!isset($record[$idf]))
             throw new DAOException("No ID set for record to be updated");
 
-        $q = "UPDATE " . self::identQuote(static::$table) . " SET ";
+        $q = "UPDATE " . self::identQuote(static::tablename()) . " SET ";
 
         $id = $record[$idf];
         if (empty($id))
@@ -204,7 +213,7 @@ class DAO
         if (!empty($record[$idf]))
             throw new DAOException("ID set for record to be inserted");
 
-        $q = "INSERT INTO " . self::identQuote(static::$table) . " ";
+        $q = "INSERT INTO " . self::identQuote(static::tablename()) . " ";
         $fields = array_map(array("Model\\DAO", "identQuote"), array_keys($record));
         $q .= "(" . implode(", ", $fields) . ")";
 
@@ -232,7 +241,7 @@ class DAO
 
     protected static function delete($where)
     {
-        $q = "DELETE FROM " . self::identQuote(static::$table);
+        $q = "DELETE FROM " . self::identQuote(static::tablename());
         $col_idx = 0;
         $params = array();
         $q .= static::getWhere($where, $col_idx, $params);
@@ -442,4 +451,52 @@ class DAO
         self::$classesnames[$cl] = $name;
     }
 
+    public static function tablename()
+    {
+        if (DAO::$prefix === null)
+        {
+            $config = Config::getConfig();
+            DAO::$prefix = $config->get('sql', 'prefix', '');
+        }
+
+        return DAO::$prefix . self::$table;
+    }
+
+    public static function quoteIdentity($identity)
+    {
+        $identity = str_replace(self::$ident_quote, self::$ident_quote . self::$ident_quote, $identity);
+        return self::$ident_quote . $identity . self::$ident_quote;
+    }
+
+    public static function getColumns()
+    {
+        if ($this->columns === null)
+        {
+            $config = Config::getConfig();
+            $dbname = $config->get('sql', 'database');
+            $schema = $config->get('sql', 'schema');
+            if (empty($schema))
+                $schema = $dbname;
+
+            $db = DB::get();
+            try
+            {
+                $q = $db->prepare("
+                    SELECT column_name, data_type, is_nullable, column_default, numeric_precision, numeric_scale, character_maximum_length
+                        FROM information_schema.columns 
+                        WHERE table_name = :table AND table_schema = :schema
+                        ORDER BY ordinal_position
+                ");
+
+                $q->execute(array("table_name" => self::tablename(), "schema" => $schema));
+
+                $this->columns = $q->fetchAll();
+            }
+            catch (PDOException $e)
+            {
+                throw new TableNotExists();
+            }
+        }
+        return $this->columns;
+    }
 }

@@ -1,22 +1,27 @@
 <?php
 
+use WASP\CLI;
+use WASP\Task;
+use WASP\Arguments;
+
 require_once "../sys/init.php";
 
-$a = new WASP\CLI;
+$a = new CLI;
 $a->addOption("r", "run", "action", "Run the specified task");
+$a->addOption("s", "list", false, "List the available tasks");
 $opts = $a->parse($_SERVER['argv']);
 
-if (!isset($opts['run']))
-{
-    $a->syntax();
-    die();
-}
-
 if (isset($opts['help']))
+    $a->syntax("");
+
+if ($opts->has('list'))
 {
-    die($a->syntax(false));
+    echo "LISTIN TASKS\n";
+    Task::listTasks();
+    exit();
 }
 
-$task = $opts['run'];
+if (!$opts->has('run'))
+    $a->syntax("Please specify the action to run");
 
-echo "Running task {$task}\n";
+Task::runTask($opts->get('run'));
