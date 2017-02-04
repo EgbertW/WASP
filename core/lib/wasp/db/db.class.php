@@ -41,6 +41,7 @@ class DB
 {
     private static $default_db = null;
     private $pdo;
+    private $qdriver;
     private $config;
 
     /**
@@ -83,6 +84,17 @@ class DB
         $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
             
         $this->pdo = $pdo;
+
+        $pos = strpos($dsn, ":");
+        $type = substr($dsn, 0, $pos);
+        $driver = "WASP\\DB\\Driver\\" . $type;
+
+        if (!class_exists($driver))
+        {
+            throw new DBException("No driver available for database type $type");
+        }
+
+        $this->qdriver = new $driver($this);
     }
 
     /**
@@ -111,6 +123,10 @@ class DB
         return $db;
     }
 
+    public function driver()
+    {
+        return $this->qdriver;
+    }
     
     /**
      * @return PDO The PDO object of this connection. Can be used to extract the unwrapped PDO, should the need arise.
