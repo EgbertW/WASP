@@ -51,6 +51,14 @@ class Log
 
     public function __construct($module)
     {
+        if (is_object($module))
+        {
+            $classname = get_class($module);
+            $module = str_replace('\\', '.', $classname);
+        }
+        elseif (class_exists($module, false))
+            $module = str_replace($module, '.', $module);
+
         $this->module = $module;
     }
 

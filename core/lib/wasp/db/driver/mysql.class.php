@@ -36,12 +36,12 @@ use WASP\DB\Table\Column\Column;
 use WASP\Config;
 use WASP\Debug\Log;
 
+use PDO;
 use PDOException;
 
-class MySQL implements IDriver
+class MySQL extends Driver
 {
-    private $logger;
-    private $db;
+    protected $iquotechar = '`';
 
     protected $mapping = array(
         Column::CHAR => 'CHAR',
@@ -49,39 +49,27 @@ class MySQL implements IDriver
         Column::TEXT => 'MEDIUMTEXT',
         Column::JSON => 'MEDIUMTEXT',
 
-        Column::BOOLEAN = 'TINYINT',
+        Column::BOOLEAN => 'TINYINT',
         Column::INT => 'INT',
         Column::BIGINT => 'BIGINT',
         Column::FLOAT => 'FLOAT',
         Column::DECIMAL => 'DECIMAL',
 
         Column::DATETIME => 'DATETIME',
-        Column::DATE = 'DATE',
-        Column::TIME = 'TIME',
+        Column::DATE => 'DATE',
+        Column::TIME => 'TIME',
 
-        Column::BINARY => 'MEDIUMBLOBL'
+        Column::BINARY => 'MEDIUMBLOB'
     );
-
-    public function __construct(DB $db)
-    {
-        $this->db = $db;
-        $this->logger = new Log("WASP.DB.Driver.MySQL");
-    }
-
-    public function identQuote($name)
-    {
-        return '"' . str_replace('"', '""', $name) . '"';
-    }
 
     public function select($table, $where, $order, array $params)
     {
-        $q = "SELECT * FROM " . $this->identQuote($table);
+        $q = "SELECT * FROM " . $this->getName($table);
         
         $col_idx = 0;
         $q .= static::getWhere($where, $col_idx, $params);
         $q .= static::getOrder($order);
 
-        $this->logger->info("Preparing query {}", $q);
         $st = $this->db->prepare($q);
 
         $st->execute($params);
@@ -105,11 +93,11 @@ class MySQL implements IDriver
         foreach ($record as $k => $v)
         {
             $col_name = "col" . (++$col_idx);
-            $parts[] .= self::identQuote($k) . " = :{$col_name}";
+            $parts[] .= $this->identQuote($k) . " = :{$col_name}";
             $params[$col_name] = $v;
         }
 
-        $q = "UPDATE " . self::identQuote($table) . " SET ";
+        $q = "UPDATE " . $this->getName($table) . " SET ";
         $q .= implode(", ", $parts);
         $q .= static::getWhere(array($idfield => $id), $col_idx, $params);
 
@@ -125,7 +113,7 @@ class MySQL implements IDriver
         if (!empty($record[$idfield]))
             throw new DAOException("ID set for record to be inserted");
 
-        $q = "INSERT INTO " . self::identQuote($table) . " ";
+        $q = "INSERT INTO " . $this->getName($table) . " ";
         $fields = array_map(array($this, "identQuote"), array_keys($record));
         $q .= "(" . implode(", ", $fields) . ")";
 
@@ -140,7 +128,6 @@ class MySQL implements IDriver
         }
         $q .= " VALUES (" . implode(", ", $parts) . ")";
     
-        $this->logger->info("Preparing insert query {}", $q);
         $st = $this->db->prepare($q);
 
         $this->logger->info("Executing insert query with params {}", $q);
@@ -150,9 +137,53 @@ class MySQL implements IDriver
         return $record[$idfield];
     }
 
+    public function upsert($table, $idfield, $conflict, array &$record)
+    {
+        if (!empty($record[$idfield]))
+            return $This->update($table, $idfield, $record);
+
+        $q = "INSERT INTO " . $this->getName($table) . " ";
+        $fields = array_map(array($this, "identQuote"), array_keys($record));
+        $q .= "(" . implode(", ", $fields) . ")";
+
+        $col_idx = 0;
+        $params = array();
+        $parts = array();
+        foreach ($record as $val)
+        {
+            $col_name = "col" . (++$col_idx);
+            $parts[] = ":{$col_name}";
+            $params[$col_name] = $val;
+        }
+        $q .= " VALUES (" . implode(", ", $parts) . ")";
+
+        // Upsert part
+        $q .= " ON DUPLICATE KEY UPDATE ";
+        $conflict = (array)$conflict;
+        $parts = array();
+        foreach ($record as $field => $value)
+        {
+            if (in_array($field, $conflict))
+                continue;
+
+            $col_name = "col" . (++$col_idx);
+            $parts[] = $this->identQuote($field) . ' = :' . $col_name;
+            $params[$col_name] = $value;
+        }
+        $q .= implode(",", $parts);
+    
+        $st = $this->db->prepare($q);
+
+        $this->logger->info("Executing upsert query with params {}", $params);
+        $st->execute($params);
+        $record[$idfield] = $this->db->lastInsertId();
+
+        return $record[$idfield];
+    }
+
     public function delete($table, $where)
     {
-        $q = "DELETE FROM " . self::identQuote($table);
+        $q = "DELETE FROM " . $this->getName($table);
         $col_idx = 0;
         $params = array();
         $q .= static::getWhere($where, $col_idx, $params);
@@ -164,84 +195,8 @@ class MySQL implements IDriver
         return $st->rowCount();
     }
 
-    protected function getWhere($where, &$col_idx, array &$params)
-    {
-        if (is_string($where))
-            return " WHERE " . $where;
-
-        if (is_array($where) && count($where))
-        {
-            $parts = array();
-            foreach ($where as $k => $v)
-            {
-                if (is_array($v))
-                {
-                    $op = $v[0];
-                    $val = $v[1];
-                }
-                else
-                {
-                    $op = "=";
-                    $val = $v;
-                }
-
-                if ($val === null)
-                {
-                    if ($op === "=")
-                        $parts[] = self::identQuote($k) . " IS NULL";
-                    else if ($op == "!=")
-                        $parts[] = self::identQuote($k) . " IS NOT NULL";
-                }
-                else
-                {
-                    $col_name = "col" . (++$col_idx);
-                    $parts[] = self::identQuote($k) . " {$op} :{$col_name}";
-                    $params[$col_name] = $v;
-                }
-            }
-
-            return " WHERE " . implode(" AND ", $parts);
-        }
-
-        return "";
-    }
-
-    public function getOrder($order)
-    {
-        if (is_string($order))
-            return "ORDER BY " . $order;
-
-        if (is_array($order) && count($order))
-        {
-            $parts = array();
-            foreach ($order as $k => $v)
-            {
-                if (is_numeric($k))
-                {
-                    $k = $v;
-                    $v = "ASC";
-                }
-                else
-                {
-                    $v = strtoupper($v);
-                    if ($v !== "ASC" && $v !== "DESC")
-                        throw new DAOException("Invalid order type {$v}");
-                }
-                $parts[] = self::identQuote($k) . " " . $v;
-            }
-
-            return " ORDER BY " . implode(", ", $parts);
-        }
-
-        return "";
-    }
-
     public function getColumns($table_name)
     {
-        $config = Config::getConfig();
-        $database = $config->get('sql', 'database');
-        $schema = $config->get('sql', 'schema', $database);
-
         try
         {
             $q = $this->db->prepare("
@@ -251,7 +206,7 @@ class MySQL implements IDriver
                     ORDER BY ordinal_position
             ");
 
-            $q->execute(array("table_name" => $table_name, "schema" => $schema));
+            $q->execute(array("table_name" => $table_name, "schema" => $this->schema));
 
             return $q->fetchAll();
         }
@@ -261,18 +216,9 @@ class MySQL implements IDriver
         }
     }
 
-    protected function validateColumn(array $column)
-    {
-        $keys = array('column_name', 'data_type', 'is_nullable', 'column_default', 'numeric_precision', 'numeric_scale', 'character_maximum_length');
-        foreach ($keys as $k)
-            if (!isset($column[$k]))
-                throw new DBException("Field {$k} from column definition is missing");
-        return true;
-    }
-
     public function createTable(Table $table)
     {
-        $query = "CREATE TABLE " . $this->identQuote($table->getName()) . " (\n";
+        $query = "CREATE TABLE " . $this->getName($table->getName()) . " (\n";
 
         $cols = $table->getColumns();
         $coldefs = array();
@@ -284,8 +230,8 @@ class MySQL implements IDriver
             $coldefs[] = $this->getColumnDefinition($c);
         }
 
-        $query .= "    " . implode("\n    ", $coldefs);
-        $query .= ") ENGINE=InnoDB\n";
+        $query .= "    " . implode(",\n    ", $coldefs);
+        $query .= "\n) ENGINE=InnoDB\n";
 
         // Create the main table
         $this->db->exec($query);
@@ -295,11 +241,11 @@ class MySQL implements IDriver
 
         $indexes = $table->getIndexes();
         foreach ($indexes as $idx)
-            $this->addIndex($table, $idx);
+            $this->createIndex($table, $idx);
 
         // Add auto_increment
         if ($serial !== null)
-            $this->createSerial($serial);
+            $this->createSerial($table, $serial);
 
         // Add foreign keys
         $fks = $table->getForeignKeys();
@@ -308,40 +254,44 @@ class MySQL implements IDriver
         return $this;
     }
 
-    public function dropTable(Table $table)
+    /**
+     * Drop a table
+     *
+     * @param $table mixed The table to drop
+     * @param $safe boolean Add IF EXISTS to query to avoid errors when it does not exist
+     * @return Driver Provides fluent interface 
+     */
+    public function dropTable($table, $safe = false)
     {
-        $query = "DROP TABLE " . $this->identQuote($table->getName());
-        $this->db->exec($query);
-        return $this;
-    }
-    
-    public function truncateTable(Table $table)
-    {
-        $query = "TRUNCATE " . $this->identQuote($table->getName());
+        $query = "DROP TABLE " . ($safe ? " IF EXISTS " : "") . $this->getName($table);
         $this->db->exec($query);
         return $this;
     }
 
+    
     public function createIndex(Table $table, Index $idx)
     {
         $cols = $idx->getColumns();
         $names = array();
         foreach ($cols as $col)
-            $names[] = $this->identQuote($col->getName());
+            $names[] = $this->identQuote($col);
         $names = '(' . implode(',', $names) . ')';
 
         if ($idx->getType() === Index::PRIMARY)
         {
-            $this->db->exec("ALTER TABLE " . $this->identQuote($table->getName()) . " ADD PRIMARY KEY $names)");
-            if ($idx->getColumn()->getSerial())
-                $serial_col = $idx->getColumn();
+            $this->db->exec("ALTER TABLE " . $this->getName($table) . " ADD PRIMARY KEY $names");
+            $cols = $idx->getColumns();
+            $first_col = $cols[0];
+            $col = $table->getColumn($first_col);
+            if (count($cols) == 1 && $col->getSerial())
+                $serial_col = $col;
         }
         else
         {
             $q = "CREATE ";
             if ($idx->getType() === Index::UNIQUE)
                 $q .= "UNIQUE ";
-            $q .= "INDEX ON " . $this->identQuote($table->getName()) . " $names";
+            $q .= "INDEX " . $this->getName($idx) . " ON " . $this->getName($table) . " $names";
             $this->db->exec($q);
         }
         return $this;
@@ -350,8 +300,8 @@ class MySQL implements IDriver
     public function dropIndex(Table $table, Index $idx)
     {
         $name = $idx->getName();
-        $q = " DROP INDEX " . $this->identQuote($name) . " ON " . $this->identQuote($table->getName());
-        $this-db->exec($q);
+        $q = " DROP INDEX " . $this->identQuote($name) . " ON " . $this->getName($table);
+        $this->db->exec($q);
         return $this;
     }
 
@@ -361,18 +311,18 @@ class MySQL implements IDriver
         $src_cols = array();
 
         foreach ($fk->getColumns() as $c)
-            $src_cols[] = $this->identQuote($c->getName());
+            $src_cols[] = $this->identQuote($c);
 
-        $tgt_table = $fk->getReferredTable()->getName();
+        $tgt_table = $fk->getReferredTable();
         $tgt_cols = array();
 
         foreach ($fk->getReferredColumns() as $c)
-            $tgt_cols[] = $this->identQuote($c->getName());
+            $tgt_cols[] = $this->identQuote($c);
 
-        $q = 'ALTER TABLE ' . $this->identQuote($src_table)
-            . ' ADD FOREIGN KEY ' . $this->identQuote($fk->getName())
+        $q = 'ALTER TABLE ' . $this->getName($src_table)
+            . ' ADD FOREIGN KEY ' . $this->getName($fk)
             . '(' . implode(',', $src_cols) . ') '
-            . 'REFERENCES ' . $this->identQuote($tgt_table)
+            . 'REFERENCES ' . $this->getName($tgt_table)
             . '(' . implode(',', $tgt_cols) . ')';
 
         $on_update = $fk->getOnUpdate();
@@ -404,28 +354,30 @@ class MySQL implements IDriver
 
     public function createSerial(Table $table, Column $column)
     {
-        $q = "ALTER TABLE " . $this->identQuote($table->getName()) 
-            . " MODIFY " . $this->identQuote($column->getName())
+        $q = "ALTER TABLE " . $this->getName($table->getName()) 
+            . " MODIFY "
             . " " . $this->getColumnDefinition($column) . " AUTO_INCREMENT";
 
-        $this-db->exec($column);
+        $this->db->exec($q);
         return $this;
     }
 
     public function dropSerial(Table $table, Column $column)
     {
-        $q = "ALTER TABLE " . $this->identQuote($table->getName()) 
+        $q = "ALTER TABLE " . $this->getName($table->getName()) 
             . " MODIFY " . $this->identQuote($column->getName())
             . " " . $this->getColumnDefinition($column);
 
-        $this-db->exec($column);
-        $column->setSerial(false);
+        $this->db->exec($column);
+        $column
+            ->setSerial(false)
+            ->setDefault(null);
         return $this;
     }
 
     public function addColumn(Table $table, Column $column)
     {
-        $q = "ALTER TABLE " . $this->identQuote($table) . " ADD COLUMN " . $this->getColumnDefinition($column);
+        $q = "ALTER TABLE " . $this->getName($table) . " ADD COLUMN " . $this->getColumnDefinition($column);
         $this->db->exec($q);
 
         return $this;
@@ -433,7 +385,7 @@ class MySQL implements IDriver
 
     public function removeColumn(Table $table, Column $column)
     {
-        $q = "ALTER TABLE " . $this->identQuote($table->getName()) . " DROP COLUMN " . $this->identQuote($column->getName());
+        $q = "ALTER TABLE " . $this->getName($table->getName()) . " DROP COLUMN " . $this->identQuote($column->getName());
         $this->db->exec($q);
 
         return $this;
@@ -442,8 +394,8 @@ class MySQL implements IDriver
     public function getColumnDefinition(Column $col)
     {
         $numtype = $col->getType();
-        if (!isset($this->mapping[$type]))
-            throw new DBException("Unsupported column type: $type");
+        if (!isset($this->mapping[$numtype]))
+            throw new DBException("Unsupported column type: $numtype");
 
         $type = $this->mapping[$numtype];
         $coldef = $this->identQuote($col->getName()) . " " . $type;
@@ -468,7 +420,7 @@ class MySQL implements IDriver
         $def = $col->getDefault();
         if ($def)
             $coldef .= " DEFAULT " . $def;
-
+        
         return $coldef;
     }
 
@@ -538,10 +490,6 @@ class MySQL implements IDriver
 
     public function getConstraints($table_name)
     {
-        $cfg = Config::getConfig();
-        $database = $cfg->get('sql', 'database');
-        $schema = $cfg->get('sql', 'schema', $database);
-
         $q = "
         SELECT 
             kcu.CONSTRAINT_NAME AS CONSTRAINT_NAME,
@@ -562,7 +510,7 @@ class MySQL implements IDriver
         ";
 
         $q = $db->prepare($q);
-        $q->execute(array("schema " => $schema, "table" => $table_name));
+        $q->execute(array("schema " => $this->schema, "table" => $table_name));
 
         return $q->fetchAll();
     }

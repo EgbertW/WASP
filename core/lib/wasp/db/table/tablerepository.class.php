@@ -23,27 +23,24 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\DB\Driver;
+namespace WASP\DB\Table;
 
-use WASP\DB\Table\Table;
-use WASP\DB\Table\Column\Column;
+use WASP\DB\DBException;
 
-class IDriver
+class TableRepository
 {
-    public function identQuote($name);
-    public function select($table, $where, $order, array $params);
-    public function update($table, $idfield, array $record);
-    public function insert($table, $idfield, array &$record);
-    public function delete($table, $where);
-    public function getWhere($where, &$col_idx, array &$params);
-    public function getOrder($order);
+    protected static $tables;
 
-    public function createTable(Table $table);
-    public function addColumn(Table $Table, Column $column);
-    public function removeColumn(Table $Table, Column $column);
-    public function getColumns($table);
-    public function loadTable($table_name);
+    public static function getTable($table)
+    {
+        if (!isset(self::$table[$table]))
+            throw new DBException("Table $table not ofund");
 
-    public function getColumnDefinition(Column $column);
+        return self::$table[$table];
+    }
+
+    public static function putTable(Table $table)
+    {
+        $this->tables[$table->getName()] = $table;
+    }
 }
-

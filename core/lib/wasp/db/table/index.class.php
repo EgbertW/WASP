@@ -38,22 +38,41 @@ class Index
     protected $name;
     protected $columns = array();
 
-    public function __construct($type, $name = null)
+    public function __construct($type, $column = null)
     {
         $this->type = $type;
-        $this->name = $name;
+        $args = func_get_args();
+        array_shift($args); // Type
+
+        foreach ($args as $arg)
+            $this->addColumn($arg);
+    }
+    
+    public function setTable($table)
+    {
+        if ($table instanceof Table)
+            $table = $table->getName();
+        $this->table = $table;
     }
 
-    public function addColumn(Column $column)
+    public function addColumn($column)
     {
-        $t = $column->getTable();
-        if ($this->table === null)
-            $this->table = $t;
+        $args = func_get_args();
+        foreach ($args as $column)
+        {
+            if (is_string($column))
+                $this->columns[] = $column;
+            elseif ($column instanceof Column)
+                $this->columns[] = $column->getName();
+            else
+                throw new DBException("Invalid column for index");
+        }
+    }
 
-        if ($t !== $this->table)
-            throw new DBException("All columns in an index must be in the same table");
-
-        $this->columns[] = $column;
+    public function setName($name)
+    {
+        $this->name = $name;
+        return $this;
     }
 
     public function getName()
@@ -63,12 +82,7 @@ class Index
 
         if ($this->name === null)
         {
-            $this->name = $this->table->getName();
-            $cols = array();
-            foreach ($this->columns as $c)
-                $cols[] = $c->getName();
-            $this->name .= "_" . implode("_", $cols);
-
+            $this->name = $this->table . "_" . implode("_", $this->columns);
             $this->name .= ($this->type === Index::UNIQUE) ? "_uidx" : "_idx";
         }
         return $this->name;

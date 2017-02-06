@@ -30,37 +30,89 @@ use WASP\DB\DBException;
 class ForeignKey
 {
     const DO_CASCADE = 1;
-    const DO_UPDATE = 2;
+    const DO_RESTRICT = 2;
     const DO_NULL = 3;
 
-    protected $name;
-    protected $table;
+    protected $name = null;
+    protected $table = null;
     protected $columns = array();
-    protected $referred_table;
+    protected $referred_table = null;
     protected $referred_columns = array();
 
     protected $on_update = null;
     protected $on_delete = null;
 
-    public function __construct($name = null)
+    public function __construct(
+        $column = null, 
+        $referred_table = null, 
+        $referred_column = null, 
+        $on_update = ForeignKey::DO_RESTRICT, 
+        $on_delete = ForeignKey::DO_RESTRICT
+    )
+    {
+        if (is_array($column))
+        {
+            if (isset($column['column']) && isset($column['referred_table']) && isset($column['referred_column']))
+            {
+                $this->columns = (array)$column['column'];
+                $this->referred_table = $column['referred_table'];
+                $this->referred_columns = (array)$column['referred_column'];
+                if (isset($column['name']))
+                    $this->name = (int)$column['name'];
+                if (isset($column['on_update']))
+                    $this->on_update = (int)$column['on_update'];
+                if (isset($column['on_delete']))
+                    $this->on_delete = (int)$column['on_delete'];
+            }
+            elseif (is_array($referred_column) && count($referred_column) === count($column))
+            {
+                $this->columns = array_values($column);
+                $this->referred_columns = array_values($referred_column);
+                $this->referred_table = $referred_table;
+            }
+            else
+                throw new DBException("Invalid arguments specified: first argument is not a suitable array");
+        }
+        else
+        {
+            $this->columns = (array)$column;
+            $this->referred_table = $referred_table;
+            if (isset($referred_column))
+                $this->referred_columns = (array)$referred_column;
+            $this->on_update = $on_update;
+            $this->on_delete = $on_delete;
+        }
+    }
+
+    public function setName($name)
     {
         $this->name = $name;
+        return $this;
     }
 
     public function getName()
     {
+        if ($this->table === null)
+            throw new DBException("No table set for foreign key");
+
         if ($this->name === null)
         {
-            $this->name = $this->table->getName() . "_";
-            $names = array();
-            foreach ($this->columns as $col)
-                $names[] = $col->getName();
-            $this_name .= implode("_", $names) . "_fkey";
+            $this->name = $this->table . "_";
+            $this->name .= implode("_", $this->columns) . "_fkey";
         }
         return $this->name;
     }
 
-    public function setReferringColumn(Column $column)
+    public function setTable($table)
+    {
+        if ($table instanceof Table)
+            $table = $table->getName();
+
+        $this->table = $table;
+        return $this;
+    }
+
+    public function addReferringColumn(Column $column)
     {
         $args = func_get_args();
         foreach ($args as $arg)
@@ -82,22 +134,26 @@ class ForeignKey
         return $this;
     }
 
-    public function setReferredColumn(Column $column)
+    public function setReferredTable($table)
+    {
+        if ($table instanceof Table)
+            $this->table = $table->getName();
+        else
+            $this->table = $table;
+        return $this;
+    }
+
+    public function addReferredColumn($column)
     {
         $args = func_get_args();
         foreach ($args as $arg)
         {
-            if (!($arg instanceof Column))
-                throw new DBException("Invalid column");
-
-            $t = $arg->getTable();
-            if ($t === null)
-                throw new DBException("Column does not belong to a table");
-
-            if ($this->referred_table !== null && $this->referred_table !== $t)
-                throw new DBException("All referred columns must be in the same table");
-            
-            $this->referred_table = $t;
+            if (is_string($arg))
+                $this->referred_columns[] = $column; 
+            elseif ($arg instanceof Column)
+                $this->referred_columns[] = $column->getName();
+            else
+                throw new DBException("Invalid column type");
         }
         return $this;
     }

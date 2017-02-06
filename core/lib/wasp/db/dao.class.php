@@ -41,9 +41,6 @@ class DAO
     /** Override to set the name of the table */
     protected static $table = null;
 
-    /** A prefix to prepend to the table name */
-    protected static $prefix = null;
-
     /** The columns defined in the database */
     protected static $columns = null;
 
@@ -453,13 +450,7 @@ class DAO
 
     public static function tablename()
     {
-        if (DAO::$prefix === null)
-        {
-            $config = Config::getConfig();
-            DAO::$prefix = $config->get('sql', 'prefix', '');
-        }
-
-        return DAO::$prefix . self::$table;
+        return static::$table;
     }
 
     public static function quoteIdentity($identity)

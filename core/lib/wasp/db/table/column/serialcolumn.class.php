@@ -25,10 +25,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\DB\Table\Column;
 
-class IntColumn extends Column
+class SerialColumn extends IntColumn
 {
     public function __construct($name, $nullable = false, $default = null)
     {
         parent::__construct($name, Column::INT, null, 11, null, $nullable, $default);
+        $this->setSerial();
     }
 }

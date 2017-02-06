@@ -83,7 +83,7 @@ class Column
 
     public function getSerial()
     {
-        return $serial;
+        return $this->serial;
     }
 
     public function getTable()

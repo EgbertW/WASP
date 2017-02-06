@@ -69,6 +69,7 @@ class DB
         $password = $this->config->get('sql', 'password');
         $host = $this->config->get('sql', 'hostname');
         $database = $this->config->get('sql', 'database');
+        $schema = $this->config->get('sql', 'schema', null);
         $dsn = $this->config->get('sql', 'dsn');
             
         if (!$dsn)
@@ -97,6 +98,8 @@ class DB
         }
 
         $this->qdriver = new $driver($this);
+        $this->qdriver->setDatabaseName($database, $schema);
+        $this->qdriver->setTablePrefix($this->config->get('sql', 'prefix', ''));
     }
 
     /**
@@ -127,6 +130,9 @@ class DB
 
     public function driver()
     {
+        if ($this->qdriver === null)
+            $this->connect();
+
         return $this->qdriver;
     }
     

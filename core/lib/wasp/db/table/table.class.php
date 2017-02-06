@@ -25,9 +25,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\DB\Table;
 
-use WASP\DB\Table\DBException;
+use WASP\DB\DBException;
 use WASP\DB\Table\Column\Column;
-use WASP\DB\Table\Index\Index;
+use WASP\DB\Table\Index;
+use WASP\DB\Table\ForeignKey;
+
+use WASP\Debug\Log;
 
 class Table
 {
@@ -40,6 +43,39 @@ class Table
     public function __construct($name)
     {
         $this->name = $name;
+
+        $duplicate = false;
+        try
+        {
+            $tb = TableRepository::getTable($name);
+            $duplicate = true;
+        }
+        catch (DBException $e)
+        { // This is actually the wanted situation }
+
+        if ($duplicate)
+            throw new DBException("Duplicate table definition for {$name}");
+
+        $args = func_get_args();
+        array_shift($args); // Name
+        foreach ($args as $arg)
+        {
+            if ($arg instanceof Column)
+                $this->addColumn($arg);
+            elseif ($arg instanceof Index)
+                $this->addIndex($arg);
+            elseif ($arg instanceof ForeignKey)
+                $this->addForeignKey($arg);
+            else
+                throw new DBException("Invalid argument: " . Log::str($arg));
+        }
+
+        TableRepository::putTable($name, $this);
+    }
+
+    public function getName()
+    {
+        return $this->name;
     }
 
     public function addColumn(Column $column)
@@ -89,11 +125,13 @@ class Table
 
         // All well
         unset($this->columns[$column->getName()]);
+        $column->setTable(null);
         return $this;
     }
 
     public function addForeignKey(ForeignKey $fk)
     {
+        $fk->setTable($this);
         $this->foreign_keys[] = $fk;
         return $this;
     }
@@ -121,6 +159,7 @@ class Table
 
     public function addIndex(Index $idx)
     {
+        $idx->setTable($this);
         if ($idx->getType() === Index::PRIMARY)
         {
             if ($this->primary !== null)

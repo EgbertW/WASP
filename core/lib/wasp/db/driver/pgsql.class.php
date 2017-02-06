@@ -26,50 +26,49 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP\DB\Driver;
 
 use WASP\DB\DB;
-use WASP\DB\DataType;
 use WASP\DB\DAOException;
 
+use WASP\DB\Table\Table;
+use WASP\DB\Table\Index;
+use WASP\DB\Table\ForeignKey;
+use WASP\DB\Table\Column\Column;
+
 use WASP\Config;
-use PDOException;
 use WASP\Debug\Log;
 
-class PostgreSQL implements IDriver
+use PDO;
+use PDOException;
+
+class PGSQL extends Driver
 {
-    private $logger;
-    private $db;
+    protected $iquotechar = '"';
 
     protected $mapping = array(
-        DataType::INT => 'int4',
-        DataType::CHAR => 'character',
-        DataType::STRING => 'character varying',
-        DataType::TEXT => 'text',
-        DataType::TIMESTAMP => 'timestamp without time zone',
-        DataType::TIMESTAMPTZ => 'timestamp with time zone',
-        DateType::DATE = 'timestamp with time zone',
-        DateType::TIME = 'timestamp with time zone',
-        DateType::BOOLEAN = 'boolean'
+        Column::CHAR => 'character',
+        Column::VARCHAR => 'character varying',
+        Column::TEXT => 'text',
+        Column::JSON => 'json',
+
+        Column::BOOLEAN => 'boolean',
+        Column::INT => 'integer',
+        Column::BIGINT => 'bigint',
+        Column::FLOAT => 'double precision',
+        Column::DECIMAL => 'decimal',
+
+        Column::DATETIME => 'timestamp without time zone',
+        Column::DATE => 'date',
+        Column::TIME => 'time',
+
+        Column::BINARY => 'bytea'
     );
-
-    public function __construct(DB $db)
-    {
-        $this->db = $db;
-        $this->logger = new Log("WASP.DB.Driver.PostgreSQL");
-    }
-
-    public function identQuote($name)
-    {
-        return '"' . str_replace('"', '""', $name) . '"';
-    }
 
     public function select($table, $where, $order, array $params)
     {
-        $q = "SELECT * FROM " . $this->identQuote($table);
+        $q = "SELECT * FROM " . $this->getName($table);
         
         $col_idx = 0;
-        $q .= static::getWhere($where, $col_idx, $params);
-        $q .= static::getOrder($order);
-
-        $this->logger->info("Preparing query {}", $q);
+        $q .= $this->getWhere($where, $col_idx, $params);
+        $q .= $this->getOrder($order);
         $st = $this->db->prepare($q);
 
         $st->execute($params);
@@ -80,11 +79,11 @@ class PostgreSQL implements IDriver
     {
         $id = $record[$idfield];
         if (empty($id))
-            throw new DAOException("No ID set for record to be updated");
+            throw new DBException("No ID set for record to be updated");
 
         unset($record[$idfield]);
         if (count($record) == 0)
-            throw new DAOException("Nothing to update");
+            throw new DBException("Nothing to update");
         
         $col_idx = 0;
         $params = array();
@@ -93,15 +92,14 @@ class PostgreSQL implements IDriver
         foreach ($record as $k => $v)
         {
             $col_name = "col" . (++$col_idx);
-            $parts[] .= self::identQuote($k) . " = :{$col_name}";
+            $parts[] .= $this->identQuote($k) . " = :{$col_name}";
             $params[$col_name] = $v;
         }
 
-        $q = "UPDATE " . self::identQuote($table) . " SET ";
+        $q = "UPDATE " . $this->getName($table) . " SET ";
         $q .= implode(", ", $parts);
-        $q .= static::getWhere(array($idfield => $id), $col_idx, $params);
+        $q .= $this->getWhere(array($idfield => $id), $col_idx, $params);
 
-        $this->logger->info("Preparing update query {}", $q);
         $st = $this->db->prepare($q);
         $st->execute($params);
 
@@ -113,7 +111,36 @@ class PostgreSQL implements IDriver
         if (!empty($record[$idfield]))
             throw new DAOException("ID set for record to be inserted");
 
-        $q = "INSERT INTO " . self::identQuote($table) . " ";
+        $q = "INSERT INTO " . $this->getName($table) . " ";
+        $fields = array_map(array($this, "identQuote"), array_keys($record));
+        $q .= "(" . implode(", ", $fields) . ")";
+
+        $col_idx = 0;
+        $params = array();
+        $parts = array();
+        foreach ($record as $val)
+        {
+            $col_name = "col" . (++$col_idx);
+            $parts[] = ":{$col_name}";
+            $params[$col_name] = $val;
+        }
+        $q .= " VALUES (" . implode(", ", $parts) . ") RETURNING " . $this->identQuote($idfield);
+    
+        $st = $this->db->prepare($q);
+
+        $this->logger->info("Executing insert query with params {}", $q);
+        $st->execute($params);
+        $record[$idfield] = $st->fetchColumn(0);
+
+        return $record[$idfield];
+    }
+
+    public function upsert($table, $idfield, $conflict, array &$record)
+    {
+        if (!empty($record[$idfield]))
+            return $This->update($table, $idfield, $record);
+
+        $q = "INSERT INTO " . $this->getName($table) . " ";
         $fields = array_map(array($this, "identQuote"), array_keys($record));
         $q .= "(" . implode(", ", $fields) . ")";
 
@@ -127,20 +154,42 @@ class PostgreSQL implements IDriver
             $params[$col_name] = $val;
         }
         $q .= " VALUES (" . implode(", ", $parts) . ")";
-    
-        $this->logger->info("Preparing insert query {}", $q);
+
+        // Upsert part
+        $q .= " ON CONFLICT ";
+
+        $names = array_map(array($this, 'identQuote'), $conflict);
+        $q .= '(' . implode(',', $names) . ') ';
+
+
+        $q .= 'DO UPDATE SET ';
+
+        $conflict = (array)$conflict;
+        $parts = array();
+        foreach ($record as $field => $value)
+        {
+            if (in_array($field, $conflict))
+                continue;
+
+            $col_name = "col" . (++$col_idx);
+            $parts[] = $this->identQuote($field) . ' = :' . $col_name;
+            $params[$col_name] = $value;
+        }
+        $q .= implode(",", $parts);
+
+        $q .= " RETURNING " . $this->identQuote($idfield);
         $st = $this->db->prepare($q);
 
-        $this->logger->info("Executing insert query with params {}", $q);
+        $this->logger->info("Executing upsert query with params {}", $params);
         $st->execute($params);
-        $record[$idfield] = $this->db->lastInsertId();
+        $record[$idfield] = $st->fetchColumn(0);
 
         return $record[$idfield];
     }
 
     public function delete($table, $where)
     {
-        $q = "DELETE FROM " . self::identQuote($table);
+        $q = "DELETE FROM " . $this->getName($table);
         $col_idx = 0;
         $params = array();
         $q .= static::getWhere($where, $col_idx, $params);
@@ -152,90 +201,18 @@ class PostgreSQL implements IDriver
         return $st->rowCount();
     }
 
-    protected function getWhere($where, &$col_idx, array &$params)
-    {
-        if (is_string($where))
-            return " WHERE " . $where;
-
-        if (is_array($where) && count($where))
-        {
-            $parts = array();
-            foreach ($where as $k => $v)
-            {
-                if (is_array($v))
-                {
-                    $op = $v[0];
-                    $val = $v[1];
-                }
-                else
-                {
-                    $op = "=";
-                    $val = $v;
-                }
-
-                if ($val === null)
-                {
-                    if ($op === "=")
-                        $parts[] = self::identQuote($k) . " IS NULL";
-                    else if ($op == "!=")
-                        $parts[] = self::identQuote($k) . " IS NOT NULL";
-                }
-                else
-                {
-                    $col_name = "col" . (++$col_idx);
-                    $parts[] = self::identQuote($k) . " {$op} :{$col_name}";
-                    $params[$col_name] = $v;
-                }
-            }
-
-            return " WHERE " . implode(" AND ", $parts);
-        }
-
-        return "";
-    }
-
-    public function getOrder($order)
-    {
-        if (is_string($order))
-            return "ORDER BY " . $order;
-
-        if (is_array($order) && count($order))
-        {
-            $parts = array();
-            foreach ($order as $k => $v)
-            {
-                if (is_numeric($k))
-                {
-                    $k = $v;
-                    $v = "ASC";
-                }
-                else
-                {
-                    $v = strtoupper($v);
-                    if ($v !== "ASC" && $v !== "DESC")
-                        throw new DAOException("Invalid order type {$v}");
-                }
-                $parts[] = self::identQuote($k) . " " . $v;
-            }
-
-            return " ORDER BY " . implode(", ", $parts);
-        }
-
-        return "";
-    }
-
-    public function getColumns($table)
+    public function getColumns($table_name)
     {
         try
         {
             $q = $this->db->prepare("
-                SELECT column_name, data_type, is_nullable, column_default, numeric_precision, numeric_scale, character_maximum_length
+                SELECT column_name, data_type, is_nullable, column_default, numeric_precision, numeric_scale, character_maximum_length, extra
                     FROM information_schema.columns 
                     WHERE table_name = :table AND table_schema = :schema
                     ORDER BY ordinal_position
             ");
 
-            $q->execute(array("table_name" => self::tablename(), "schema" => $schema));
+            $q->execute(array("table_name" => $table_name, "schema" => $this->schema));
 
             return $q->fetchAll();
         }
@@ -245,46 +222,321 @@ class PostgreSQL implements IDriver
         }
     }
 
-    protected function validateColumn(array $column)
+    public function createTable(Table $table)
     {
-        $keys = array('column_name', 'data_type', 'is_nullable', 'column_default', 'numeric_precision', 'numeric_scale', 'character_maximum_length');
-        foreach ($keys as $k)
-            if (!isset($column[$k]))
-                throw new DBException("Field {$k} from column definition is missing");
-        return true;
-    }
+        $query = "CREATE TABLE " . $this->getName($table->getName()) . " (\n";
 
-    public function createTable($table, $columns)
-    {
-
-    }
-
-    public function getColumnDef(array $column)
-    {
-
-    }
-
-    public function parseColumnInfo(array $column)
-    {
-        
-    }
-
-    public function addColumn($table, array $column)
-    {
-        $coldef = $this->validateColumn($column);
-        $cols = $this->getColumns($table);
-
-        foreach $cols as $c)
+        $cols = $table->getColumns();
+        $coldefs = array();
+        $serial = null;
+        foreach ($cols as $c)
         {
-            if ($c['column_name'] === $column['column_name'])
-                throw new DBException("Duplicate column: {$column['column_name']}");
+            if ($c->getSerial())
+                $serial = $c;
+            $coldefs[] = $this->getColumnDefinition($c);
         }
 
-        $q = "ALTER TABLE " . $this->identQuote($table) . " ADD COLUMN " . $this->getColumnDefin
+        $query .= "    " . implode(",\n    ", $coldefs);
+        $query .= "\n)";
+
+        // Create the main table
+        $this->db->exec($query);
+
+        // Add indexes
+        $serial_col = null;
+
+        $indexes = $table->getIndexes();
+        foreach ($indexes as $idx)
+            $this->createIndex($table, $idx);
+
+        // Add auto_increment
+        if ($serial !== null)
+            $this->createSerial($table, $serial);
+
+        // Add foreign keys
+        $fks = $table->getForeignKeys();
+        foreach ($fks as $fk)
+            $this->createForeignKey($table, $fk);
+        return $this;
     }
 
-    public function removeColumn($table, array $column)
+    /**
+     * Drop a table
+     *
+     * @param $table mixed The table to drop
+     * @param $safe boolean Add IF EXISTS to query to avoid errors when it does not exist
+     * @return Driver Provides fluent interface 
+     */
+    public function dropTable($table, $safe = false)
     {
+        $query = "DROP TABLE " . ($safe ? " IF EXISTS " : "") . $this->getName($table);
+        $this->db->exec($query);
+        return $this;
+    }
 
+    
+    public function createIndex(Table $table, Index $idx)
+    {
+        $cols = $idx->getColumns();
+        $names = array();
+        foreach ($cols as $col)
+            $names[] = $this->identQuote($col);
+        $names = '(' . implode(',', $names) . ')';
+
+        if ($idx->getType() === Index::PRIMARY)
+        {
+            $this->db->exec("ALTER TABLE " . $this->getName($table) . " ADD PRIMARY KEY $names");
+            $cols = $idx->getColumns();
+            $first_col = $cols[0];
+            $col = $table->getColumn($first_col);
+            if (count($cols) == 1 && $col->getSerial())
+                $serial_col = $col;
+        }
+        else
+        {
+            $q = "CREATE ";
+            if ($idx->getType() === Index::UNIQUE)
+                $q .= "UNIQUE ";
+            $q .= "INDEX " . $this->getName($idx) . " ON " . $this->getName($table) . " $names";
+            $this->db->exec($q);
+        }
+        return $this;
+    }
+
+    public function dropIndex(Table $table, Index $idx)
+    {
+        if ($idx->getType() === Index::PRIMARY || $idx->getType() === Index::UNIQUE)
+            $q = "ALTER TABLE " . $this->getName($table) . " DROP CONSTRAINT " . $this->getName($idx);
+        else
+            $q = "DROP INDEX " . $this->identQuote($idx);
+
+        $this->db->exec($q);
+        return $this;
+    }
+
+    public function createForeignKey(Table $table, ForeignKey $fk)
+    {
+        $src_table = $table->getName();
+        $src_cols = array();
+
+        foreach ($fk->getColumns() as $c)
+            $src_cols[] = $this->identQuote($c);
+
+        $tgt_table = $fk->getReferredTable();
+        $tgt_cols = array();
+
+        foreach ($fk->getReferredColumns() as $c)
+            $tgt_cols[] = $this->identQuote($c);
+
+        $q = 'ALTER TABLE ' . $this->getName($src_table)
+            . ' ADD CONSTRAINT ' . $this->getName($fk)
+            . ' FOREIGN KEY (' . implode(',', $src_cols) . ') '
+            . 'REFERENCES ' . $this->getName($tgt_table)
+            . '(' . implode(',', $tgt_cols) . ')';
+
+        $on_update = $fk->getOnUpdate();
+        if ($on_update === ForeignKey::DO_CASCADE)
+            $q .= ' ON UPDATE CASCADE ';
+        elseif ($on_update === ForeignKey::DO_RESTRICT)
+            $q .= ' ON UPDATE RESTRICT ';
+        elseif ($on_update === ForeignKey::DO_NULL)
+            $q .= ' ON UPDATE SET NULL ';
+
+        $on_delete = $fk->getOnDelete();
+        if ($on_update === ForeignKey::DO_CASCADE)
+            $q .= ' ON DELETE CASCADE ';
+        elseif ($on_update === ForeignKey::DO_RESTRICT)
+            $q .= ' ON DELETE RESTRICT ';
+        elseif ($on_update === ForeignKey::DO_NULL)
+            $q .= ' ON DELETE SET NULL ';
+
+        $this->db->exec($q);
+        return $this;
+    }
+
+    public function dropForeignKey(Table $table, ForeignKey $fk)
+    {
+        $name = $fk->getName();
+        $this->db->exec("ALTER TABLE DROP CONSTRAINT " . $this->identQuote($name));
+        return $this;
+    }
+
+    public function createSerial(Table $table, Column $column)
+    {
+        $tablename = $this->getName($table);
+        $colname = $this->identQuote($column->getName());
+        $seqname = $this->prefix . $table->getName() . "_" . $column->getName() . "_seq";
+
+        // Create the new sequence
+        $this->db->exec("CREATE SEQUENCE $seqname");
+
+        // Change the column type to use the sequence
+        $q = "ALTER TABLE {$tablename}"
+            . " ALTER COLUMN {$colname} SET DEFAULT nextval('{$seqname}'), "
+            . " ALTER COLUMN {$seqname} SET NOT NULL;";
+        $this->db->exec($q);
+
+        // Make the sequence owned by the column so it will be automatically
+        // removed when the column is removed
+        $this->db->exec("ALTER SEQUENCE {$seqname} OWNED BY {$tablename}.{$colname};");
+
+        return $this;
+    }
+
+    public function dropSerial(Table $table, Column $column)
+    {
+        $tablename = $this->getName($table);
+        $colname = $this->identQuote($column->getName());
+        $seqname = $this->prefix . $table->getName() . "_" . $column->getName() . "_seq";
+        
+        // Remove the default value for the column
+        $this->db->exec("ALTER TABLE {$tablename} ALTER COLUMN {$colname} DROP DEFAULT");
+
+        // Drop the sequence providing the value
+        $this->db->exec("DROP SEQUENCE {seqname}");
+
+        $column->setSerial(false);
+        $column->setDefault(null);
+        return $this;
+    }
+
+    public function addColumn(Table $table, Column $column)
+    {
+        $q = "ALTER TABLE " . $this->getName($table) . " ADD COLUMN " . $this->getColumnDefinition($column);
+        $this->db->exec($q);
+
+        return $this;
+    }
+
+    public function removeColumn(Table $table, Column $column)
+    {
+        $q = "ALTER TABLE " . $this->getName($table->getName()) . " DROP COLUMN " . $this->identQuote($column->getName());
+        $this->db->exec($q);
+
+        return $this;
+    }
+
+    public function getColumnDefinition(Column $col)
+    {
+        $numtype = $col->getType();
+        if (!isset($this->mapping[$numtype]))
+            throw new DBException("Unsupported column type: $numtype");
+
+        $type = $this->mapping[$numtype];
+        $coldef = $this->identQuote($col->getName()) . " " . $type;
+        switch ($numtype)
+        {
+            case Column::CHAR:
+            case Column::VARCHAR:
+                $coldef .= "(" . $col->getMaxLength() . ")";
+                break;
+            case Column::INT:
+            case Column::BIGINT:
+                $coldef .= "(" . $col->getNumericPrecision() . ")";
+                break;
+            case Column::BOOLEAN:
+                $coldef .= "(1)";
+                break;
+            case Column::DECIMAL:
+                $coldef .= "(" . $col->getNumericPrecision() . "," . $col->getNumericScale() . ")";
+        }
+
+        $coldef .= $col->isNullable() ? " NULL " : " NOT NULL ";
+        $def = $col->getDefault();
+        if ($def)
+            $coldef .= " DEFAULT " . $def;
+        
+        return $coldef;
+    }
+
+    public function loadTable($table_name)
+    {
+        $table = new Table($table_name);
+
+        // Get all columns
+        $columns = $this->getColumns($table_name);
+        $serial = null;
+        foreach ($columns as $col)
+        {
+            $type = $col['data_type'];
+            $numtype = array_search($type, $this->mapping);
+            if ($numtype === false)
+                throw new DBException("Unsupported field type: " . $type);
+
+            $column = new Column(
+                $col['column_name'],
+                $numtype,
+                $col['character_maximum_length'],
+                $col['numeric_scale'],
+                $col['numeric_precision'],
+                $col['is_nullable'],
+                $col['column_default']
+            );
+
+            $table->addColumn($column);
+            if (strtolower($col['extra']) === "auto_increment")
+            {
+                $pkey = new Index(Index::PRIMARY);
+                $pkey->addColumn($column);
+                $table->addIndex($pkey);
+
+                $column->setSerial(true);
+                $serial = $column;
+            }
+        }
+
+        $constraints = $this->getConstraints($table_name);
+        foreach ($constraints as $constraint)
+        {
+            if ($constraint['CONSTRAINT_TYPE'] === "FOREIGN KEY")
+            {
+                $fk = new ForeignKey($constraint['CONSTRAINT_NAME']);
+
+                $ref_table = $constraint['REF_TABLE'];
+
+                // Get refere
+
+            }
+            elseif ($constraint['CONSTRAINT_TYPE'] === "PRIMARY KEY")
+            {
+                if ($serial !== null) // Should have already have this one
+                    continue;
+
+                $idx = new Index(Index::PRIMARY, $constraint['CONSTRAINT_NAME']);
+            }
+            elseif($constraint['CONSTRAINT_TYPE'] === "UNIQUE")
+            {
+                $idx = new Index(Index::UNIQUE, $constraint['CONSTRAINT_NAME']);
+            }
+        }
+
+        // Get all indexes
+    }
+
+    public function getConstraints($table_name)
+    {
+        $q = "
+        SELECT 
+            kcu.CONSTRAINT_NAME AS CONSTRAINT_NAME,
+            kcu.REFERENCED_TABLE_NAME AS REF_TABLE,
+            kcu.REFERENCED_COLUMN_NAME AS REF_COLUMN,
+            tc.CONSTRAINT_TYPE AS CONSTRAINT_TYPE
+        FROM
+            information_schema.key_column_usage kcu
+        LEFT JOIN information_schema.TABLE_CONSTRAINTS tc 
+            ON (
+                tc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME AND
+                tc.CONSTRAINT_SCHEMA = kcu.CONSTRAINT_SCHEMA AND
+                tc.TABLE_NAME = kcu.TABLE_NAME
+            )
+        WHERE 
+            tc.CONSTRAINT_SCHEMA = :schema AND
+            kcu.table_name = :table
+        ";
+
+        $q = $db->prepare($q);
+        $q->execute(array("schema " => $this->schema, "table" => $table_name));
+
+        return $q->fetchAll();
     }
 }
