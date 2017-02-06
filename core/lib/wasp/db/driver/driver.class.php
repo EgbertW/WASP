@@ -46,7 +46,7 @@ abstract class Driver
     protected $table_prefix = "";
 
     protected $dbname;
-    protected $schemaname;
+    protected $schema;
 
     protected $mapping = array();
     protected $iquotechar = null;
@@ -75,8 +75,7 @@ abstract class Driver
     public function setDatabaseName($dbname, $schema = null)
     {
         $this->dbname = $dbname;
-        if ($schema !== null)
-            $this->schema = $schema;
+        $this->schema = $schema !== null ? $schema : $dbname;
 
         return $this;
     }
@@ -98,13 +97,14 @@ abstract class Driver
      *                     object with a getName method.
      * @return string The quoted, prefixed name
      */
-    public function getName($entity)
+    public function getName($entity, $quote = true)
     {
         if (is_object($entity))
             $entity = $entity->getName();
         if (!is_string($entity))
             throw new DBException("Provide a string or a object with a getName method");
-        return $this->identQuote($this->table_prefix . $entity);
+        $entity = $this->table_prefix . $entity;
+        return $quote ? $this->identQuote($entity) : $entity;
     }
 
 

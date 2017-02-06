@@ -29,6 +29,7 @@ namespace WASP\File
     use WASP\HttpError;
     use WASP\Autoloader;
     use WASP\Translate;
+    use WASP\Cache;
 
     /**
      * Resolve templates, routes, clases and assets from the core and modules.
@@ -41,40 +42,18 @@ namespace WASP\File
         /** The cache of templates, assets, routes */
         private static $cache = null;
 
-        /** Whether the cache has changed, so it needs to be saved */
-        private static $cacheChanged = false;
-        
         /** The logger instance */
         private static $logger;
 
-        /**
-         * Load the cache file on initialization
-         */
         public static function init()
         {
-            $cache_file = WASP_CACHE . '/' . 'resolve.cache';
-            self::$cache = array();
-            if (file_exists($cache_file))
-                self::loadCache();
-        }
+            if (self::$cache !== null)
+                return;
+            
+            $p = dirname(dirname(__FILE__)) . '/cache.class.php';
+            require_once $p;
 
-        /**
-         * Add the hook after the configuration has been loaded, and apply invalidation to the
-         * cache once it times out.
-         * @param $config WAS\Config The configuration to load settings from
-         */
-        public static function setHook($config)
-        {
-            register_shutdown_function(array('WASP\\File\\Resolve', 'saveCache'));
-
-            $timeout = $config->get('resolve', 'expire', 60); // Clear out cache every minute by default
-            $st = isset(self::$cache['_timestamp']) ? self::$cache['_timestamp'] : 0;
-        
-            if (time() - $st > $timeout)
-            {
-                Debug\info("WASP.File.Resolve", "Cache is more than {} seconds old ({}), invalidating", $timeout, $st);
-                self::$cache = array('_timestamp' => time());
-            }
+            self::$cache = new Cache('resolve');
         }
 
         /** 
@@ -120,54 +99,9 @@ namespace WASP\File
             }
         }
 
-        /**
-         * Load the cache from the file
-         */
-        public static function loadCache()
+        public static function getModules()
         {
-            $cache_file = WASP_CACHE . '/' . 'resolve.cache';
-            if (!file_exists($cache_file))
-                return;
-
-            if (!is_readable($cache_file))
-            {
-                Debug\error("WASP.File.Resolve", "Cannot read cache from {$cache_file}");
-                return;
-            }
-
-            $data = file_get_contents($cache_file);
-            $cache = unserialize($data);
-            if ($cache === false)
-            {
-                Debug\error("WASP.File.Resolve", "Cache file contains invalid data: {$cache_file} - removing");
-                return;
-            }
-
-            Debug\info("WASP.File.Resolve", "Loaded {} bytes resolve cache data from: {}", strlen($data), $cache_file);
-            self::$cache = $cache;
-        }
-
-        /**
-         * Save the cache once the script terminates.
-         */
-        public static function saveCache()
-        {
-            if (!self::$cacheChanged)
-                return;
-
-            $cache_dir = WASP_CACHE;
-            $cache_file = WASP_CACHE . '/' . 'resolve.cache';
-
-            if (file_exists($cache_file && !is_writable($cache_file)))
-            {
-                Debug\error("WASP.File.Resolve", "Cannot write cache to {$cache_file}");
-                return;
-            }
-
-            $data = serialize(self::$cache);
-            file_put_contents($cache_file, $data);
-
-            Debug\info("WASP.File.Resolve", "Saved {} bytes resolve cache data from: {}", strlen($data), $cache_file);
+            return array_keys(self::$modules);
         }
 
         /**
@@ -176,9 +110,7 @@ namespace WASP\File
          */
         public static function purgeModuleFromCache($module)
         {
-            if (self::$cache === null)
-                return;
-
+            $cache = self::$cache->get();
             $cnt = 0;
             foreach (self::$cache as $ctype => $data)
             {
@@ -191,8 +123,9 @@ namespace WASP\File
                     }
                 }
             }
+
             if ($cnt > 0)
-                self::$cacheChanged = true;
+                $this->cache->replace($cache);
 
             Debug\info("WASP.Util.Resolve", "Removed {} elements from cache for module {}", $cnt, $module);
         }
@@ -203,10 +136,11 @@ namespace WASP\File
         public static function autoload($class_name)
         {
             // Check the cache first
+            $cache = self::$cache->get('class');
             $class_name = strtolower($class_name);
-            if (isset(self::$cache['class'][$class_name]))
+            if (isset($cache[$class_name]))
             {
-                $cached = self::$cache['class'][$class_name];
+                $cached = $cache[$class_name];
                 if (file_exists($cached['path']) && is_readable($cached['path']))
                 {
                     Debug\debug("WASP.File.Resolve", "Including {}", $cached['path']);
@@ -241,11 +175,8 @@ namespace WASP\File
             if (class_exists($class_name))
             { // SUCCESS!
                 \WASP\Debug\info("WASP.File.Resolve", "Resolved class {} to {} (module: {})", $class_name, $path, $found_module);
-                if (self::$cache !== null && $path !== null)
-                {
-                    self::$cache['class'][$class_name] = array('module' => $found_module, 'path' => $path);
-                    self::$cacheChanged = true;
-                }
+                if ($path !== null)
+                    self::$cache->put('class', $class_name, array('module' => $found_module, 'path' => $path));
             }
         }
 
@@ -345,8 +276,9 @@ namespace WASP\File
          */
         public static function getRoutes()
         {
-            if (isset(self::$cache['routes']))
-                return self::$cache['routes'];
+            $routes = self::$cache->get('routes');
+            if (!empty($routes))
+                return $routes;
             
             $routes = array();
             foreach (self::$modules as $module => $location)
@@ -395,8 +327,7 @@ namespace WASP\File
             }
 
             // Update the cache
-            if (self::$cache !== null)
-                self::$cache['routes'] = $routes;
+            self::$cache->put('routes', $routes);
             return $routes;
         }
 
@@ -442,9 +373,9 @@ namespace WASP\File
          */
         private static function resolve($type, $file, $reverse = false)
         {
-            if (isset(self::$cache[$type][$file]))
+            $cached = self::$cache->get($type, $file);
+            if (!empty($cached))
             {
-                $cached = self::$cache[$type][$file];
                 if (file_exists($cached['path']) && is_readable($cached['path']))
                 {
                     Debug\debug("WASP.File.Resolve", "Resolved {} {} to path {} (module: {}) (cached)", $type, $file, $cached['path'], $cached['module']);
@@ -473,11 +404,7 @@ namespace WASP\File
             if ($found_module !== null)
             {
                 Debug\debug("WASP.File.Resolve", "Resolved {} {} to path {} (module: {})", $type, $file, $path, $found_module);
-                if (self::$cache !== null)
-                {
-                    self::$cache[$type][$file] = array("module" => $found_module, "path" => $path);
-                    self::$cacheChanged = true;
-                }
+                self::$cache->put($type, $file, array("module" => $found_module, "path" => $path));
                 return $path;
             }
         
@@ -485,7 +412,9 @@ namespace WASP\File
         }
     }
 
-    // Initialize the cache
+    // Set up the cache
     Resolve::init();
+
+    // Set up the autoloader
     spl_autoload_register(array('WASP\\File\\Resolve', 'autoload'));
 }

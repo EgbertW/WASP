@@ -28,6 +28,10 @@ namespace WASP\Model;
 
 use WASP\Config;
 use WASP\DB\DAO;
+use WASP\DB\DB;
+use WASP\DB\Table\Table;
+use WASP\DB\Table\Column;
+use WASP\DB\Table\Index;
 
 class DBVersion extends DAO
 {
@@ -46,29 +50,28 @@ class DBVersion extends DAO
 
     public static function createTable()
     {
-        $config = Config::getConfig();
-        $type = $config->get('sql', 'type');
+        $table = new Table(
+            self::$table,
+            new Column\SerialColumn('id'),
+            new Column\StringColumn('module', 128),
+            new Column\IntColumn('version'),
+            new Index(Index::PRIMARY, 'id'),
+            new Index(Index::UNIQUE, 'module')
+        );
 
-        if ($type === "mysql")
-        {
-            $q = "CREATE TABLE `" . self::tablename() . "` (
-                id integer primary key auto_increment,
-                module varchar(128) not null,
-                version integer not null,
-                UNIQUE(module)
-            )";
-        }
-        elseif ($type === "pgsql")
-        {
-            $q = "CREATE TABLE \"" . self::tablename() . "\" (
-                id serial,
-                module character varying(128),
-                version integer not null,
-                UNIQUE(module)
-            ");
-        }
+        // We are now at version 1
+        $drv = DB::get()->driver();
+        $drv->createTable($table);
 
-        $db = DB::get();
-        $db->exec($q);
+        $rec = new DBVersion('core');
+        $rec->setField('version', 1);
+        $rec->save();
+    }
+
+    public static function dropTable()
+    {
+        // We are now at version 1
+        $drv = DB::get()->driver();
+        $drv->dropTable(self::$table);
     }
 }

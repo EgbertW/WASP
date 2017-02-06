@@ -212,8 +212,13 @@ class JSON
      * @param $obj array The data to output
      * @return string the JSON encoded, formatted data
      */
-    public static function pprint(array $obj, $indent)
+    public static function pprint($obj, $indent = 0)
     {
+        if (is_object($obj) && method_exists($obj, "jsonSerialize"))
+            $obj = $obj->jsonSerialize();
+        elseif (!is_array($obj))
+            throw new \RuntimeException("Invalid arguments for JSON::pprint");
+
         $array = true;
         foreach ($obj as $key => $sub)
             if (!is_int($key))

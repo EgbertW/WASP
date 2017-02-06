@@ -26,7 +26,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP\DB\Driver;
 
 use WASP\DB\DB;
-use WASP\DB\DAOException;
+use WASP\DB\TableNotExists;
+use WASP\DB\DBException;
 
 use WASP\DB\Table\Table;
 use WASP\DB\Table\Index;
@@ -80,11 +81,11 @@ class MySQL extends Driver
     {
         $id = $record[$idfield];
         if (empty($id))
-            throw new DAOException("No ID set for record to be updated");
+            throw new DBEXception("No ID set for record to be updated");
 
         unset($record[$idfield]);
         if (count($record) == 0)
-            throw new DAOException("Nothing to update");
+            throw new DBException("Nothing to update");
         
         $col_idx = 0;
         $params = array();
@@ -111,7 +112,7 @@ class MySQL extends Driver
     public function insert($table, $idfield, array &$record)
     {
         if (!empty($record[$idfield]))
-            throw new DAOException("ID set for record to be inserted");
+            throw new DBException("ID set for record to be inserted");
 
         $q = "INSERT INTO " . $this->getName($table) . " ";
         $fields = array_map(array($this, "identQuote"), array_keys($record));
@@ -197,23 +198,20 @@ class MySQL extends Driver
 
     public function getColumns($table_name)
     {
-        try
-        {
-            $q = $this->db->prepare("
-                SELECT column_name, data_type, is_nullable, column_default, numeric_precision, numeric_scale, character_maximum_length, extra
-                    FROM information_schema.columns 
-                    WHERE table_name = :table AND table_schema = :schema
-                    ORDER BY ordinal_position
-            ");
+        $q = $this->db->prepare("
+            SELECT column_name, data_type, is_nullable, column_default, numeric_precision, numeric_scale, character_maximum_length, extra
+                FROM information_schema.columns 
+                WHERE table_name = :table AND table_schema = :schema
+                ORDER BY ordinal_position
+        ");
 
-            $q->execute(array("table_name" => $table_name, "schema" => $this->schema));
+        $table_name = $this->getName($table_name, false);
+        $q->execute(array("table" => $table_name, "schema" => $this->schema));
 
-            return $q->fetchAll();
-        }
-        catch (PDOException $e)
-        {
+        if ($q->rowCount() === 0)
             throw new TableNotExists();
-        }
+
+        return $q->fetchAll();
     }
 
     public function createTable(Table $table)
@@ -231,7 +229,7 @@ class MySQL extends Driver
         }
 
         $query .= "    " . implode(",\n    ", $coldefs);
-        $query .= "\n) ENGINE=InnoDB\n";
+        $query .= "\n) ENGINE=InnoDB CHARSET=utf8 COLLATE=utf8_general_ci\n";
 
         // Create the main table
         $this->db->exec($query);
@@ -433,17 +431,22 @@ class MySQL extends Driver
         $serial = null;
         foreach ($columns as $col)
         {
-            $type = $col['data_type'];
+            $type = strtoupper($col['data_type']);
             $numtype = array_search($type, $this->mapping);
             if ($numtype === false)
                 throw new DBException("Unsupported field type: " . $type);
+
+            $precision = $col['numeric_precision'];
+            // MySQL reserves one bit for the sign, which is not reflected in the numeric_precision field
+            if (in_array($numtype, array(Column::INT, Column::BIGINT, Column::BOOLEAN)))
+                $precision += 1; 
 
             $column = new Column(
                 $col['column_name'],
                 $numtype,
                 $col['character_maximum_length'],
+                $precision,
                 $col['numeric_scale'],
-                $col['numeric_precision'],
                 $col['is_nullable'],
                 $col['column_default']
             );
@@ -461,31 +464,99 @@ class MySQL extends Driver
         }
 
         $constraints = $this->getConstraints($table_name);
+
+        // Constraints with multiple columns will have multiple rows
+        $summarized = array();
         foreach ($constraints as $constraint)
         {
-            if ($constraint['CONSTRAINT_TYPE'] === "FOREIGN KEY")
+            if ($serial !== null && $constraint['CONSTRAINT_TYPE'] === "PRIMARY KEY" && $constraint['COLUMN_NAME'] == $serial->getName())
+                continue;
+
+            $n = $constraint['CONSTRAINT_NAME'];
+            if (!isset($summarized[$n]))
+                $summarized[$n] = array(
+                    'name' => $n,
+                    'column' => array(),
+                    'referred_table' => array(),
+                    'referred_column' => array(),
+                    'type' => $constraint['CONSTRAINT_TYPE']
+                );
+
+            $summarized[$n]['column'][] = $constraint['COLUMN_NAME'];
+            $summarized[$n]['referred_table'] = $constraint['REF_TABLE'];
+            $summarized[$n]['referred_column'][] = $constraint['REF_COLUMN'];
+        }
+        
+        // Get update/delete policy from foreign keys
+        $fks = $this->getForeignKeys($table_name);
+        foreach ($fks as $fk)
+        {
+            if (isset($summarized[$fk['CONSTRAINT_NAME']]))
             {
-                $fk = new ForeignKey($constraint['CONSTRAINT_NAME']);
-
-                $ref_table = $constraint['REF_TABLE'];
-
-                // Get refere
-
-            }
-            elseif ($constraint['CONSTRAINT_TYPE'] === "PRIMARY KEY")
-            {
-                if ($serial !== null) // Should have already have this one
-                    continue;
-
-                $idx = new Index(Index::PRIMARY, $constraint['CONSTRAINT_NAME']);
-            }
-            elseif($constraint['CONSTRAINT_TYPE'] === "UNIQUE")
-            {
-                $idx = new Index(Index::UNIQUE, $constraint['CONSTRAINT_NAME']);
+                $summarized[$n]['on_update'] = $fk['UPDATE_RULE'];
+                $summarized[$n]['on_delete'] = $fk['DELETE_RULE'];
             }
         }
 
+        foreach ($summarized as $constraint)
+        {
+            if ($constraint['type'] === "FOREIGN KEY")
+            {
+                $table->addForeignKey(new ForeignKey($constraint));
+            }
+            elseif ($constraint['type'] === "PRIMARY KEY")
+            {
+                $constraint['type'] = Index::PRIMARY;
+                $table->addIndex(new Index($constraint));
+            }
+            elseif ($constraint['type'] === "UNIQUE")
+            {
+                $constraint['type'] = Index::UNIQUE;
+                $table->addIndex(new Index($constraint));
+            }
+            else
+                throw new DBException("Unsupported constraint type: {$constraint['type']}");
+        }
+
         // Get all indexes
+        $indexes = $this->getIndexes($table_name);
+
+        $summarized = array();
+        foreach ($indexes as $index)
+        {
+            // We need to skip primary and unique keys, as they have already been added by the constraints
+            if ($index['Non_unique'] == 0)
+                continue;
+
+            $n = $index['Key_name'];
+            if (!isset($summarized[$n]))
+                $summarized[$n] = array(
+                    'name' => $n,
+                    'type' => Index::INDEX,
+                    'column' => array()
+                );
+
+            $summarized[$n]['column'][] = $index['Column_name'];
+        }
+
+        foreach ($summarized as $idx)
+            $table->addIndex(new Index($idx));
+
+        return $table;
+    }
+
+    public function getForeignKeys($table_name)
+    {
+        $q = "
+        SELECT 
+                CONSTRAINT_NAME, UPDATE_RULE, DELETE_RULE 
+        FROM information_schema.REFERENTIAL_CONSTRAINTS 
+        WHERE CONSTRAINT_SCHEMA = :schema AND TABLE_NAME  = :table";
+        $q = $this->db->prepare($q);
+        $tname = $this->getName($table_name, false);
+
+        $q->execute(array("schema" => $this->schema, "table" => $tname));
+        return $q->fetchAll();
     }
 
     public function getConstraints($table_name)
@@ -493,6 +564,7 @@ class MySQL extends Driver
         $q = "
         SELECT 
             kcu.CONSTRAINT_NAME AS CONSTRAINT_NAME,
+            kcu.COLUMN_NAME AS COLUMN_NAME,
             kcu.REFERENCED_TABLE_NAME AS REF_TABLE,
             kcu.REFERENCED_COLUMN_NAME AS REF_COLUMN,
             tc.CONSTRAINT_TYPE AS CONSTRAINT_TYPE
@@ -509,8 +581,18 @@ class MySQL extends Driver
             kcu.table_name = :table
         ";
 
-        $q = $db->prepare($q);
-        $q->execute(array("schema " => $this->schema, "table" => $table_name));
+        $table_name = $this->getName($table_name, false);
+        $q = $this->db->prepare($q);
+        $q->execute(array("schema" => $this->schema, "table" => $table_name));
+
+        return $q->fetchAll();
+    }
+
+    public function getIndexes($table_name)
+    {
+        $q = "SHOW INDEX FROM " . $this->getName($table_name);
+        $q = $this->db->prepare($q);
+        $q->execute();
 
         return $q->fetchAll();
     }

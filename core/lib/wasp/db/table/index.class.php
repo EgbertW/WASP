@@ -28,11 +28,11 @@ namespace WASP\DB\Table;
 use WASP\DB\Table\Column\Column;
 use WASP\DB\DBException;
 
-class Index
+class Index implements \Serializable, \JSONSerializable
 {
-    const PRIMARY = 3;
-    const INDEX = 1;
+    const PRIMARY = 1;
     const UNIQUE = 2;
+    const INDEX = 3;
 
     protected $table;
     protected $name;
@@ -40,12 +40,25 @@ class Index
 
     public function __construct($type, $column = null)
     {
+        if (is_array($type))
+        {
+            $this->initFromArray($type);
+            return;
+        }
+
         $this->type = $type;
         $args = func_get_args();
         array_shift($args); // Type
 
         foreach ($args as $arg)
             $this->addColumn($arg);
+    }
+
+    protected function initFromArray(array $data)
+    {
+        $this->name = isset($data['name']) ? $data['name'] : null;
+        $this->type = self::strToType($data['type']);
+        $this->columns = (array)$data['column'];
     }
     
     public function setTable($table)
@@ -101,5 +114,59 @@ class Index
     public function getTable()
     {
         return $this->table;
+    }
+
+    public function toArray()
+    {
+        $arr = array(
+            'name' => $this->getName(),
+            'type' => self::typeToStr($this->type),
+            'column' => $this->columns
+        );
+        if ($this->type === self::PRIMARY)
+            unset($arr['name']);
+        return $arr;
+    }
+
+    public function jsonSerialize()
+    {
+        return $this->toArray();
+    }
+
+    public function serialize()
+    {
+        return serialize($this->toArray());
+    }
+
+    public function unserialize($data)
+    {
+        $arr = unserialize($data);
+        
+    }
+
+    public static function strToType($str)
+    {
+        if (\is_int_val($str) && $str >= Index::PRIMARY && $str <= Index::INDEX)
+            return $str;
+
+        $name = get_called_class() . "::" . $str;
+        if (defined($name))
+            return constant($name);
+        throw new DBException("Invalid type: $str ($name)");
+    }
+
+    public static function typeToStr($type)
+    {
+        switch ($type)
+        {
+            case Index::INDEX:
+                return "INDEX";
+            case Index::PRIMARY:
+                return "PRIMARY";
+            case Index::UNIQUE:
+                return "UNIQUE";
+            default:
+                throw new DBException("Invalid index type: $type");
+        }
     }
 }

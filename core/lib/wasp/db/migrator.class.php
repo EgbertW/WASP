@@ -1,4 +1,5 @@
 <?php
+
 /*
 This is part of WASP, the Web Application Software Platform.
 It is published under the MIT Open Source License.
@@ -23,24 +24,16 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\DB\Table;
+namespace WASP\DB;
 
-use WASP\DB\DBException;
+use WASP\DB\Migration;
+use WASP\Task;
 
-class TableRepository
+class Migrator extends Task
 {
-    protected static $tables = array();
-
-    public static function getTable($table)
+    public function run()
     {
-        if (!isset(self::$tables[$table]))
-            throw new DBException("Table $table not ofund");
-
-        return self::$tables[$table];
-    }
-
-    public static function putTable(Table $table)
-    {
-        self::$tables[$table->getName()] = $table;
+        $migration = new Migration\Core("core");
+        $migration->upgradeToLatest();
     }
 }

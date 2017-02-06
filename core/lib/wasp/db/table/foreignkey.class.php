@@ -27,7 +27,7 @@ namespace WASP\DB\Table;
 
 use WASP\DB\DBException;
 
-class ForeignKey
+class ForeignKey implements \Serializable, \JSONSerializable
 {
     const DO_CASCADE = 1;
     const DO_RESTRICT = 2;
@@ -58,17 +58,23 @@ class ForeignKey
                 $this->referred_table = $column['referred_table'];
                 $this->referred_columns = (array)$column['referred_column'];
                 if (isset($column['name']))
-                    $this->name = (int)$column['name'];
+                    $this->name = $column['name'];
                 if (isset($column['on_update']))
-                    $this->on_update = (int)$column['on_update'];
+                    $this->on_update = self::strToPolicy($column['on_update']);
+                else
+                    $this->on_update = self::DO_RESTRICT;
                 if (isset($column['on_delete']))
-                    $this->on_delete = (int)$column['on_delete'];
+                    $this->on_delete = self::strToPolicy($column['on_delete']);
+                else
+                    $this->on_delete = self::DO_RESTRICT;
             }
             elseif (is_array($referred_column) && count($referred_column) === count($column))
             {
                 $this->columns = array_values($column);
                 $this->referred_columns = array_values($referred_column);
                 $this->referred_table = $referred_table;
+                $this->on_update = $on_update;
+                $this->on_delete = $on_delete;
             }
             else
                 throw new DBException("Invalid arguments specified: first argument is not a suitable array");
@@ -206,5 +212,51 @@ class ForeignKey
     public function getOnDelete()
     {
         return $this->on_delete;
+    }
+
+    public function toArray()
+    {
+        return array(
+            "name" => $this->getName(),
+            "column" => $this->columns,
+            "referred_table" => $this->referred_table,
+            "referred_column" => $this->referred_columns,
+            "on_update" => self::policyToStr($this->on_update),
+            "on_delete" => self::policyToStr($this->on_delete)
+        );
+    }
+
+    public function jsonSerialize()
+    {
+        return $this->toArray();
+    }
+
+    public function serialize()
+    {
+        return serialize($this->toArray());
+    }
+
+    public function unserialize($data)
+    {
+        $args = unserialize($data);
+        $this->__construct($args);
+    }
+
+    public static function strToPolicy($str)
+    {
+        if (\is_int_val($str) && $str >= self::DO_CASCADE && $str <= self::DO_NULL)
+            return $str;
+        if ($str === "CASCADE") return self::DO_CASCADE;
+        if ($str === "RESTRICT") return self::DO_RESTRICT;
+        if ($str === "NULL") return self::DO_NULL;
+        throw new DBException("Invalid policy: $str");
+    }
+
+    public static function policyToStr($policy)
+    {
+        if ($policy === self::DO_CASCADE) return "CASCADE";
+        if ($policy === self::DO_RESTRICT) return "RESTRICT";
+        if ($policy === self::DO_NULL) return "NULL";
+        throw new DBException("Invalid policy: $policy");
     }
 }

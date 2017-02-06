@@ -11,4 +11,7 @@ abstract class Module
     {
         return array();
     }
+
+    public static function registerTasks()
+    {}
 }

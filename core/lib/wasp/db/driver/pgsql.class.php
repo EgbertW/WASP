@@ -365,7 +365,7 @@ class PGSQL extends Driver
     {
         $tablename = $this->getName($table);
         $colname = $this->identQuote($column->getName());
-        $seqname = $this->prefix . $table->getName() . "_" . $column->getName() . "_seq";
+        $seqname = $this->getName($table->getName() . "_" . $column->getName() . "_seq", false);
 
         // Create the new sequence
         $this->db->exec("CREATE SEQUENCE $seqname");

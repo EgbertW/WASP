@@ -25,15 +25,39 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP;
 
+use WASP\File\Resolve;
+
 class Task
 {
     private static $task_list = array();
+    private static $init = false;
+
+    public static function registerTask($task, $description)
+    {
+        self::$task_list[$task] = $description;
+    }
+
+    private static function findTasks()
+    {
+        if (self::$init)
+            return;
+
+        $modules = Resolve::getModules();
+        foreach ($modules as $mod)
+        {
+            $cl = $mod . "\\Module";
+            if (class_exists($cl, false))
+                $cl::registerTasks();
+        }
+        self::$init = true;
+    }
 
     public function execute()
     {}
 
     public static function listTasks($ostr = STDOUT)
     {
+        self::findTasks();
         if (count(self::$task_list) === 0)
         {
             fprintf($ostr, "No tasks available\n");
@@ -44,7 +68,8 @@ class Task
 
             foreach (Task::$task_list as $task => $desc)
             {
-                printf("- %-30s");
+                $task = str_replace('\\', ':', $task);
+                printf("- %-30s", $task);
                 CLI::formatText(32, CLI::MAX_LINE_LENGTH, $desc);
             }
             printf("\n");
@@ -57,6 +82,12 @@ class Task
         // awkward syntax is required.
         $task = str_replace(":", "\\", $task);
 
+        if (!class_exists($task))
+        {
+            fprintf(STDERR, "Error: task does not exist: {$task}\n");
+            return;
+        }
+
         try
         {
             $taskrunner = new $task($opts);
@@ -65,15 +96,18 @@ class Task
                 fprintf(STDERR, "Error: invalid task: {$task}\n");
                 exit(1);
             }
+            $taskrunner->run();
         }
-        catch (\Exception $e)
+        catch (\Throwable $e)
         {
-            fprintf(STDERR, "Error: error while running task: {$task}\n");
+            fprintf(STDERR, "Error: error while running task: %s\n", $task);
+            fprintf(STDERR, "Exception: %s\n", get_class($e));
+            fprintf(STDERR, "Message: %s\n", $e->getMessage());
+            if (method_exists($e, "getLine"))
+                fprintf(STDERR, "On: %s (line %d)\n", $e->getFile(), $e->getLine());
             fprintf(STDERR, $e->getTraceAsString() . "\n");
-        }
-        catch (\Error $e)
-        {
-            fprintf(STDERR, "Error: task does not exist: {$task}\n");
         }
     }
 }
+
+Task::registerTask("WASP.DB.Migrator", "Setup database tables");

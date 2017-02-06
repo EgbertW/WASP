@@ -3,6 +3,7 @@
 use WASP\CLI;
 use WASP\Task;
 use WASP\Arguments;
+use WASP\File\Resolve;
 
 require_once "../sys/init.php";
 
@@ -16,7 +17,6 @@ if (isset($opts['help']))
 
 if ($opts->has('list'))
 {
-    echo "LISTIN TASKS\n";
     Task::listTasks();
     exit();
 }

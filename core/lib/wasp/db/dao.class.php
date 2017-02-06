@@ -26,12 +26,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP\DB;
 
 use WASP\Config;
+use WASP\Debug;
 use PDOException;
 
 class DAO
 {
     /** A mapping between class identifier and full, namespaced class name */
     protected static $classes = array();
+
     /** A mapping between full, namespaced class name and class identifier */
     protected static $classnames = array();
 
@@ -150,183 +152,26 @@ class DAO
 
     protected static function select($where = array(), $order = array(), array $params = array())
     {
-        $db = DB::get();
-        $q = "SELECT * FROM " . self::identQuote(static::tablename());
-        
-        $col_idx = 0;
-        $q .= static::getWhere($where, $col_idx, $params);
-        $q .= static::getOrder($order);
-
-        \Debug\info("Model.DAO", "Preparing query {}", $q);
-        $st = $db->prepare($q);
-
-        $st->execute($params);
-        return $st;
+        $db = DB::get()->driver();
+        return $db->select(static::tablename(), $where, $order, $params);
     }
 
     protected static function update(array $record)
     {
-        $idf = static::$idfield;
-        if (!isset($record[$idf]))
-            throw new DAOException("No ID set for record to be updated");
-
-        $q = "UPDATE " . self::identQuote(static::tablename()) . " SET ";
-
-        $id = $record[$idf];
-        if (empty($id))
-            throw new DAOException("No ID set for record to be updated");
-
-        unset($record[$idf]);
-
-        if (count($record) == 0)
-            throw new DAOException("Nothing to update");
-        
-        $col_idx = 0;
-        $params = array();
-
-        $parts = array();
-        foreach ($record as $k => $v)
-        {
-            $col_name = "col" . (++$col_idx);
-            $parts[] .= self::identQuote($k) . " = :{$col_name}";
-            $params[$col_name] = $v;
-        }
-
-        $q .= implode(", ", $parts);
-        $q .= static::getWhere(array($idf => $id), $col_idx, $params);
-
-        \Debug\info("Model.DAO", "Preparing update query {}", $q);
-        $db = DB::get();
-        $st = $db->prepare($q);
-
-        $st->execute($params);
-
-        return $st->rowCount();
+        $db = DB::get()->driver();
+        return $db->update(static::tablename(), static::$idfield, $record);
     }
 
     protected static function insert(array &$record)
     {
-        $idf = static::$idfield;
-        if (!empty($record[$idf]))
-            throw new DAOException("ID set for record to be inserted");
-
-        $q = "INSERT INTO " . self::identQuote(static::tablename()) . " ";
-        $fields = array_map(array("Model\\DAO", "identQuote"), array_keys($record));
-        $q .= "(" . implode(", ", $fields) . ")";
-
-        $col_idx = 0;
-        $params = array();
-        $parts = array();
-        foreach ($record as $val)
-        {
-            $col_name = "col" . (++$col_idx);
-            $parts[] = ":{$col_name}";
-            $params[$col_name] = $val;
-        }
-        $q .= " VALUES (" . implode(", ", $parts) . ")";
-    
-        \Debug\info("Model.DAO", "Preparing insert query {}", $q);
-        $db = DB::get();
-        $st = $db->prepare($q);
-
-        \Debug\info("Model.DAO", "Executing insert query with params {}", $q);
-        $st->execute($params);
-        $record[$idf] = $db->lastInsertId();
-
-        return $record[$idf];
+        $db = DB::get()->driver();
+        return $db->insert(static::tablename(), static::$idfield, $record);
     }
 
     protected static function delete($where)
     {
-        $q = "DELETE FROM " . self::identQuote(static::tablename());
-        $col_idx = 0;
-        $params = array();
-        $q .= static::getWhere($where, $col_idx, $params);
-        var_dump($q);
-
-        \Debug\info("Model.DAO", "Preparing delete query {}", $q);
-        $db = DB::get();
-        $st = $db->prepare($q);
-        $st->execute($params);
-
-        return $st->rowCount();
-    }
-
-    protected static function getWhere($where, &$col_idx, array &$params)
-    {
-        if (is_string($where))
-            return " WHERE " . $where;
-
-        if (is_array($where) && count($where))
-        {
-            $parts = array();
-            foreach ($where as $k => $v)
-            {
-                if (is_array($v))
-                {
-                    $op = $v[0];
-                    $val = $v[1];
-                }
-                else
-                {
-                    $op = "=";
-                    $val = $v;
-                }
-
-                if ($val === null)
-                {
-                    if ($op === "=")
-                        $parts[] = self::identQuote($k) . " IS NULL";
-                    else if ($op == "!=")
-                        $parts[] = self::identQuote($k) . " IS NOT NULL";
-                }
-                else
-                {
-                    $col_name = "col" . (++$col_idx);
-                    $parts[] = self::identQuote($k) . " {$op} :{$col_name}";
-                    $params[$col_name] = $v;
-                }
-            }
-
-            return " WHERE " . implode(" AND ", $parts);
-        }
-
-        return "";
-    }
-
-    protected static function getOrder($order)
-    {
-        if (is_string($order))
-            return "ORDER BY " . $order;
-
-        if (is_array($order) && count($order))
-        {
-            $parts = array();
-            foreach ($order as $k => $v)
-            {
-                if (is_numeric($k))
-                {
-                    $k = $v;
-                    $v = "ASC";
-                }
-                else
-                {
-                    $v = strtoupper($v);
-                    if ($v !== "ASC" && $v !== "DESC")
-                        throw new DAOException("Invalid order type {$v}");
-                }
-                $parts[] = self::identQuote($k) . " " . $v;
-            }
-
-            return " ORDER BY " . implode(", ", $parts);
-        }
-
-        return "";
-    }
-
-    public static function identQuote($ident)
-    {
-        return '`' . str_replace("`", "``", $ident) . "`";
+        $db = DB::get()->driver();
+        return $db->insert(static::tablename(), $where);
     }
 
     public function getID()
@@ -334,8 +179,25 @@ class DAO
         return $this->id;
     }
 
+    public function getField($field)
+    {
+        if (isset($this->record[$field]))
+            return $this->record[$field];
+        return null;
+    }
+
+    public function setField($field, $value)
+    {
+        $correct = $this->validate($field, $value);
+        if ($correct !== true)
+            throw new DAOException("Field $field cannot be set to $value: {$correct}");
+
+        $this->record[$field] = $value;
+    }
+
     public function __get($field)
     {
+        return $this->getField($field);
         if (isset($this->record[$field]))
             return $this->record[$field];
         return null;
@@ -343,11 +205,7 @@ class DAO
 
     public function __set($field, $value)
     {
-        $correct = $this->validate($field, $value);
-        if ($correct !== true)
-            throw new DAOException("Field $field cannot be set to $value: {$correct}");
-
-        $this->record[$field] = $value;
+        $this->setField($field, $value);
     }
     
     // Override to perform checks
@@ -400,7 +258,7 @@ class DAO
         if (count($parts) !== 2)
             throw new \RuntimeException("Invalid DAO ID: {$id}");
 
-        if (!isset(self::$classes[$parts[0]))
+        if (!isset(self::$classes[$parts[0]]))
             throw new \RuntimeException("Invalid DAO type: {$parts[0]}");
 
         $classname = self::$classes[$parts[0]];
@@ -461,33 +319,11 @@ class DAO
 
     public static function getColumns()
     {
-        if ($this->columns === null)
+        if (self::$columns === null)
         {
-            $config = Config::getConfig();
-            $dbname = $config->get('sql', 'database');
-            $schema = $config->get('sql', 'schema');
-            if (empty($schema))
-                $schema = $dbname;
-
-            $db = DB::get();
-            try
-            {
-                $q = $db->prepare("
-                    SELECT column_name, data_type, is_nullable, column_default, numeric_precision, numeric_scale, character_maximum_length
-                        FROM information_schema.columns 
-                        WHERE table_name = :table AND table_schema = :schema
-                        ORDER BY ordinal_position
-                ");
-
-                $q->execute(array("table_name" => self::tablename(), "schema" => $schema));
-
-                $this->columns = $q->fetchAll();
-            }
-            catch (PDOException $e)
-            {
-                throw new TableNotExists();
-            }
+            $driver = DB::get()->driver();
+            self::$columns = $driver->getColumns(static::tablename());
         }
-        return $this->columns;
+        return self::$columns;
     }
 }

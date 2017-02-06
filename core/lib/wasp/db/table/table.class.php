@@ -32,7 +32,7 @@ use WASP\DB\Table\ForeignKey;
 
 use WASP\Debug\Log;
 
-class Table
+class Table implements \Serializable, \JSONSerializable
 {
     protected $name;
     protected $columns = array();
@@ -42,6 +42,12 @@ class Table
 
     public function __construct($name)
     {
+        if (is_array($name))
+        {
+            $this->initFromArray($name);
+            return;
+        }
+
         $this->name = $name;
 
         $duplicate = false;
@@ -51,7 +57,9 @@ class Table
             $duplicate = true;
         }
         catch (DBException $e)
-        { // This is actually the wanted situation }
+        {
+            // This is actually the wanted situation
+        }
 
         if ($duplicate)
             throw new DBException("Duplicate table definition for {$name}");
@@ -70,7 +78,30 @@ class Table
                 throw new DBException("Invalid argument: " . Log::str($arg));
         }
 
-        TableRepository::putTable($name, $this);
+        TableRepository::putTable($this);
+    }
+
+    protected function initFromArray($data)
+    {
+        $name = $data['name'];
+        $cols = $data['columns'];
+        $fks = !empty($data['foreign_keys']) ? $data['foreign_keys'] : array();
+        $indexes = !empty($data['indexes']) ? $data['indexes'] : array();
+
+        $this->name = $name;
+        foreach ($cols as $name => $col)
+        {
+            $col['column_name'] = $name;
+            $this->addColumn(Column::fromArray($col));
+        }
+
+        foreach ($indexes as $idx)
+            $this->addIndex(new Index($idx));
+
+        foreach ($fks as $fk)
+            $this->addForeignKey(new ForeignKey($fk));
+
+        $this->validate();
     }
 
     public function getName()
@@ -212,5 +243,88 @@ class Table
     public function getForeignKeys()
     {
         return $this->foreign_keys;
+    }
+
+    public function toArray()
+    {
+        $arr = array(
+            'name' => $this->name,
+            'columns' => array(),
+        );
+
+        foreach ($this->columns as $column)
+        {
+            $column = $column->toArray();
+            $arr['columns'][$column['column_name']] = $column;
+        }
+
+        if (count($this->indexes))
+            foreach ($this->indexes as $index)
+                $arr['indexes'][] = $index->toArray();
+
+        if (count($this->foreign_keys))
+            foreach ($this->foreign_keys as $fk)
+                $arr['foreign_keys'][] = $fk->toArray();
+
+        return $arr;
+    }
+
+    public function jsonSerialize()
+    {
+        return $this->toArray();
+    }
+    
+    public function serialize()
+    {
+        return serialize($this->toArray());
+    }
+
+    public function unserialize($data)
+    {
+        $arr = unserialize($data);
+        $this->initFromArray($arr);
+    }
+
+    public function validate()
+    {
+        $serial = false;
+        foreach ($this->columns as $name => $col)
+        {
+            if ($col->getSerial())
+            {
+                if ($serial !== false)
+                    throw new DBException("Duplicate serial column");
+                $serial = $name;
+            }
+        }
+
+        $pkey = false;
+        foreach ($this->indexes as $idx)
+        {
+            $cols = $idx->getColumns();
+            if ($serial)
+            {
+                if (count($cols) > 1 || $cols[0] !== $serial)
+                    throw new DBException("The serial column must be the primary key");
+                $pkey = true;
+            }
+            foreach ($cols as $col)
+            {
+                if (!isset($this->columns[$col]))
+                    throw new DBException("Index {$idx->getName()} used unknown column {$col}");
+            }
+        }
+
+        if ($serial && !$pkey)
+            throw new DBException("The serial column must be the primary key");
+
+        foreach ($this->foreign_keys as $fk)
+        {
+            $cols = $fk->getColumns();
+            foreach ($cols as $col)
+                if (!isset($this->columns[$col]))
+                    throw new DBException("The foreign key {$fk->getName()} used unknown column {$col}");
+        }
+
     }
 }

@@ -28,7 +28,7 @@ namespace WASP\DB;
 
 use WASP\Model\DBVersion;
 
-class ModuleMigration
+class Migration
 {
     protected $max_version = 0;
     protected $db_version = null;
@@ -39,9 +39,6 @@ class ModuleMigration
         try
         {
             $columns = DBVersion::getColumns();
-            
-            if (count($columns) !== 3 ||
-                $columns[0]['id']
         }
         catch (TableNotExists $e)
         {
@@ -52,30 +49,57 @@ class ModuleMigration
         $this->db_version = new DBVersion($module);
     }
 
+    public function getNewestVersion()
+    {
+        return $this->max_version;
+    }
+
+    public function getCurrentVersion()
+    {
+        return $this->db_version->get('version');
+    }
+
+    public function upgradeToLatest()
+    {
+        return $this->upgradeTo($this->getNewestVersion());
+    }
+
+    public function uninstall()
+    {
+        if ($module === "core")
+            DBVersion::dropTable();
+    }
+
     public function upgradeTo($version)
     {
         if (!is_int($version))
-            throw new DBException("Version is not an integer"):
+            throw new DBException("Version is not an integer");
 
-        if ($version <= 0 || version > $this->max_version)
+        if ($version <= 0 || $version > $this->max_version)
             throw new DBException("Module cannot be upgraded beyond the maximum version");
 
+        if (method_exists($this, "upgradeToV" . $version))
+            throw new DBException("Upgrade to version $version not implemented");
 
         $db = DB::get();
-        for ($v = $current_version + 1, $v <= $version; ++$v)
+        $current_version = $this->db_version->version;
+        for ($v = $current_version + 1; $v <= $version; ++$v)
         {
             if (!method_exists($this, "upgradeToV" . $v))
-                throw new DBException("Upgrade to version $v not implemented");
+                continue;
+
             $func = array($this, "upgradeToV" . $version);
             $db->beginTransaction();
             try
             {
                 call_user_func($func, $db);
+                $db_version->setField('version', $v)->save();
                 $db->commit();
             }
             catch (Exception $e)
             {
                 $db->rollback();
+                throw $e;
             }
         }
         return true;
@@ -84,26 +108,31 @@ class ModuleMigration
     public function downgradeTo($version)
     {
         if (!is_int($version))
-            throw new DBException("Version is not an integer"):
+            throw new DBException("Version is not an integer");
         if ($version < 0 || $version > $this->max_version)
             throw new DBException("Invalid module version number");
 
+        if (!method_exists($this, "downgradeToV" . $version))
+            throw new DBException("Downgrade to version $version is not implemented");
+
         $db = DB::get();
-        for ($v = $current_version - 1, $v >= $version; --$v)
+        for ($v = $current_version - 1; $v >= $version; --$v)
         {
             if (!method_exists($this, "downgradeToV" . $v))
-                throw new DBException("Downgrade to version $v is not implemented");
+                continue;
             $func = array($this, "downgradeToV" . $version);
 
             $db->beginTransaction();
             try
             {
                 call_user_func($func, $db);
+                $db_version->set('version', $v)->save();
                 $db->commit();
             }
             catch (Exception $e)
             {
                 $db->rollback();
+                throw $e;
             }
         }
         return true;
