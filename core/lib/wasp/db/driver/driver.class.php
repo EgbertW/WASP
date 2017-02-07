@@ -115,6 +115,40 @@ abstract class Driver
         return $name;
     }
 
+    public function equivalentTypes(Column $c1, Column $c2)
+    {
+        $t1 = $c1->getType();
+        $t2 = $c2->getType();
+
+        $m1 = $this->mapping[$t1];
+        $m2 = $this->mapping[$t2];
+
+        if ($m1 !== $m2)
+            return false;
+
+        if ($c1->getMaxLength() !== $c2->getMaxLength())
+            return false;
+
+        if ($c1->getNumericPrecision() !== $c2->getNumericPrecision())
+            return false;
+
+        if ($c1->getNumericScale() !== $c2->getNumericScale())
+            return false;
+
+        if ($t1 === Column::ENUM)
+        {
+            $vals1 = $c1->getEnumValues();
+            $vals2 = $c2->getEnumValues();
+            if (count($vals1) !== count($vals2))
+                return false;
+
+            $diff = array_diff($vals1, $vals2);
+            if (count($diff) > 0)
+                return false;
+        }
+        return true;
+    }
+
 
     // CRUD
     abstract public function select($table, $where, $order, array $params);

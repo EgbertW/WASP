@@ -52,7 +52,9 @@ class MySQL extends Driver
         Column::ENUM => 'ENUM',
 
         Column::BOOLEAN => 'TINYINT',
+        Column::TINYINT => 'TINYINT',
         Column::SMALLINT => 'SMALLINT',
+        Column::MEDIUMINT => 'MEDIUMINT',
         Column::INT => 'INT',
         Column::BIGINT => 'BIGINT',
         Column::FLOAT => 'FLOAT',
@@ -70,8 +72,8 @@ class MySQL extends Driver
         $q = "SELECT * FROM " . $this->getName($table);
         
         $col_idx = 0;
-        $q .= static::getWhere($where, $col_idx, $params);
-        $q .= static::getOrder($order);
+        $q .= $this->getWhere($where, $col_idx, $params);
+        $q .= $this->getOrder($order);
 
         $st = $this->db->prepare($q);
 
@@ -102,7 +104,7 @@ class MySQL extends Driver
 
         $q = "UPDATE " . $this->getName($table) . " SET ";
         $q .= implode(", ", $parts);
-        $q .= static::getWhere(array($idfield => $id), $col_idx, $params);
+        $q .= $this->getWhere(array($idfield => $id), $col_idx, $params);
 
         $this->logger->info("Preparing update query {}", $q);
         $st = $this->db->prepare($q);
@@ -189,7 +191,7 @@ class MySQL extends Driver
         $q = "DELETE FROM " . $this->getName($table);
         $col_idx = 0;
         $params = array();
-        $q .= static::getWhere($where, $col_idx, $params);
+        $q .= $this->getWhere($where, $col_idx, $params);
 
         $this->logger->info("Model.DAO", "Preparing delete query {}", $q);
         $st = $this->db->prepare($q);
@@ -513,7 +515,7 @@ class MySQL extends Driver
         foreach ($fks as $fk)
         {
             $n = $this->stripPrefix($fk['CONSTRAINT_NAME']);
-            var_Dump($this->prefix);
+            var_Dump($this->table_prefix);
             var_Dump($n);
             if (!empty($this->prefix) && substr($n, 0, strlen($this->prefix)) == $this->prefix)
                 $n = substr($n, strlen($this->prefix));

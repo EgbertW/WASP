@@ -26,6 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP\DB\Driver;
 
 use WASP\DB\DB;
+use WASP\DB\TableNotExists;
 use WASP\DB\DAOException;
 
 use WASP\DB\Table\Table;
@@ -48,8 +49,12 @@ class PGSQL extends Driver
         Column::VARCHAR => 'character varying',
         Column::TEXT => 'text',
         Column::JSON => 'json',
+        Column::ENUM => 'enum',
 
         Column::BOOLEAN => 'boolean',
+        Column::TINYINT => 'smallint',
+        Column::SMALLINT => 'smallint',
+        Column::MEDIUMINT => 'integer',
         Column::INT => 'integer',
         Column::BIGINT => 'bigint',
         Column::FLOAT => 'double precision',
@@ -192,7 +197,7 @@ class PGSQL extends Driver
         $q = "DELETE FROM " . $this->getName($table);
         $col_idx = 0;
         $params = array();
-        $q .= static::getWhere($where, $col_idx, $params);
+        $q .= $this->getWhere($where, $col_idx, $params);
 
         $this->logger->info("Model.DAO", "Preparing delete query {}", $q);
         $st = $this->db->prepare($q);

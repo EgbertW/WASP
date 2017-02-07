@@ -25,10 +25,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\DB\Table\Column;
 
-class IntColumn extends Column
+class SmallIntColumn extends Column
 {
     public function __construct($name, $nullable = false, $default = null)
     {
-        parent::__construct($name, Column::INT, null, 10, null, $nullable, $default);
+        parent::__construct($name, Column::SMALLINT, null, 5, null, $nullable, $default);
     }
 }

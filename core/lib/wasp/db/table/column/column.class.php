@@ -30,24 +30,26 @@ use WASP\DB\DBException;
 
 class Column implements \Serializable, \JSONSerializable
 {
-    const CHAR     =  1;
-    const VARCHAR  =  2;
-    const TEXT     =  3;
-    const JSON     =  4;
-    const ENUM     =  5;
+    const CHAR      =  1;
+    const VARCHAR   =  2;
+    const TEXT      =  3;
+    const JSON      =  4;
+    const ENUM      =  5;
 
-    const BOOLEAN  =  6;
-    const SMALLINT =  7;
-    const INT      =  8;
-    const BIGINT   =  9;
-    const FLOAT    = 10;
-    const DECIMAL  = 11;
+    const BOOLEAN   =  6;
+    const TINYINT   =  7;
+    const SMALLINT  =  8;
+    const MEDIUMINT =  9;
+    const INT       = 10;
+    const BIGINT    = 11;
+    const FLOAT     = 12;
+    const DECIMAL   = 13;
  
-    const DATE     = 12;
-    const DATETIME = 13;
-    const TIME =     14;
+    const DATE      = 14;
+    const DATETIME  = 15;
+    const TIME      = 16;
 
-    const BINARY =   15;
+    const BINARY    = 17;
 
     protected $table;
 
