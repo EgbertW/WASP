@@ -638,7 +638,7 @@ class PGSQL extends Driver
                     throw new DBException("Invalid index: $indexdef");
 
                 $algo = $matches[2];
-                $columns = explode(", ", $matches[3]);
+                $columns = self::explodeFunc($matches[3]);
                 $constraints[] = array(
                     'type' => 'INDEX',
                     'column' => $columns,

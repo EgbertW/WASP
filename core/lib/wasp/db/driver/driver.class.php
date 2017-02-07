@@ -265,4 +265,49 @@ abstract class Driver
         return "";
     }
 
+    /**
+     * Explodes a string on occurences of , while
+     * parsing functions properly. Each opening brace should be
+     * accompanied by a closing brace, and only split the string
+     * at the top-level, so that
+     * "max(a, b),c" is split into array("max(a, b)", "c") rather than
+     * array("max(a,", "b)", "c");
+     * 
+     * @param $str string The expression to parse
+     * @return array The split string
+     */
+    public static function explodeFunc($str)
+    {
+        $parts = array();
+
+        $buf = "";
+        $brace_count = 0;
+        $in_quote = 0;
+        for ($i = 0; $i < strlen($str); ++$i)
+        {
+            $ch = substr($str, $i, 1);
+            if ($ch === "'")
+            {
+                $in_quote = !$in_quote;
+            }
+            elseif ($ch === '(' && !$in_quote)
+            {
+                ++$brace_count;
+            }
+            elseif ($ch === ')' && !$in_quote)
+            {
+                --$brace_count;
+            }
+            elseif ($ch === ',' && !$in_quote && $brace_count === 0)
+            {
+                $parts[] = $buf;
+                $buf = "";
+                continue;
+            }
+            $buf .= $ch;
+        }
+        if (!empty($buf))
+            $parts[] = $buf;
+        return array_map('trim', $parts);
+    }
 }
