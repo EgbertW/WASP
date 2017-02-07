@@ -67,6 +67,23 @@ class MySQL extends Driver
         Column::BINARY => 'MEDIUMBLOB'
     );
 
+    public function generateDSN(array $config)
+    {
+        if (!isset($config['database']))
+            throw new DBException("Required field missing: database");
+
+        if (isset($config['socket']))
+            return "mysql:socket=" . $config['socket'] . ";dbname=" . $config['database'] . ";charset=utf8"; 
+
+        if (!isset($config['hostname']))
+            throw new DBException("Required field missing: socket or hostname");
+
+        if (isset($config['port']))
+            $port = ";port=" . $config['port'];
+
+        return "mysql:host=" . $config['hostname'] . ";dbname=" . $config['database'] . $port . ";charset=utf8";
+    }
+
     public function select($table, $where, $order, array $params)
     {
         $q = "SELECT * FROM " . $this->getName($table);

@@ -149,6 +149,8 @@ abstract class Driver
         return true;
     }
 
+    // PDO
+    abstract public function generateDSN(array $config);
 
     // CRUD
     abstract public function select($table, $where, $order, array $params);

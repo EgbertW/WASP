@@ -27,7 +27,7 @@ namespace WASP\DB\Driver;
 
 use WASP\DB\DB;
 use WASP\DB\TableNotExists;
-use WASP\DB\DAOException;
+use WASP\DB\DBException;
 
 use WASP\DB\Table\Table;
 use WASP\DB\Table\Index;
@@ -66,6 +66,26 @@ class PGSQL extends Driver
 
         Column::BINARY => 'bytea'
     );
+
+    public function generateDSN(array $config)
+    {
+        foreach (array('hostname', 'database') as $req)
+            if (!isset($config[$req]))
+                throw new DBException("Required field missing: " . $req);
+
+        $ssl = (!empty($config['ssl'])) ? " sslmode=require" : "";
+        $port = (!empty($config['port'])) ? " port=" . $config['port'] : "";
+
+        return "pgsql:dbname=" . $config['database'] . " host=" . $config['hostname'] . $ssl . $port;
+    }
+
+    public function setDatabaseName($dbname, $schema = null)
+    {
+        $this->dbname = $dbname;
+        $this->schema = $schema !== null ? $schema : "public";
+
+        return $this;
+    }
 
     public function select($table, $where, $order, array $params)
     {
@@ -211,18 +231,19 @@ class PGSQL extends Driver
         try
         {
             $q = $this->db->prepare("
-                SELECT column_name, data_type, is_nullable, column_default, numeric_precision, numeric_scale, character_maximum_length, extra
+                SELECT column_name, data_type, is_nullable, column_default, numeric_precision, numeric_scale, character_maximum_length 
                     FROM information_schema.columns 
                     WHERE table_name = :table AND table_schema = :schema
                     ORDER BY ordinal_position
             ");
 
-            $q->execute(array("table_name" => $table_name, "schema" => $this->schema));
+            $q->execute(array("table" => $table_name, "schema" => $this->schema));
 
             return $q->fetchAll();
         }
         catch (PDOException $e)
         {
+            var_dump($e);
             throw new TableNotExists();
         }
     }
@@ -463,84 +484,183 @@ class PGSQL extends Driver
         $serial = null;
         foreach ($columns as $col)
         {
-            $type = $col['data_type'];
+            $type = strtolower($col['data_type']);
             $numtype = array_search($type, $this->mapping);
             if ($numtype === false)
                 throw new DBException("Unsupported field type: " . $type);
-
+            
             $column = new Column(
                 $col['column_name'],
                 $numtype,
                 $col['character_maximum_length'],
-                $col['numeric_scale'],
                 $col['numeric_precision'],
+                $col['numeric_scale'],
                 $col['is_nullable'],
                 $col['column_default']
             );
 
-            $table->addColumn($column);
-            if (strtolower($col['extra']) === "auto_increment")
+            // TODO: Postgresify
+            if ($numtype === Column::ENUM)
             {
-                $pkey = new Index(Index::PRIMARY);
-                $pkey->addColumn($column);
-                $table->addIndex($pkey);
-
-                $column->setSerial(true);
-                $serial = $column;
+                // Extract values from enum
+                $vals = substr($col['column_type'], 5, -1); //  Remove 'ENUM(' and ')'
+                $enum_values = explode(',', $vals);
+                $vals = array();
+                foreach ($enum_values as $val)
+                    $vals[] = trim($val, "'");
+                $column->setEnumValues($vals);
             }
+
+            $table->addColumn($column);
+
+            // TODO: detect serial / nextval columns
+            //if (strtolower($col['extra']) === "auto_increment")
+            //{
+            //    $pkey = new Index(Index::PRIMARY);
+            //    $pkey->addColumn($column);
+            //    $table->addIndex($pkey);
+
+            //    $column->setSerial(true);
+            //    $serial = $column;
+            //}
         }
 
         $constraints = $this->getConstraints($table_name);
         foreach ($constraints as $constraint)
         {
-            if ($constraint['CONSTRAINT_TYPE'] === "FOREIGN KEY")
-            {
-                $fk = new ForeignKey($constraint['CONSTRAINT_NAME']);
-
-                $ref_table = $constraint['REF_TABLE'];
-
-                // Get refere
-
-            }
-            elseif ($constraint['CONSTRAINT_TYPE'] === "PRIMARY KEY")
-            {
-                if ($serial !== null) // Should have already have this one
-                    continue;
-
-                $idx = new Index(Index::PRIMARY, $constraint['CONSTRAINT_NAME']);
-            }
-            elseif($constraint['CONSTRAINT_TYPE'] === "UNIQUE")
-            {
-                $idx = new Index(Index::UNIQUE, $constraint['CONSTRAINT_NAME']);
-            }
+            $constraint['name'] = $this->stripPrefix($constraint['name']);
+            $table->addIndex($constraint);
+        }
+        
+        // Get update/delete policy from foreign keys
+        $fks = $this->getForeignKeys($table_name);
+        foreach ($fks as $fk)
+        {
+            $fk['name'] = $this->stripPrefix($fk['name']);
+            $table->addForeignKey(new ForeignKey($fk));
         }
 
-        // Get all indexes
+        return $table;
+    }
+
+    public function getForeignKeys($table_name)
+    {
+        $q = "
+        SELECT conname,
+            pg_catalog.pg_get_constraintdef(r.oid, true) as condef
+        FROM pg_catalog.pg_constraint r
+        WHERE r.conrelid = :table::regclass AND r.contype = 'f' ORDER BY 1;
+        ";
+        $q = $this->db->prepare($q);
+        $tname = $this->getName($table_name, false);
+        $q->execute(array("table" => $tname));
+
+        $fks = array();
+        foreach ($q as $row)
+        {
+            $name = $row['conname'];
+            $def = $row['condef'];
+
+            if (!preg_match('/^FOREIGN KEY \(([\w\d\s,_]+)\) REFERENCES ([\w\d]+)\(([\w\d\s,_]+)\)[\s]*(ON UPDATE (CASCADE|RESTRICT|SET NULL))?[\s]*(ON DELETE (CASCADE|RESTRICT|SET NULL))?$/', $def, $matches))
+                throw new DBException("Invalid condef: " . $def);
+            $columns = explode(", ", $matches[1]);
+            $reftable = $matches[2];
+            $refcolumns = explode(", ", $matches[3]);
+
+            $update_policy = isset($matches[5]) ? $matches[5] : "RESTRICT";
+            $delete_policy = isset($matches[7]) ? $matches[5] : "RESTRICT";
+
+            $fks[] = array('name' => $name, 'column' => $columns, 'referred_table' => $reftable, 'referred_column' => $refcolumns, "on_update" => $update_policy, "on_delete" => $delete_policy);
+        }
+
+        var_dump($fks);
+
+        return $q->fetchAll();
     }
 
     public function getConstraints($table_name)
     {
         $q = "
         SELECT 
-            kcu.CONSTRAINT_NAME AS CONSTRAINT_NAME,
-            kcu.REFERENCED_TABLE_NAME AS REF_TABLE,
-            kcu.REFERENCED_COLUMN_NAME AS REF_COLUMN,
-            tc.CONSTRAINT_TYPE AS CONSTRAINT_TYPE
-        FROM
-            information_schema.key_column_usage kcu
-        LEFT JOIN information_schema.TABLE_CONSTRAINTS tc 
-            ON (
-                tc.CONSTRAINT_NAME = kcu.CONSTRAINT_NAME AND
-                tc.CONSTRAINT_SCHEMA = kcu.CONSTRAINT_SCHEMA AND
-                tc.TABLE_NAME = kcu.TABLE_NAME
-            )
-        WHERE 
-            tc.CONSTRAINT_SCHEMA = :schema AND
-            kcu.table_name = :table
+            c2.relname AS name, 
+            i.indisprimary AS is_primary, 
+            i.indisunique AS is_unique, 
+            pg_catalog.pg_get_indexdef(i.indexrelid, 0, true) AS indexdef,
+            pg_catalog.pg_get_constraintdef(con.oid, true) AS constraintdef
+        FROM 
+            pg_catalog.pg_class c, pg_catalog.pg_class c2, pg_catalog.pg_index i
+        LEFT JOIN
+            pg_catalog.pg_constraint con ON (conrelid = i.indrelid AND conindid = i.indexrelid AND contype IN ('p','u','x'))
+        WHERE c.oid = :table::regclass AND c.oid = i.indrelid AND i.indexrelid = c2.oid
+        ORDER BY i.indisprimary DESC, i.indisunique DESC, c2.relname;
         ";
 
-        $q = $db->prepare($q);
-        $q->execute(array("schema " => $this->schema, "table" => $table_name));
+        $table_name = $this->getName($table_name, false);
+        $q = $this->db->prepare($q);
+        $q->execute(array("table" => $table_name));
+
+        $constraints = array();
+        foreach ($q as $row)
+        {
+            $name = $row['name'];
+            $primary = $row['is_primary'];
+            $unique = $row['is_unique'];
+            $indexdef = $row['indexdef'];
+            $constraintdef = $row['constraintdef'];
+
+            if ($primary)
+            {
+                if (!preg_match('/^PRIMARY KEY \(([\w\d\s,_]+)\)$/', $constraintdef, $matches))
+                    throw new DBException("Invalid primary key: $constraintdef");
+
+                $columns = explode(", ", $matches[1]);
+                $constraints[] = array(
+                    'type' => 'PRIMARY',
+                    'column' => $columns
+                );
+            }
+            elseif ($unique)
+            {
+                if (!preg_match('/^UNIQUE \(([\w\d\s,_]+)\)$/', $constraintdef, $matches))
+                    throw new DBException("Invalid unique key: $constraintdef");
+
+                $columns = explode(", ", $matches[1]);
+                $constraints[] = array(
+                    'type' => 'UNIQUE',
+                    'column' => $columns,
+                    'name' => $name
+                );
+            }
+            else
+            {
+                $qname = preg_quote($name, '/');
+                $tname = preg_quote($table_name, '/');
+                var_dump($indexdef);
+                if (!preg_match('/^CREATE INDEX ' . $qname . ' ON ' . $tname . ' (USING ([\w]+))?\s*\((.+)\)(\s*WHERE (.*))?$/', $indexdef, $matches))
+                    throw new DBException("Invalid index: $indexdef");
+
+                var_dump($matches);
+                $algo = $matches[2];
+                $columns = explode(", ", $matches[3]);
+                $constraints[] = array(
+                    'type' => 'INDEX',
+                    'column' => $columns,
+                    'name' => $name,
+                    'algorithm' => $algo,
+                    'condition' => isset($matches[5]) ? $matches[5] : null
+                );
+                var_dump(end($constraints));
+            }
+        }
+
+        return $q->fetchAll();
+    }
+
+    public function getIndexes($table_name)
+    {
+        $q = "SHOW INDEX FROM " . $this->getName($table_name);
+        $q = $this->db->prepare($q);
+        $q->execute();
 
         return $q->fetchAll();
     }

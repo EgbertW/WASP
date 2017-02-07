@@ -71,25 +71,10 @@ class DB
         $database = $this->config->get('sql', 'database');
         $schema = $this->config->get('sql', 'schema', null);
         $dsn = $this->config->get('sql', 'dsn');
-            
-        if (!$dsn)
-        {
-            $type = $this->config->get('sql', 'type');
-            if ($type === "mysql")
-            {
-                $dsn = "mysql:host=" . $host . ";dbname=" . $database;
-                Debug\info("WASP.DB", "Generated DSN: {}", $dsn);
-            }
-        }
-            
-        $pdo = new PDO($dsn, $username, $password);
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-            
-        $this->pdo = $pdo;
+        $type = $this->config->get('sql', 'type');
+        if (empty($type))
+            throw new DBException("Please specify the database type in the configuration section [sql]");
 
-        $pos = strpos($dsn, ":");
-        $type = substr($dsn, 0, $pos);
         $driver = "WASP\\DB\\Driver\\" . $type;
 
         if (!class_exists($driver))
@@ -100,6 +85,19 @@ class DB
         $this->qdriver = new $driver($this);
         $this->qdriver->setDatabaseName($database, $schema);
         $this->qdriver->setTablePrefix($this->config->get('sql', 'prefix', ''));
+            
+        if (!$dsn)
+        {
+            $dsn = $this->qdriver->generateDSN($this->config->getSection('sql'));
+            Debug\info("WASP.DB", "Generated DSN: {}", $dsn);
+            $this->config->set('sql', 'dsn', $dsn);
+        }
+            
+        $pdo = new PDO($dsn, $username, $password);
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+            
+        $this->pdo = $pdo;
     }
 
     /**

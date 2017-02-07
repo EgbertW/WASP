@@ -244,7 +244,9 @@ class Column implements \Serializable, \JSONSerializable
             case Column::ENUM: return "ENUM";
 
             case Column::BOOLEAN: return "BOOLEAN";
+            case Column::TINYINT: return "TINYINT";
             case Column::SMALLINT: return "SMALLINT";
+            case Column::MEDIUMINT: return "MEDIUMINT";
             case Column::INT: return "INT";
             case Column::BIGINT: return "BIGINT";
             case Column::FLOAT: return "FLOAT";
