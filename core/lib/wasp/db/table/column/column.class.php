@@ -34,18 +34,20 @@ class Column implements \Serializable, \JSONSerializable
     const VARCHAR  =  2;
     const TEXT     =  3;
     const JSON     =  4;
+    const ENUM     =  5;
 
-    const BOOLEAN  =  5;
-    const INT      =  6;
-    const BIGINT   =  7;
-    const FLOAT    =  8;
-    const DECIMAL  =  9;
+    const BOOLEAN  =  6;
+    const SMALLINT =  7;
+    const INT      =  8;
+    const BIGINT   =  9;
+    const FLOAT    = 10;
+    const DECIMAL  = 11;
  
-    const DATE     = 10;
-    const DATETIME = 11;
-    const TIME =     12;
+    const DATE     = 12;
+    const DATETIME = 13;
+    const TIME =     14;
 
-    const BINARY =   13;
+    const BINARY =   15;
 
     protected $table;
 
@@ -61,14 +63,15 @@ class Column implements \Serializable, \JSONSerializable
     protected $default = null;
 
     protected $serial = null;
+    protected $enum_values = null;
 
     public function __construct($name, $type, $max_length, $numeric_precision, $numeric_scale, $nullable, $default, $serial = false)
     {
         $this->name = $name;
         $this->type = $type;
         $this->max_length = $max_length;
-        $this->numeric_scale = $numeric_scale;
         $this->numeric_precision = $numeric_precision;
+        $this->numeric_scale = $numeric_scale;
         $this->nullable = $nullable == true;
         $this->default = $default;
         $this->serial = $serial == true;
@@ -140,25 +143,46 @@ class Column implements \Serializable, \JSONSerializable
         return $this->default;
     }
 
+    public function setEnumValues(array $values)
+    {
+        $this->enum_values = $values;
+        return $this;
+    }
+
+    public function getEnumValues()
+    {
+        return $this->enum_values;
+    }
+
     public function toArray()
     {
-        return array(
+        $arr = array(
             "column_name" => $this->name,
             "data_type" => $this->typeToStr($this->type),
             "is_nullable" => $this->nullable ? 1 : 0,
             "column_default" => $this->default,
-            "numeric_precision" => $this->numeric_precision,
-            "numeric_scale" => $this->numeric_scale,
-            "character_maximum_length" => $this->max_length,
             "serial" => $this->serial
         );
+
+        if ($this->numeric_precision !== null)
+            $arr["numeric_precision"] = $this->numeric_precision;
+        if ($this->numeric_scale !== null)
+            $arr["numeric_scale"] = $this->numeric_scale;
+        if ($this->max_length !== null)
+            $arr["character_maximum_length"] = $this->max_length;
+        if ($this->type === Column::ENUM)
+            $arr["enum_values"] = $this->enum_values;
+        return $arr;
     }
 
     public static function fromArray(array $data)
     {
         $args = self::parseArray($data);
         extract($args);
-        return new Column($name, $type, $max_length, $is_nullable, $column_default, $numeric_precision, $numeric_scale, $serial);
+        $col = new Column($name, $type, $max_length, $is_nullable, $column_default, $numeric_precision, $numeric_scale, $serial);
+        if (isset($enum_values) && $type === Column::ENUM)
+            $col->setEnumValues($col['enum_values']);
+        return $col;
     }
 
     public static function parseArray(array $data)
@@ -171,7 +195,8 @@ class Column implements \Serializable, \JSONSerializable
             'column_default' => isset($data['column_default']) ? $data['column_default'] : null,
             'numeric_precision' => isset($data['numeric_precision']) ? $data['numeric_precision'] : null,
             'numeric_scale' => isset($data['numeric_scale']) ? $data['numeric_scale'] : null,
-            'serial' => isset($data['serial']) ? $data['serial'] == true : false
+            'serial' => isset($data['serial']) ? $data['serial'] == true : false,
+            'enum_values' => isset($data['enum_values']) ? $data['enum_values'] : null
         );
     }
 
@@ -190,6 +215,9 @@ class Column implements \Serializable, \JSONSerializable
         $args = self::parseArray($data);
         extract($args);
         $this->__construct($name, $type, $max_length, $is_nullable, $column_default, $numeric_precision, $numeric_scale, $serial);
+        if (isset($enum_values) && $type === Column::ENUM)
+            $this->setEnumValues($col['enum_values']);
+        return $col;
     }
 
     public static function strToType($type)
@@ -211,8 +239,10 @@ class Column implements \Serializable, \JSONSerializable
             case Column::VARCHAR: return "VARCHAR";
             case Column::TEXT: return "TEXT";
             case Column::JSON: return "JSON";
+            case Column::ENUM: return "ENUM";
 
             case Column::BOOLEAN: return "BOOLEAN";
+            case Column::SMALLINT: return "SMALLINT";
             case Column::INT: return "INT";
             case Column::BIGINT: return "BIGINT";
             case Column::FLOAT: return "FLOAT";

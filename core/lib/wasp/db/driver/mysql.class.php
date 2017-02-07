@@ -49,8 +49,10 @@ class MySQL extends Driver
         Column::VARCHAR => 'VARCHAR',
         Column::TEXT => 'MEDIUMTEXT',
         Column::JSON => 'MEDIUMTEXT',
+        Column::ENUM => 'ENUM',
 
         Column::BOOLEAN => 'TINYINT',
+        Column::SMALLINT => 'SMALLINT',
         Column::INT => 'INT',
         Column::BIGINT => 'BIGINT',
         Column::FLOAT => 'FLOAT',
@@ -199,7 +201,7 @@ class MySQL extends Driver
     public function getColumns($table_name)
     {
         $q = $this->db->prepare("
-            SELECT column_name, data_type, is_nullable, column_default, numeric_precision, numeric_scale, character_maximum_length, extra
+            SELECT column_name, data_type, column_type, is_nullable, column_default, numeric_precision, numeric_scale, character_maximum_length, extra
                 FROM information_schema.columns 
                 WHERE table_name = :table AND table_schema = :schema
                 ORDER BY ordinal_position
@@ -403,6 +405,7 @@ class MySQL extends Driver
             case Column::VARCHAR:
                 $coldef .= "(" . $col->getMaxLength() . ")";
                 break;
+            case Column::SMALLINT:
             case Column::INT:
             case Column::BIGINT:
                 $coldef .= "(" . $col->getNumericPrecision() . ")";
@@ -412,12 +415,24 @@ class MySQL extends Driver
                 break;
             case Column::DECIMAL:
                 $coldef .= "(" . $col->getNumericPrecision() . "," . $col->getNumericScale() . ")";
+                break;
+            case Column::ENUM:
+                $coldef .= "('" . implode("','", $col->getEnumValues()) . "')";
+                break;
         }
 
-        $coldef .= $col->isNullable() ? " NULL " : " NOT NULL ";
+        $coldef .= $col->isNullable() ? " NULL" : " NOT NULL";
         $def = $col->getDefault();
+
         if ($def)
+        {
+            if (is_bool($def))
+                $def = $def ? 1 : 0;
+            elseif (!in_array($def, array("NOW()", "CURRENT_TIMESTAMP", "CURRENT_TIME", "CURRENT_DATE")))
+                $def = $this->db->quote($def);
+
             $coldef .= " DEFAULT " . $def;
+        }
         
         return $coldef;
     }
@@ -435,21 +450,27 @@ class MySQL extends Driver
             $numtype = array_search($type, $this->mapping);
             if ($numtype === false)
                 throw new DBException("Unsupported field type: " . $type);
-
-            $precision = $col['numeric_precision'];
-            // MySQL reserves one bit for the sign, which is not reflected in the numeric_precision field
-            if (in_array($numtype, array(Column::INT, Column::BIGINT, Column::BOOLEAN)))
-                $precision += 1; 
-
+            
             $column = new Column(
                 $col['column_name'],
                 $numtype,
                 $col['character_maximum_length'],
-                $precision,
+                $col['numeric_precision'],
                 $col['numeric_scale'],
                 $col['is_nullable'],
                 $col['column_default']
             );
+
+            if ($numtype === Column::ENUM)
+            {
+                // Extract values from enum
+                $vals = substr($col['column_type'], 5, -1); //  Remove 'ENUM(' and ')'
+                $enum_values = explode(',', $vals);
+                $vals = array();
+                foreach ($enum_values as $val)
+                    $vals[] = trim($val, "'");
+                $column->setEnumValues($vals);
+            }
 
             $table->addColumn($column);
             if (strtolower($col['extra']) === "auto_increment")
@@ -472,7 +493,7 @@ class MySQL extends Driver
             if ($serial !== null && $constraint['CONSTRAINT_TYPE'] === "PRIMARY KEY" && $constraint['COLUMN_NAME'] == $serial->getName())
                 continue;
 
-            $n = $constraint['CONSTRAINT_NAME'];
+            $n = $this->stripPrefix($constraint['CONSTRAINT_NAME']);
             if (!isset($summarized[$n]))
                 $summarized[$n] = array(
                     'name' => $n,
@@ -483,7 +504,7 @@ class MySQL extends Driver
                 );
 
             $summarized[$n]['column'][] = $constraint['COLUMN_NAME'];
-            $summarized[$n]['referred_table'] = $constraint['REF_TABLE'];
+            $summarized[$n]['referred_table'] = $this->stripPrefix($constraint['REF_TABLE']);
             $summarized[$n]['referred_column'][] = $constraint['REF_COLUMN'];
         }
         
@@ -491,7 +512,12 @@ class MySQL extends Driver
         $fks = $this->getForeignKeys($table_name);
         foreach ($fks as $fk)
         {
-            if (isset($summarized[$fk['CONSTRAINT_NAME']]))
+            $n = $this->stripPrefix($fk['CONSTRAINT_NAME']);
+            var_Dump($this->prefix);
+            var_Dump($n);
+            if (!empty($this->prefix) && substr($n, 0, strlen($this->prefix)) == $this->prefix)
+                $n = substr($n, strlen($this->prefix));
+            if (isset($summarized[$n]))
             {
                 $summarized[$n]['on_update'] = $fk['UPDATE_RULE'];
                 $summarized[$n]['on_delete'] = $fk['DELETE_RULE'];
@@ -528,7 +554,7 @@ class MySQL extends Driver
             if ($index['Non_unique'] == 0)
                 continue;
 
-            $n = $index['Key_name'];
+            $n = $this->stripPrefix($index['Key_name']);
             if (!isset($summarized[$n]))
                 $summarized[$n] = array(
                     'name' => $n,

@@ -23,31 +23,13 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\DB\Table;
+namespace WASP\DB\Table\Column;
 
-use WASP\DB\DBException;
-
-class TableRepository
+class EnumColumn extends Column
 {
-    protected static $tables = array();
-
-    public static function getTable($table)
+    public function __construct($name, array $values, $nullable = false, $default = null)
     {
-        if (!isset(self::$tables[$table]))
-            throw new DBException("Table $table not ofund");
-
-        return self::$tables[$table];
-    }
-
-    public static function putTable(Table $table)
-    {
-        self::$tables[$table->getName()] = $table;
-    }
-
-    public static function removeTable($table)
-    {
-        if ($table instanceof Table)
-            $table = $table->getName();
-        unset(self::$tables[$table]);
+        parent::__construct($name, Column::ENUM, null, null, null, $nullable, $default);
+        $this->setEnumValues($values);
     }
 }

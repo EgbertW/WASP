@@ -107,6 +107,14 @@ abstract class Driver
         return $quote ? $this->identQuote($entity) : $entity;
     }
 
+    public function stripPrefix($name)
+    {
+        // Strip the prefix away
+        if (!empty($this->table_prefix) && substr($name, 0, strlen($this->table_prefix)) === $this->table_prefix)
+            $name = substr($name, strlen($this->table_prefix));
+        return $name;
+    }
+
 
     // CRUD
     abstract public function select($table, $where, $order, array $params);
