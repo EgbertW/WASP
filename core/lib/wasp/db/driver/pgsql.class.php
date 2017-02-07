@@ -52,10 +52,10 @@ class PGSQL extends Driver
         Column::ENUM => 'enum',
 
         Column::BOOLEAN => 'boolean',
-        Column::TINYINT => 'smallint',
         Column::SMALLINT => 'smallint',
-        Column::MEDIUMINT => 'integer',
+        Column::TINYINT => 'smallint',
         Column::INT => 'integer',
+        Column::MEDIUMINT => 'integer',
         Column::BIGINT => 'bigint',
         Column::FLOAT => 'double precision',
         Column::DECIMAL => 'decimal',
@@ -528,8 +528,9 @@ class PGSQL extends Driver
         $constraints = $this->getConstraints($table_name);
         foreach ($constraints as $constraint)
         {
-            $constraint['name'] = $this->stripPrefix($constraint['name']);
-            $table->addIndex($constraint);
+            if (isset($constraint['name']))
+                $constraint['name'] = $this->stripPrefix($constraint['name']);
+            $table->addIndex(new Index($constraint));
         }
         
         // Get update/delete policy from foreign keys
@@ -573,9 +574,7 @@ class PGSQL extends Driver
             $fks[] = array('name' => $name, 'column' => $columns, 'referred_table' => $reftable, 'referred_column' => $refcolumns, "on_update" => $update_policy, "on_delete" => $delete_policy);
         }
 
-        var_dump($fks);
-
-        return $q->fetchAll();
+        return $fks;
     }
 
     public function getConstraints($table_name)
@@ -635,11 +634,9 @@ class PGSQL extends Driver
             {
                 $qname = preg_quote($name, '/');
                 $tname = preg_quote($table_name, '/');
-                var_dump($indexdef);
                 if (!preg_match('/^CREATE INDEX ' . $qname . ' ON ' . $tname . ' (USING ([\w]+))?\s*\((.+)\)(\s*WHERE (.*))?$/', $indexdef, $matches))
                     throw new DBException("Invalid index: $indexdef");
 
-                var_dump($matches);
                 $algo = $matches[2];
                 $columns = explode(", ", $matches[3]);
                 $constraints[] = array(
@@ -649,19 +646,9 @@ class PGSQL extends Driver
                     'algorithm' => $algo,
                     'condition' => isset($matches[5]) ? $matches[5] : null
                 );
-                var_dump(end($constraints));
             }
         }
 
-        return $q->fetchAll();
-    }
-
-    public function getIndexes($table_name)
-    {
-        $q = "SHOW INDEX FROM " . $this->getName($table_name);
-        $q = $this->db->prepare($q);
-        $q->execute();
-
-        return $q->fetchAll();
+        return $constraints;
     }
 }
