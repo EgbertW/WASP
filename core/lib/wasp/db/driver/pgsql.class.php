@@ -231,7 +231,7 @@ class PGSQL extends Driver
         try
         {
             $q = $this->db->prepare("
-                SELECT column_name, data_type, is_nullable, column_default, numeric_precision, numeric_scale, character_maximum_length 
+                SELECT column_name, data_type, udt_name, is_nullable, column_default, numeric_precision, numeric_scale, character_maximum_length 
                     FROM information_schema.columns 
                     WHERE table_name = :table AND table_schema = :schema
                     ORDER BY ordinal_position
@@ -419,6 +419,7 @@ class PGSQL extends Driver
         $this->db->exec("ALTER TABLE {$tablename} ALTER COLUMN {$colname} DROP DEFAULT");
 
         // Drop the sequence providing the value
+        // TODO: maybe this is not necessary
         $this->db->exec("DROP SEQUENCE {seqname}");
 
         $column->setSerial(false);
@@ -486,9 +487,29 @@ class PGSQL extends Driver
         {
             $type = strtolower($col['data_type']);
             $numtype = array_search($type, $this->mapping);
+
+            $enum_values = null;
+            if ($col['data_type'] === "USER-DEFINED")
+            {
+                $udt = $col['udt_name'];
+
+                // Check if it is an enum
+                $q = "SELECT enumlabel FROM pg_catalog.pg_type pt LEFT JOIN pg_catalog.pg_enum pe ON pe.enumtypid = pt.oid WHERE pt.typname = :enumname";
+                $q = $this->db->prepare($q);
+                $q->execute(array('enumname' => $udt));
+
+                if ($q->rowCount() === 0)
+                    throw new DBException("Unsupported field type: " . $type);
+
+                $enum_values = array();
+                foreach ($q as $r)
+                    $enum_values[] = $r['enumlabel'];
+                $numtype = Column::ENUM;
+            }
+
             if ($numtype === false)
-                throw new DBException("Unsupported field type: " . $type);
-            
+                    throw new DBException("Unsupported field type: " . $type);
+
             $column = new Column(
                 $col['column_name'],
                 $numtype,
@@ -499,35 +520,31 @@ class PGSQL extends Driver
                 $col['column_default']
             );
 
-            // TODO: Postgresify
-            if ($numtype === Column::ENUM)
-            {
-                // Extract values from enum
-                $vals = substr($col['column_type'], 5, -1); //  Remove 'ENUM(' and ')'
-                $enum_values = explode(',', $vals);
-                $vals = array();
-                foreach ($enum_values as $val)
-                    $vals[] = trim($val, "'");
-                $column->setEnumValues($vals);
-            }
+            if ($enum_values !== null)
+                $column->setEnumValues($enum_values);
+
 
             $table->addColumn($column);
 
-            // TODO: detect serial / nextval columns
-            //if (strtolower($col['extra']) === "auto_increment")
-            //{
-            //    $pkey = new Index(Index::PRIMARY);
-            //    $pkey->addColumn($column);
-            //    $table->addIndex($pkey);
-
-            //    $column->setSerial(true);
-            //    $serial = $column;
-            //}
+            // Detect serial columns by the presence of nextval( While postgres
+            // technically allows the use of more than one sequence per table
+            // and also does not require it to be a primary key, it's the most
+            // common use case.
+            if ($col['column_default'] !== null)
+            {
+                if (substr($col['column_default'], 0, 8) === "nextval(")
+                {
+                    $sequence_name = substr($col['column_default'], 9, -12);
+                    $column->setSerial(true);
+                    $column->setDefault(null);
+                }
+            }
         }
 
         $constraints = $this->getConstraints($table_name);
         foreach ($constraints as $constraint)
         {
+            var_dump($constraint);
             if (isset($constraint['name']))
                 $constraint['name'] = $this->stripPrefix($constraint['name']);
             $table->addIndex(new Index($constraint));

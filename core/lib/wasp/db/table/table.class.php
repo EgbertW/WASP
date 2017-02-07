@@ -302,7 +302,7 @@ class Table implements \Serializable, \JSONSerializable
         foreach ($this->indexes as $idx)
         {
             $cols = $idx->getColumns();
-            if ($serial)
+            if ($idx->getType() === Index::PRIMARY && $serial)
             {
                 if (count($cols) > 1 || $cols[0] !== $serial)
                     throw new DBException("The serial column must be the primary key");
@@ -312,6 +312,13 @@ class Table implements \Serializable, \JSONSerializable
             {
                 if (strpos($col, '(') !== false)
                     continue; // Parsing function expressions is out-of-scope
+
+                if (($sp_pos = strpos($col, ' ')) !== false)
+                {
+                    // Modifiers may be present after the name of the column,
+                    // such as ASC or DESC. Validating these is out of scope
+                    $col = substr($col, 0, $sp_pos);
+                }
 
                 if (!isset($this->columns[$col]))
                     throw new DBException("Index {$idx->getName()} used unknown column {$col}");

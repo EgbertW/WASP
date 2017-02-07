@@ -125,9 +125,21 @@ class Column implements \Serializable, \JSONSerializable
         return $this->max_length;
     }
 
+    public function setMaxLength($max_length)
+    {
+        $this->max_length = $max_length === null ? null : (int)$max_length;
+        return $this;
+    }
+
     public function getNumericScale()
     {
         return $this->numeric_scale;
+    }
+
+    public function setNumericScale($scale)
+    {
+        $this->numeric_scale = $scale === null ? null : (int)$scale;
+        return $this;
     }
 
     public function getNumericPrecision()
@@ -135,14 +147,31 @@ class Column implements \Serializable, \JSONSerializable
         return $this->numeric_precision;
     }
 
+    public function setNumericPrecision($precision)
+    {
+        $this->numeric_precision = $precision === null ? null : (int)$precision;
+        return $this;
+    }
+
     public function isNullable()
     {
         return $this->nullable;
     }
 
+    public function setNullable($nullable)
+    {
+        $this->nullable = $nullable == true;
+    }
+
     public function getDefault()
     {
         return $this->default;
+    }
+
+    public function setDefault($default)
+    {
+        $this->default = $default;
+        return $this;
     }
 
     public function setEnumValues(array $values)
