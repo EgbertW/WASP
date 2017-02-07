@@ -310,6 +310,9 @@ class Table implements \Serializable, \JSONSerializable
             }
             foreach ($cols as $col)
             {
+                if (strpos($col, '(') !== false)
+                    continue; // Parsing function expressions is out-of-scope
+
                 if (!isset($this->columns[$col]))
                     throw new DBException("Index {$idx->getName()} used unknown column {$col}");
             }

@@ -541,6 +541,8 @@ class PGSQL extends Driver
             $table->addForeignKey(new ForeignKey($fk));
         }
 
+        $table->validate();
+
         return $table;
     }
 

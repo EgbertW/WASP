@@ -587,6 +587,8 @@ class MySQL extends Driver
         foreach ($summarized as $idx)
             $table->addIndex(new Index($idx));
 
+        $table->validate();
+
         return $table;
     }
 
