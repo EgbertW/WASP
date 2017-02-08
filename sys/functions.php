@@ -29,7 +29,7 @@ function is_int_val($val)
     if (is_bool($val)) return false;
     if (!is_string($val)) return false;
 
-    return (string)((int)$val) == $val;
+    return (string)((int)$val) === $val;
 }
 
 /** Convert any value to a bool, somewhat more intelligently than PHP does

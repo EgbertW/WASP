@@ -73,13 +73,15 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \JsonSerializab
         switch ($type)
         {
             case Dictionary::TYPE_NUMERIC:
-                return is_string($val);
+                return is_numeric($val);
             case Dictionary::TYPE_INT:
                 return \is_int_val($val);
+            case Dictionary::TYPE_FLOAT:
+                return is_float($val);
             case Dictionary::TYPE_STRING:
                 return is_string($val);
             case Dictionary::TYPE_ARRAY:
-                return is_array($val);
+                return is_array($val) || $val instanceof Dictionary;
             case Dictionary::TYPE_OBJECT:
                 return is_object($val);
             default:
