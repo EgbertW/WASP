@@ -25,7 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP;
 
-use WASP\File\Resolve;
+use WASP\Module;
 
 class Task
 {
@@ -42,13 +42,9 @@ class Task
         if (self::$init)
             return;
 
-        $modules = Resolve::getModules();
+        $modules = Module\Manager::getModules();
         foreach ($modules as $mod)
-        {
-            $cl = $mod . "\\Module";
-            if (class_exists($cl, false))
-                $cl::registerTasks();
-        }
+            $mod->registerTasks();
         self::$init = true;
     }
 

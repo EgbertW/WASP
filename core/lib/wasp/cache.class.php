@@ -135,6 +135,9 @@ class Cache
             $ref = &$ref[$arg];
         }
 
+        if (!is_array($ref))
+            return $nul;
+
         return $ref[$key];
     }
     

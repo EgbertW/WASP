@@ -46,7 +46,11 @@ if (!defined('WASP_ROOT'))
 
 // Set up logging
 ini_set('log_errors', '1');
-ini_set('error_log', WASP_ROOT . '/var/log/error-php.log');
+
+if (PHP_SAPI === 'cli')
+    ini_set('error_log', WASP_ROOT . '/var/log/error-php-cli.log');
+else
+    ini_set('error_log', WASP_ROOT . '/var/log/error-php.log');
 
 // Check required modules
 require_once WASP_ROOT . "/core/lib/wasp/debug/log.class.php";
@@ -57,7 +61,7 @@ if (isset($_SERVER['REQUEST_URI']))
 require_once WASP_ROOT . "/sys/functions.php";
 
 // Set up the autoloader
-require_once WASP_ROOT . "/core/lib/wasp/file/resolve.class.php";
+require_once WASP_ROOT . "/core/lib/wasp/autoload/autoloader.class.php";
 
 Request::setErrorHandler();
 Path::setup();
@@ -68,15 +72,13 @@ $config = WASP\Config::getConfig();
 // Change settings for CLI
 if (Request::cli())
 {
-    ini_set('error_log', WASP_ROOT . '/var/log/error-php-cli.log');
-    ini_set('max_execution_time', 0);
-
     $limit = (int)$config->get('cli', 'memory_limit', 1024);
     ini_set('memory_limit', $limit . 'M');
+    ini_set('max_execution_time', 0);
 }
 
 // Save the cache if configured so
 WASP\Cache::setHook($config);
 
 // Find installed modules and initialize them
-WASP\File\Resolve::findModules($config);
+WASP\Module\Manager::setup($config);
