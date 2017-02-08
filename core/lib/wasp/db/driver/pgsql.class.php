@@ -34,7 +34,6 @@ use WASP\DB\Table\Index;
 use WASP\DB\Table\ForeignKey;
 use WASP\DB\Table\Column\Column;
 
-use WASP\Config;
 use WASP\Debug\Log;
 
 use PDO;
@@ -243,7 +242,6 @@ class PGSQL extends Driver
         }
         catch (PDOException $e)
         {
-            var_dump($e);
             throw new TableNotExists();
         }
     }
@@ -544,7 +542,6 @@ class PGSQL extends Driver
         $constraints = $this->getConstraints($table_name);
         foreach ($constraints as $constraint)
         {
-            var_dump($constraint);
             if (isset($constraint['name']))
                 $constraint['name'] = $this->stripPrefix($constraint['name']);
             $table->addIndex(new Index($constraint));

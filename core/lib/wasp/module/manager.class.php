@@ -42,7 +42,7 @@ class Manager
     /** 
      * Find and initialize installed modules in the module path
      *
-     * @param $config WASP\Config The configuration from which to obtain the module path
+     * @param $config WASP\Dictionary The configuration from which to obtain the module path
      */
     public static function setup($config)
     {
@@ -51,13 +51,12 @@ class Manager
 
         self::$logger = new Log('WASP.Module.Manager');
 
-        $module_path = realpath($config->get('site', 'module_path', WASP_ROOT . '/modules'));
+        $module_path = realpath($config->dget('site', 'module_path', WASP_ROOT . '/modules'));
         $modules = Resolve::listModules($module_path);
 
         foreach ($modules as $mod_name => $path)
         {
             self::$logger->info("WASP.Autoload.Resolve", "Found module {} in path {}", $mod_name, $path);
-            var_dump($path);
             Resolve::registerModule($mod_name, $path);
             self::$modules[$mod_name] = $path;
 

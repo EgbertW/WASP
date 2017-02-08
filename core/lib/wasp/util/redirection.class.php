@@ -54,14 +54,14 @@ class Redirection
         $needs_redirect = false;
         
         // Whether we prefer www. in front of the domain or not
-        $use_www = $config->get('site', 'www', true) == true;
+        $use_www = $config->dget('site', 'www', true) == true;
 
         // Whether we prefer HTTPS
-        $use_ssl = $config->get('site', 'secure', false) == true;
+        $use_ssl = $config->dget('site', 'secure', false) == true;
         
         // Detect the domain in use
         $domain = null;
-        $domains = $config->get('site', 'url', $host);
+        $domains = $config->dget('site', 'url', $host);
         $domains = explode(";", $domains);
         foreach ($domains as $d)
         {
@@ -76,7 +76,7 @@ class Redirection
         $http_lang = isset($_SERVER['HTTP_ACCEPT_LANGUAGE']) ? $_SERVER['HTTP_ACCEPT_LANGUAGE'] : "";
         $language = substr($http_lang, 0, 2);
         if (empty($language) || ($language !== "nl" && $language !== "en"))
-            $language = $config->get('site', 'default_language', 'en');
+            $language = $config->dget('site', 'default_language', 'en');
 
         if ($domain === null)
         {
@@ -84,7 +84,7 @@ class Redirection
             Debug\info("Util.Redirection", "Unknown domain name in use: {}", $host);
             $subdomain = null;
             
-            if ($config->get('site', 'redirect_unknown'))
+            if ($config->has('site', 'redirect_unknown'))
             {
                 $preferred = reset($domains);
                 if ($use_www)
@@ -103,7 +103,7 @@ class Redirection
 
             // Detect language based on domain name
             $preferred = reset($domains);
-            $site_config = $config->getSection('domainlanguage');
+            $site_config = $config->get('domainlanguage');
             foreach ($site_config as $key => $domains)
             {
                 if (!substr($key, 0, 4) == "url_")

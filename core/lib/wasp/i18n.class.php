@@ -65,31 +65,31 @@ class I18N
     public static function defaultCurrency()
     {
         $cfg = Config::getConfig();
-        return $cfg->get('localization', 'currency', 'EUR');
+        return $cfg->dget('localization', 'currency', 'EUR');
     }
     
     public static function defaultTimezone()
     {
         $cfg = Config::getConfig();
-        return new DateTimeZone($cfg->get('localization', 'timezone', 'UTC'));
+        return new DateTimeZone($cfg->dget('localization', 'timezone', 'UTC'));
     }
 
     public function defaultDateFormat()
     {
         $cfg = Config::getConfig();
-        return $cfg->get('localization', 'dateformat', 'd/m/Y');
+        return $cfg->dget('localization', 'dateformat', 'd/m/Y');
     }
 
     public function defaultDateTimeFormat()
     {
         $cfg = Config::getConfig();
-        return $cfg->get('localization', 'dateformat', 'd/m/Y H:i:s');
+        return $cfg->dget('localization', 'dateformat', 'd/m/Y H:i:s');
     }
 
     public function defaultTimeFormat()
     {
         $cfg = Config::getConfig();
-        return $cfg->get('localization', 'dateformat', 'H:i:s');
+        return $cfg->dget('localization', 'dateformat', 'H:i:s');
     }
 
     public function formatNumber($number, $decimals = false)

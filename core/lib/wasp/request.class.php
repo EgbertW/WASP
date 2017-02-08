@@ -68,12 +68,12 @@ class Request
         $domain = self::$domain;
         $sub = self::$subdomain;
 
-        $lifetime = $conf->get('cookie', 'lifetime', 30 * 24 * 3600);
+        $lifetime = $conf->dget('cookie', 'lifetime', 30 * 24 * 3600);
         $path = '/';
         $domain = (!empty($sub) && $sub !== "www") ? $sub . "." . $domain : $domain;
         $secure = self::$secure;
-        $httponly = $conf->get('cookie', 'httponly', true) == true;
-        $session_name = (string)$conf->get('cookie', 'prefix', 'cms_') . str_replace(".", "_", $domain);
+        $httponly = $conf->dget('cookie', 'httponly', true) == true;
+        $session_name = (string)$conf->dget('cookie', 'prefix', 'cms_') . str_replace(".", "_", $domain);
 
         session_set_cookie_params($lifetime, $path, $domain, $secure, $httponly);
         session_name($session_name);
@@ -82,7 +82,7 @@ class Request
         // Make sure the cookie expiry is updated every time.
         setcookie(session_name(), session_id(), time() + $lifetime);
 
-        self::$session = new Arguments($_SESSION);
+        self::$session = new Dictionary($_SESSION);
         if (self::$session->has('language'))
             self::$language = self::$session->get('language');
     }
@@ -121,9 +121,9 @@ class Request
 			throw new HttpError(400, "No accept type requested");
 
         // Get request data
-        self::$get = new Arguments($_GET);
-        self::$post = new Arguments($_POST);
-        self::$cookie = new Arguments($_COOKIE);
+        self::$get = new Dictionary($_GET);
+        self::$post = new Dictionary($_POST);
+        self::$cookie = new Dictionary($_COOKIE);
         self::$method = $_SERVER['REQUEST_METHOD'];
 
         Util\Redirection::checkRedirect();
@@ -141,7 +141,7 @@ class Request
             throw new HttpError(404, 'Could not resolve ' . self::$uri);
 
         self::$route = $resolved['route'];
-        self::$url_args = new Arguments($resolved['remainder']);
+        self::$url_args = new Dictionary($resolved['remainder']);
         self::$app = $resolved['path'];
 
         self::execute($resolved['path']);
@@ -250,7 +250,7 @@ class Request
             try
             {
                 $conf = Config::getConfig();
-                $dev = $conf->get('site', 'dev', false);
+                $dev = $conf->dget('site', 'dev', false);
             }
             catch (\Exception $e)
             {}

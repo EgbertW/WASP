@@ -212,7 +212,7 @@ namespace WASP
         {
             $list = array();
             $cfg = Config::getConfig();
-            $dev = $cfg->get('site', 'dev', true);
+            $dev = $cfg->dget('site', 'dev', true);
             foreach (self::$js as $l)
             {
                 $relpath = "js/" . $l;
@@ -241,7 +241,7 @@ namespace WASP
         {
             $list = array();
             $cfg = Config::getConfig();
-            $dev = $cfg->get('site', 'dev', true);
+            $dev = $cfg->dget('site', 'dev', true);
             foreach (self::$css as $l)
             {
                 $relpath = "css/" . $l;

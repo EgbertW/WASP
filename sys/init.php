@@ -72,7 +72,7 @@ $config = WASP\Config::getConfig();
 // Change settings for CLI
 if (Request::cli())
 {
-    $limit = (int)$config->get('cli', 'memory_limit', 1024);
+    $limit = (int)$config->dget('cli', 'memory_limit', 1024);
     ini_set('memory_limit', $limit . 'M');
     ini_set('max_execution_time', 0);
 }

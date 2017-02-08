@@ -26,6 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP\DB;
 
 use WASP\Config;
+use WASP\Dictionary;
 use WASP\Debug;
 use PDO;
 
@@ -52,7 +53,7 @@ class DB
     {
         $this->logger = new Debug\Log("WASP.DB.DB");
         $this->config = $config;
-        if ($this->config->get('sql', 'lazy', true) == false)
+        if ($this->config->dget('sql', 'lazy', true) == false)
             $this->connect();
     }
 
@@ -69,7 +70,7 @@ class DB
         $password = $this->config->get('sql', 'password');
         $host = $this->config->get('sql', 'hostname');
         $database = $this->config->get('sql', 'database');
-        $schema = $this->config->get('sql', 'schema', null);
+        $schema = $this->config->get('sql', 'schema');
         $dsn = $this->config->get('sql', 'dsn');
         $type = $this->config->get('sql', 'type');
         if (empty($type))
@@ -84,11 +85,11 @@ class DB
 
         $this->qdriver = new $driver($this);
         $this->qdriver->setDatabaseName($database, $schema);
-        $this->qdriver->setTablePrefix($this->config->get('sql', 'prefix', ''));
+        $this->qdriver->setTablePrefix($this->config->dget('sql', 'prefix', ''));
             
         if (!$dsn)
         {
-            $dsn = $this->qdriver->generateDSN($this->config->getSection('sql'));
+            $dsn = $this->qdriver->generateDSN($this->config->getArray('sql'));
             Debug\info("WASP.DB", "Generated DSN: {}", $dsn);
             $this->config->set('sql', 'dsn', $dsn);
         }
@@ -103,7 +104,7 @@ class DB
     /**
      * Get a DB object for the provided configuration
      */
-    public static function get(Config $config = null)
+    public static function get(Dictionary $config = null)
     {
         $default = false;
         if ($config === null)

@@ -286,7 +286,7 @@ class Resolve
             if ($resolved === null) // Store failure as false in the cache
                 $resolved = false;
 
-            self::$cache->put('class', $resolved);
+            self::$cache->put('class', $class_name, $resolved);
         }
 
         return $resolved ? $resolved : null;

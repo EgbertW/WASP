@@ -27,12 +27,24 @@ namespace WASP;
 
 use WASP\Debug;
 
+/**
+ * Provides automatic persistent caching facilities. You can store and retrieve
+ * objects in this cache. When they are available, they'll be returned,
+ * otherwise null will be returned. The cache is automatically saved to PHP
+ * serialized files on shutdown, and they are loaded from these files on
+ * initialization.
+ */ 
 class Cache
 {
     public static $logger = null;
     private static $repository = array();
     private $cache_name;
 
+    /**
+     * Create a cache
+     * @param $name string The name of the cache, determines the file name
+     *
+     */
     public function __construct($name)
     {
         $this->cache_name = $name;
@@ -43,13 +55,13 @@ class Cache
     /**
      * Add the hook after the configuration has been loaded, and apply invalidation to the
      * cache once it times out.
-     * @param $config WAS\Config The configuration to load settings from
+     * @param $config WASP\Dictionary The configuration to load settings from
      */
     public static function setHook($config)
     {
         register_shutdown_function(array('WASP\\Cache', 'saveCache'));
 
-        $timeout = $config->get('cache', 'expire', 60); // Clear out cache every minute by default
+        $timeout = $config->dget('cache', 'expire', 60); // Clear out cache every minute by default
         foreach (self::$repository as $name => $cache)
         {
             $st = isset($cache['_timestamp']) ? $cache['_timestamp'] : 0;
@@ -57,13 +69,22 @@ class Cache
             if (time() - $st > $timeout)
             {
                 Debug\info("WASP.Cache", "Cache {$name} is more than {} seconds old ({}), invalidating", $timeout, $st);
-                self::$repository[$name] = array('_timestamp' => time());
+                self::$repository[$name] = new Dictionary();
+                self::$repository[$name]['_timestamp'] = time();
             }
         }
     }
 
+    /**
+     * Load the cache from the cache files. The data will be stored in the class-internal cache storage
+     *
+     * @param $name string The name of the cache to load
+     */
     private static function loadCache($name)
     {
+        if (!class_exists('WASP\\Dictionary', false))
+            require_once 'dictionary.class.php';
+
         $cache_file = WASP_CACHE . '/' . $name  . '.cache';
 
         if (file_exists($cache_file))
@@ -74,26 +95,30 @@ class Cache
                 return;
             }
 
-            $data = file_get_contents($cache_file);
-            $cache = unserialize($data);
-            if ($cache === false)
+            try
             {
-                self::$logger->error("Cache file contains invalid data: {} - removing", $cache);
+                self::$repository[$name] = Dictionary::loadFile($cache_file, "phps");
+                self::$repository[$name]['_changed'] = false;
+            }
+            catch (\Throwable $t)
+            {
+                self::$logger->error("Failure loading cache {} - removing", $name);
+                self::$logger->error("Error", $t);
                 if (is_writable($cache_file))
                     unlink($cache_file);
                 return;
             }
-
-            self::$logger->info("Loaded {} bytes resolve cache data from: {}", strlen($data), $cache_file);
-            unset($cache['_changed']);
-            self::$repository[$name] = $cache;
         }
         else
-            self::$repository[$name] = array();
+        {
+            self::$logger->info("Cache {} does not exist - creating", $cache_file);
+            self::$repository[$name] = new Dictionary();
+        }
     }
 
     /**
-     * Save the cache once the script terminates.
+     * Save the cache once the script terminates. Is attached as a shutdown
+     * hook by calling Cache::setHook
      */
     public static function saveCache()
     {
@@ -105,67 +130,44 @@ class Cache
 
             unset($cache['_changed']);
             $cache_file = $cache_dir . '/' . $name . '.cache';
-
-            if (file_exists($cache_file) && !is_writable($cache_file))
-            {
-                Debug\error("WASP.Cache", "Cannot write {$name} cache to {$cache_file}");
-                continue;
-            }
-
-            $data = serialize($cache);
-            file_put_contents($cache_file, $data);
-            Debug\info("WASP.Cache", "Saved {} bytes {} cache data from: {}", strlen($data), $name, $cache_file);
+            $cache->saveFile($cache_file, 'phps');
         }
     }
 
+    /**
+     * Get a value from the cache
+     *
+     * @param $key scalar The key under which to store. Can be repeated to go deeper
+     * @return mixed The requested value, or null if it doesn't exist
+     */
     public function &get()
     {
-        $args = func_get_args();
-        if (count($args) === 0)
-            return self::$repository[$this->cache_name];
-
-        $ref = &self::$repository[$this->cache_name];
-        $key = array_pop($args);
-        $nul = null;
-
-        foreach ($args as $arg)
-        {
-            if (!isset($ref[$arg]))
-                return $nul;
-            $ref = &$ref[$arg];
-        }
-
-        if (!is_array($ref))
-            return $nul;
-
-        return $ref[$key];
+        return self::$repository[$this->cache_name]->dget(func_get_args(), null);
     }
     
-    public function put()
+    /**
+     * Put a value in the cache
+     *
+     * @param $key scalar The key under which to store. Can be repeated to go deeper.
+     * @param $val mixed The value to store. Should be PHP-serializable. If
+     *                   this is null, the entry will be removed from the cache
+     * @return Cache Provides fluent interface
+     */
+    public function put($key, $val)
     {
-        $args = func_get_args();
-        if (count($args) === 0)
-            throw new \RuntimeException("Need at least two arguments for Cache#put");
-
-        $value = array_pop($args);
-        $key = array_pop($args);
-
-        $ref = &self::$repository[$this->cache_name];
-        foreach ($args as $arg)
-        {
-            if (!isset($ref[$arg]))
-                $ref[$arg] = array();
-
-            $ref = &$ref[$arg];
-        }
-        $ref[$key] = $value;
-
+        self::$repository[$this->cache_name]->set(func_get_args(), null);
         self::$repository[$this->cache_name]['_changed'] = true;
+        return $this;
     }
 
+    /**
+     * Replace the entire contents of the cache
+     *
+     * @param $replacement array The replacement for the cache
+     */
     public function replace(array $replacement)
     {
-        self::$repository[$this->cache_name] = $replacement;
+        self::$repository[$this->cache_name] = new Dictionary($replacement);
         self::$repository[$this->cache_name]['_changed'] = true;
         self::$repository[$this->cache_name]['_timestamp'] = time();
     }

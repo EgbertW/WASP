@@ -122,7 +122,7 @@ class CLI
                 $res[$k] = $v;
         }
 
-        return new Arguments($res);
+        return new Dictionary($res);
     }
 
     /**

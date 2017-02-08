@@ -33,7 +33,6 @@ use WASP\DB\Table\Index;
 use WASP\DB\Table\ForeignKey;
 use WASP\DB\Table\Column\Column;
 
-use WASP\Config;
 use WASP\Debug\Log;
 
 use PDO;

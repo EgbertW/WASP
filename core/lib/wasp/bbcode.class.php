@@ -47,10 +47,10 @@ class BBCode
      */
     public function __construct($config = null)
     {
-        if ($config instanceof Config)
-            $config = $config->getSection('bbcode');
+        if ($config->has('bbcode', Dictionary::TYPE_ARRAY))
+            $config = $config->get('bbcode');
 
-        if (is_array($config) || $config instanceof Arguments)
+        if (is_array($config) || $config instanceof Dictionary)
         {
             $patterns = isset($config['patterns']) ? $config['patterns'] : array();
             $replacements = isset($config['replacements']) ? $config['replacements'] : array();
