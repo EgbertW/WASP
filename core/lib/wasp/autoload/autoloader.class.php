@@ -27,6 +27,10 @@ namespace WASP\Autoload;
 
 use WASP\Debug;
 
+if (!defined('WASP_ROOT'))
+    define('WASP_ROOT', dirname(dirname(dirname(dirname(dirname(__FILE__))))));
+
+require_once WASP_ROOT . '/core/lib/wasp/debug/log.class.php';
 require_once "resolve.class.php";
 
 class Autoloader

@@ -27,6 +27,9 @@ namespace WASP;
 
 use WASP\Debug;
 
+if (!defined('WASP_CACHE'))
+    define('WASP_CACHE', WASP_ROOT . '/var/cache');
+
 /**
  * Provides automatic persistent caching facilities. You can store and retrieve
  * objects in this cache. When they are available, they'll be returned,
