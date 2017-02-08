@@ -1,0 +1,77 @@
+<?php
+/*
+This is part of WASP, the Web Application Software Platform.
+It is published under the MIT Open Source License.
+
+Copyright 2017, Egbert van der Wal
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+
+namespace WASP;
+
+use PHPUnit\Framework\TestCase;
+
+/**
+ * @covers WASP\Cache
+ */
+final class CacheTest extends TestCase
+{
+    /**
+     * @covers WASP\Cache::__construct
+     * @covers WASP\Cache::loadCache
+     * @covers WASP\Cache::get
+     * @covers WASP\Cache::put
+     * @covers WASP\Cache::saveCache
+     */
+    public function testConstruct()
+    {
+        $data = array('test' => array('a' => true, 'b' => false, 'c' => true), 'test2' => array(1, 2, 3));
+        $file = WASP_CACHE . '/testcache.cache';
+
+        $dataser = serialize($data);
+        file_put_contents($file, $dataser);
+        unset($dataser);
+
+        $c = new Cache('testcache');
+        $this->assertEquals($c->get('test')->toArray(), $data['test']);
+        $this->assertEquals($c->get('test', 'a'), true);
+        $this->assertEquals($c->get('test', 'b'), false);
+        $this->assertEquals($c->get('test', 'c'), true);
+        $this->assertEquals($c->get('test2')->toArray(), $data['test2']);
+
+        $c->put('test2', 'foobar');
+        Cache::saveCache();
+
+        $dataser = file_get_contents($file);
+        $dataunser = unserialize($dataser);
+        $this->assertEquals($dataunser['test2'], 'foobar');
+
+        $emptyarr = array();
+        $c->replace($emptyarr);
+        Cache::saveCache();
+
+        $dataser = file_get_contents($file);
+        $dataunser = unserialize($dataser);
+        unset($dataunser['_timestamp']); // Added by cache
+        $this->assertEquals($dataunser, $emptyarr);
+
+        unlink($file);
+    }
+}
+

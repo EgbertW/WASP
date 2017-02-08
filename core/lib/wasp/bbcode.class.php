@@ -47,13 +47,21 @@ class BBCode
      */
     public function __construct($config = null)
     {
-        if ($config->has('bbcode', Dictionary::TYPE_ARRAY))
+        if ($config instanceof Dictionary && $config->has('bbcode', Dictionary::TYPE_ARRAY))
             $config = $config->get('bbcode');
 
         if (is_array($config) || $config instanceof Dictionary)
         {
-            $patterns = isset($config['patterns']) ? $config['patterns'] : array();
-            $replacements = isset($config['replacements']) ? $config['replacements'] : array();
+            if (isset($config['patterns']) && isset($config['replacements']))
+            {
+                $patterns = isset($config['patterns']) ? $config['patterns'] : array();
+                $replacements = isset($config['replacements']) ? $config['replacements'] : array();
+            }
+            else
+            {
+                $patterns = array_keys($config);
+                $replacements = array_values($config);
+            }
 
             if (count($patterns))
                 $this->addRule($patterns, $replacements);
@@ -73,6 +81,14 @@ class BBCode
      */
     public function addRule($pattern, $replacement = null)
     {
+        if (is_object($pattern) && method_exists($pattern, 'toArray'))
+            $pattern = $pattern->toArray();
+        if (is_object($replacement) && method_exists($replacement, 'toArray'))
+            $replacement = $replacement->toArray();
+
+        if (!(is_array($pattern) || is_string($pattern)))
+            throw new \RuntimeException("Arguments must be string or array, or implement toArray method");
+
         if (is_array($pattern))
         {
             if ($replacement !== null)

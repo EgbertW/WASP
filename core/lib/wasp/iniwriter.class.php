@@ -58,9 +58,6 @@ class INIWriter
             if (preg_match("/^\[(.+)\]$/", $line, $matches))
             {
                 $leading = false;
-                if ($section !== null)
-                    $new_contents .= "\n";
-
                 if (!isset($data[$matches[1]]))
                 {
                     // Skip this section
@@ -77,22 +74,36 @@ class INIWriter
             if (substr($line, 0, 1) == ";" && ($section !== null || $leading = true))
             {
                 if ($leading)
-                    $section_comments[0] = $line;
+                    $section_comments[0][] = $line;
                 else
-                    $section_comments[$section] = $line;
+                    $section_comments[$section][] = $line;
                 continue;
             }
         }
 
         // Write config, re-add comments from original file
+        $first = true;
+        if (!empty($section_comments[0]))
+        {
+            $first = false;
+            foreach ($section_comments[0] as $comment)
+                $new_contents .= $comment . "\n";
+        }
+
         foreach ($data as $section => $parameters)
         {
+            if ($first)
+                $first = false;
+            else
+                $new_contents .= "\n";
+
+            $new_contents .= "[" . $section . "]\n";
             $comments = isset($section_comments[$section]) ? $section_comments[$section] : array();
             $lines = array_merge($comments, $parameters);
             uasort($lines, function ($l, $r) {
                 $cmp1 = ltrim($l, "; \t");
                 $cmp2 = ltrim($l, "; \t");
-                return strncmp($l, $r);
+                return strcasecmp($l, $r);
             });
 
             foreach ($lines as $name => $line)
@@ -135,7 +146,7 @@ class INIWriter
         elseif (is_numeric($parameter))
             $str = "$name = " . $parameter . "\n";
         else
-            $str = "$name = " . str_replace('"', '\\"', $parameter) . "\n";
+            $str = "$name = \"" . str_replace('"', '\\"', $parameter) . "\"\n";
         return $str;
     }
 }

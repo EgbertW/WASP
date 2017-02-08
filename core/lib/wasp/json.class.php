@@ -230,6 +230,10 @@ class JSON
         $cur = 0;
         foreach ($obj as $key => $sub)
         {
+            // Keys need to be string, otherwise they will not be quoted
+            if (is_numeric($key) && !$array)
+                $key = (string)$key;
+
             $ending = (++$cur < $tot ? ",\n" : "\n");
             $v .= str_repeat(' ', $indent);
             if (!$array)

@@ -25,7 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP;
 
-class Dictionary implements \Iterator, \ArrayAccess, \Countable, \JsonSerializable
+class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, \JsonSerializable
 {
     const EXISTS = -1;
     const TYPE_NUMERIC = -2;
@@ -167,6 +167,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \JsonSerializab
                     throw new \DomainException("Key " . implode('.', $args) . " is not an integer");
                 return (int)$val;
             case Dictionary::TYPE_NUMERIC:
+            case Dictionary::TYPE_FLOAT:
                 if (!is_numeric($val))
                     throw new \DomainException("Key " . implode('.', $args) . " is not numeric");
                 return (float)$val;
@@ -254,6 +255,14 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \JsonSerializab
     }
 
     /**
+     * @return array an array with the same contents as this Dictionary
+     */
+    public function toArray()
+    {
+        return $this->values;
+    }
+
+    /**
      * Set a value in the dictionary
      *
      * @param $key scalar The key to set. May be repeated to go deeper
@@ -311,6 +320,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \JsonSerializab
     public function rewind()
     {
         $this->keys = array_keys($this->values);    
+        $this->iterator = 0;
     }
 
     public function next()
@@ -357,6 +367,17 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \JsonSerializab
         return $this->values;
     }
 
+    // Serializable implementation
+    public function serialize()
+    {
+        return serialize($this->values);
+    }
+
+    public function unserialize($data)
+    {
+        $this->values = unserialize($data);
+    }
+
     public static function loadFile($filename, $filetype = null)
     {
         if (!is_readable($filename))
@@ -400,9 +421,11 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \JsonSerializab
             if (!function_exists('yaml_parse_file'))
                 throw new \RuntimeException('YAML extension is not installed - cannot handle YAML files');
             
-            $arr = yaml_parse_file($filename);
-            if (!is_Array($arr))
+            $contents = file_get_contents($filename);
+            $arr = yaml_parse($contents);
+            if (!is_array($arr))
                 throw new \RuntimeException("Invalid YAML data in $filename");
+            self::info("Loaded {} bytes serialized YAML-data from: {}", strlen($contents), $filename);
             return new Dictionary($arr);
         }
 
@@ -440,7 +463,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \JsonSerializab
             if ($ret === false)
                 throw new \RuntimeException("Failed to write serialized data to " . $filename);
 
-            self::info("Saved {} bytes serialized data from: {}", $ret, $filename);
+            self::info("Saved {} bytes serialized data to: {}", $ret, $filename);
             return true;
         }
 
@@ -450,9 +473,9 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \JsonSerializab
             $ret = file_put_contents($filename, $json);
 
             if ($ret === false)
-                throw new \RuntimeException("Failed to write JSON data to " . $cache_file);
+                throw new \RuntimeException("Failed to write JSON data to " . $filename);
 
-            self::info("Saved {} bytes JSON-serialized data from: {}", $ret, $cache_file);
+            self::info("Saved {} bytes JSON-serialized data to: {}", $ret, $filename);
             return true;
         }
 
@@ -460,7 +483,14 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \JsonSerializab
         {
             if (!function_exists('yaml_emit_file'))
                 throw new \RuntimeException('YAML extension is not installed - cannot handle YAML files.');
-            return yaml_emit_file($filename, $this->values);
+            $yaml = yaml_emit($this->values);
+            $ret = file_put_contents($filename, $yaml);
+
+            if ($yaml === false || $ret === false)
+                throw new \RuntimeException("Failed to write YAML data to " . $filename);
+
+            self::info("Saved {} bytes YAML-serialized data to: {}", $ret, $filename);
+            return true;
         }
     }
 

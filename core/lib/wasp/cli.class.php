@@ -79,7 +79,7 @@ class CLI
      * @param $arguments array The list of arguments to parse
      * @return array Associative array of option => argument pairs. For option without an argument, the argument === false
      */
-    public function parse(array $arguments)
+    public function parse()
     {
         $opt_str = "";
         $long_opts = array();

@@ -1,4 +1,27 @@
 <?php
+/*
+This is part of WASP, the Web Application Software Platform.
+It is published under the MIT Open Source License.
+
+Copyright 2017, Egbert van der Wal
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
 
 namespace WASP;
 
@@ -9,14 +32,56 @@ use PHPUnit\Framework\TestCase;
  */
 final class DictionaryTest extends TestCase
 {
-    function testConstruct()
+    private $path = null;
+
+    public function setUp()
+    {
+        $this->path = WASP_ROOT . '/var/test';
+        if (is_dir($this->path))
+            $this->delDir($this->path);
+        mkdir($this->path);
+    }
+    
+    private function delDir($path)
+    {
+        if (strpos($path, WASP_ROOT . '/var') === false)
+            throw new \RuntimeException("Only delete files within WASP/var");
+
+        foreach (glob($path . '/*') as $entry)
+        {
+            if (is_dir($entry))
+                $this->delDir($entry);
+            else
+                unlink($entry);
+        }
+
+        rmdir($path);
+    }
+
+    public function tearDown()
+    {
+        $this->delDir($this->path);
+
+    }
+
+    /**
+     * @covers WASP\Dictionary::__construct
+     * @covers WASP\Dictionary::getAll
+     */
+    public function testConstruct()
     {
         $dict = new Dictionary();
         $this->assertInstanceOf(Dictionary::class, $dict);
         $this->assertTrue(empty($dict->getAll()));
     }
 
-    function testConstructArray()
+    /**
+     * @covers WASP\Dictionary::__construct
+     * @covers WASP\Dictionary::get
+     * @covers WASP\Dictionary::dget
+     * @covers WASP\Dictionary::offsetGet
+     */
+    public function testConstructArray()
     {
         $data = array('var1' => 'val1', 'var2' => 'val2');
         $dict = new Dictionary($data);
@@ -36,7 +101,13 @@ final class DictionaryTest extends TestCase
         $this->assertEquals($data['var3'], 'val3');
     }
 
-    function testConstructArrayRecursive()
+    /**
+     * @covers WASP\Dictionary::__construct
+     * @covers WASP\Dictionary::get
+     * @covers WASP\Dictionary::has
+     * @covers WASP\Dictionary::offsetGet
+     */
+    public function testConstructArrayRecursive()
     {
         $data = array('var1' => 'val1', 'var2' => array('a' => 1, 'b' => 2, 'c' => 3));
         $dict = new Dictionary($data);
@@ -55,7 +126,11 @@ final class DictionaryTest extends TestCase
         $this->assertEquals($data['var2']['d'], 4);
     }
 
-    function testTypeChecking()
+    /**
+     * @covers WASP\Dictionary::has
+     * @covers WASP\Dictionary::set
+     */
+    public function testTypeChecking()
     {
         $dict = new Dictionary();
 
@@ -125,5 +200,202 @@ final class DictionaryTest extends TestCase
         $this->assertFalse($dict->has('stringfloat', Dictionary::TYPE_INT));
         $this->assertFalse($dict->has('stringfloat', Dictionary::TYPE_FLOAT));
         $this->assertFalse($dict->has('stringfloat', Dictionary::TYPE_OBJECT));
+    }
+
+    /**
+     * @covers WASP\Dictionary::saveFile
+     * @covers WASP\Dictionary::loadFile
+     * @covers WASP\Dictionary::info
+     */
+    public function testJSON()
+    {
+        $filename = $this->path . '/test.json';
+        $data = array(1, 2, 3, 'test' => 'data', 'test2' => array('test3' => array('test4', 'test5', 'test6'), 'test7' => 'test8'));
+
+        $dict = new Dictionary($data);
+        $dict->saveFile($filename);
+
+        unset($dict);
+        $dict = Dictionary::loadFile($filename);
+        unlink($filename);
+
+        $this->assertEquals($dict->getAll(), $data);
+    }
+
+    /**
+     * @covers WASP\Dictionary::saveFile
+     * @covers WASP\Dictionary::loadFile
+     * @covers WASP\Dictionary::info
+     */
+    public function testPHPS()
+    {
+        $filename = $this->path . '/test.phps';
+        $data = array(1, 2, 3, 'test' => 'data', 'test2' => array('test3' => array('test4', 'test5', 'test6'), 'test7' => 'test8'));
+
+        $dict = new Dictionary($data);
+        $dict->saveFile($filename);
+
+        unset($dict);
+        $dict = Dictionary::loadFile($filename);
+        unlink($filename);
+
+        $this->assertEquals($dict->getAll(), $data);
+    }
+
+    /**
+     * @covers WASP\Dictionary::saveFile
+     * @covers WASP\Dictionary::loadFile
+     * @covers WASP\Dictionary::info
+     */
+    public function testYAML()
+    {
+        $filename = $this->path . '/test.yaml';
+        $data = array(1, 2, 3, 'test' => 'data', 'test2' => array('test3' => array('test4', 'test5', 'test6'), 'test7' => 'test8'));
+
+        $dict = new Dictionary($data);
+        $dict->saveFile($filename);
+        
+        unset($dict);
+        $dict = Dictionary::loadFile($filename);
+
+        $this->assertEquals($dict->getAll(), $data);
+    }
+
+    /** 
+     * @covers WASP\Dictionary::getType
+     * @covers WASP\Dictionary::getInt
+     * @covers WASP\Dictionary::getFloat
+     * @covers WASP\Dictionary::getString
+     * @covers WASP\Dictionary::getArray
+     * @covers WASP\Dictionary::getObject
+     */ 
+    public function testGetType()
+    {
+        $data = array(1, 2, 3, 'test' => 'data', 'test2' => array('test3' => array('test4', 'test5', 'test6'), 'test7' => 'test8'));
+        $dict = new Dictionary($data);
+
+        $this->assertTrue(is_int($dict->getType(0, Dictionary::TYPE_INT)));
+        $this->assertTrue($dict->getType(0, Dictionary::TYPE_INT) === 1);
+        $this->assertFalse($dict->getType(0, Dictionary::TYPE_INT) === 1.0);
+
+        $this->assertTrue(is_float($dict->getType(0, Dictionary::TYPE_FLOAT)));
+        $this->assertEquals($dict->getType(0, Dictionary::TYPE_FLOAT), 1.0);
+        $this->assertFalse($dict->getType(0, Dictionary::TYPE_FLOAT) === 1);
+
+        $this->assertTrue(is_string($dict->getType(0, Dictionary::TYPE_STRING)));
+        $this->assertTrue($dict->getType(0, Dictionary::TYPE_STRING) === "1");
+        $this->assertFalse($dict->getType(0, Dictionary::TYPE_STRING) === 1);
+
+        $dict['int'] = '3';
+        $dict['fl'] = '3.5';
+        $dict['str'] = 3;
+        $this->assertTrue($dict->getInt('int') === 3);
+        $this->assertTrue($dict->getFloat('fl') === 3.5);
+        $this->assertTrue($dict->getString('str') === '3');
+
+        $obj = new \StdClass();
+        $dict['obj'] = $obj;
+        $arr = array(1, 2, 3, 4);
+        $dict['arr'] = $arr;
+
+        $this->assertTrue($dict->has('obj', Dictionary::TYPE_OBJECT));
+        $this->assertFalse($dict->has('obj', Dictionary::TYPE_ARRAY));
+        $this->assertFalse($dict->has('obj', Dictionary::TYPE_INT));
+        $this->assertFalse($dict->has('obj', Dictionary::TYPE_FLOAT));
+        $this->assertFalse($dict->has('obj', Dictionary::TYPE_NUMERIC));
+        $this->assertFalse($dict->has('obj', Dictionary::TYPE_STRING));
+        $this->assertEquals($dict->getObject('obj'), $obj);
+
+        $this->assertTrue($dict->has('arr', Dictionary::TYPE_ARRAY));
+        $this->assertFalse($dict->has('arr', Dictionary::TYPE_OBJECT));
+        $this->assertFalse($dict->has('arr', Dictionary::TYPE_INT));
+        $this->assertFalse($dict->has('arr', Dictionary::TYPE_FLOAT));
+        $this->assertFalse($dict->has('arr', Dictionary::TYPE_NUMERIC));
+        $this->assertFalse($dict->has('arr', Dictionary::TYPE_STRING));
+        $this->assertEquals($dict->getArray('arr'), $arr);
+
+
+        $this->expectException(\DomainException::class);
+        $this->expectException(is_array($dict->getType(0, Dictionary::TYPE_ARRAY)));
+    }
+
+    /**
+     * @covers WASP\Dictionary::offsetGet
+     * @covers WASP\Dictionary::offsetSet
+     * @covers WASP\Dictionary::offsetExists
+     * @covers WASP\Dictionary::offsetUnset
+     * @covers WASP\Dictionary::getAll
+     */
+    public function testArrayAccess()
+    {
+        $data = array(1, 2, 3, 'test' => 'data', 'test2' => array('test3' => array('test4', 'test5', 'test6'), 'test7' => 'test8'));
+        $dict = new Dictionary($data);
+
+        $keys = array_keys($data);
+        foreach ($keys as $key)
+        {
+            $val = $dict[$key];
+            if ($val instanceof Dictionary)
+                $val = $val->getAll();
+                
+            $this->assertEquals($data[$key], $val);
+        }
+
+        $dict['test9'] = 'test10';
+        $this->assertEquals($data['test9'], $dict->get('test9'));
+
+        $this->assertTrue(isset($dict['test9']));
+        unset($dict['test9']);
+        $this->assertFalse(isset($dict['test9']));
+    }
+
+    /**
+     * @covers WASP\Dictionary::rewind
+     * @covers WASP\Dictionary::current
+     * @covers WASP\Dictionary::next
+     * @covers WASP\Dictionary::key
+     * @covers WASP\Dictionary::valid
+     */
+    public function testIterator()
+    {
+        $data = array(1, 2, 3, 'test' => 'data', 'test2' => array('test3' => array('test4', 'test5', 'test6'), 'test7' => 'test8'));
+        $dict = new Dictionary($data);
+
+        $iterations = 0;
+        $exp = count($data);
+        foreach ($dict as $key => $val)
+        {
+            ++$iterations;
+            if ($val instanceof Dictionary)
+                $val = $val->getAll();
+                
+            $this->assertEquals($data[$key], $val);
+        }
+
+        $this->assertEquals($iterations, $exp);
+    }
+
+    /**
+     * @covers WASP\Dictionary::count
+     */
+    public function testCountable()
+    {
+        $data = array(1, 2, 3, 'test' => 'data', 'test2' => array('test3' => array('test4', 'test5', 'test6'), 'test7' => 'test8'));
+        $dict = new Dictionary($data);
+
+        $this->assertEquals(count($dict), count($data));
+    }
+
+    /**
+     * @covers WASP\Dictionary::toArray
+     */
+    public function testToArray()
+    {
+        $data = array('a' => 1, 'b' => 2);
+        $dict = new Dictionary($data);
+
+        $data2 = $dict->toArray();
+        $data2['c'] = 3;
+        $this->assertEmpty($dict->get('c'));
     }
 }
