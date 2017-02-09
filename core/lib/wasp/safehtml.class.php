@@ -244,7 +244,8 @@ class SafeHTML
     public function getHTML()
     {
         $dom = new DOMDocument();
-        $dom->loadHTML($this->html);
+
+        @$dom->loadHTML($this->html);
         
         $body = $dom->getElementsByTagName('body')->item(0);
 
@@ -293,7 +294,8 @@ class SafeHTML
             else
             {
                 // Sanitize the attributes of an allowed tag
-                $this->sanitizeAttributes($child);
+                if ($child->attributes !== null)
+                    $this->sanitizeAttributes($child);
 
                 // And now process the contents
                 $this->sanitizeNode($child);
@@ -320,16 +322,23 @@ class SafeHTML
         if ($next === null)
             $next = $child;
 
-        $l = $child->childNodes->length;
-        for ($i = $l - 1; $i >= 0; --$i)
+        if ($child->childNodes !== null)
         {
-            try
+            $l = $child->childNodes->length;
+            for ($i = $l - 1; $i >= 0; --$i)
             {
+                // This try/catch seems not necessary as it does not actually
+                // check HTML rules, it will gladly accept <option> in a <p>,
+                // or <li> in a <div> for example.
+                //
+                //try
+                //{
                 $sub = $child->childNodes[$i];
                 $next = $node->insertBefore($sub, $next);
+                //}
+                //catch (DOMException $ex)
+                //{}
             }
-            catch (DOMException $ex)
-            {}
         }
 
         // Finally, remove the node
@@ -351,9 +360,6 @@ class SafeHTML
      */
     private function sanitizeAttributes(DOMNode $child)
     {
-        if ($child->attributes === null)
-            return;
-
         // Compile a list of attributes that should be removed
         $remove_attributes = array();
         foreach ($child->attributes as $attrib)

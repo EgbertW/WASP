@@ -28,25 +28,39 @@ namespace WASP;
 class Path
 {
     public static $ROOT;
-    public static $TEMPLATE;
     public static $CONFIG;
-    public static $APP;
-    public static $FILES;
+    public static $SYS;
+    public static $VAR;
+    public static $CACHE;
+
     public static $HTTP;
     public static $ASSETS;
     public static $JS;
     public static $CSS;
     public static $IMG;
 
+    private static $is_setup = false;
+
+    /**
+     * @codeCoverageIgnore Since this is run in bootstrap, the code coverage will not detect it
+     */
     public static function setup()
     {
-        define('WASP_HTTP', WASP_ROOT . '/http');
+        if (self::$is_setup)
+            return;
+        
+        if (!defined('WASP_ROOT'))
+            define('WASP_ROOT', dirname(dirname(dirname(dirname(realpath(__FILE__))))));
+
         define('WASP_CONFIG', WASP_ROOT . '/config');
-        define('WASP_TEMPLATE', WASP_ROOT . '/template');
-        define('WASP_APP', WASP_ROOT . '/app');
-        define('WASP_FILES', WASP_ROOT . '/files');
-        define('WASP_LIB', WASP_ROOT . '/lib');
         define('WASP_SYS', WASP_ROOT . '/sys');
+        define('WASP_VAR', WASP_ROOT . '/var');
+
+        if (!defined('WASP_CACHE'))
+            define('WASP_CACHE', WASP_VAR . '/cache');
+
+        if (!defined('WASP_HTTP'))
+            define('WASP_HTTP', WASP_ROOT . '/http');
 
         define('WASP_ASSETS', WASP_HTTP . '/assets');
         define('WASP_JS', WASP_ASSETS . '/js');
@@ -54,15 +68,18 @@ class Path
         define('WASP_IMG', WASP_ASSETS . '/img');
 
         self::$ROOT = WASP_ROOT;
-        self::$HTTP = WASP_HTTP;
         self::$CONFIG = WASP_CONFIG;
-        self::$TEMPLATE = WASP_TEMPLATE;
-        self::$APP = WASP_APP;
-        self::$FILES = WASP_FILES;
+        self::$SYS = WASP_SYS;
+        self::$VAR = WASP_VAR;
+        self::$CACHE = WASP_CACHE;
 
+        self::$HTTP = WASP_HTTP;
         self::$ASSETS = WASP_ASSETS;
         self::$JS = WASP_JS;
         self::$CSS = WASP_CSS;
         self::$IMG = WASP_IMG;
+        self::$is_setup = true;
     }
 }
+
+Path::setup();
