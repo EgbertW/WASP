@@ -163,6 +163,9 @@ class Request
             throw new HttpError(400, self::$uri);
     }
 
+    /**
+     * @codeCoverageIgnore This will not do anything from CLI except for enabling error reporting
+     */
     public static function setErrorHandler()
     {
         // Don't attach error handlers when running from CLI
@@ -178,12 +181,18 @@ class Request
         set_error_handler(array("WASP\\Request", "handleError"), E_ALL | E_STRICT);
     }
 
+    /**
+     * @codeCoverageIgnore As this will stop the script, its not good for unit testing
+     */
     public static function handleError($errno, $errstr, $errfile, $errline, $errcontext)
     {
         Debug\error("WASP.Request", "PHP Error {}: {} on {}({})", $errno, $errstr, $errfile, $errline);
         throw new \ErrorException($errstr, 0, $errno, $errfile, $errline);
     }
 
+    /**
+     * @codeCoverageIgnore As this will stop the script, its not good for unit testing
+     */
     public static function handleException($exception)
     {
         if (!headers_sent())
@@ -296,7 +305,7 @@ class Request
         $best_priority = null;
         $best_type = null;
 
-        if (self::cli())
+        if (self::cli() && empty(self::$accept))
             self::$accept = self::$CLI_MIME;
 
         foreach ($types as $type)
@@ -315,12 +324,15 @@ class Request
         return $best_type;
 	}
 
-	public function outputBestResponseType(array $available)
+	public static function outputBestResponseType(array $available)
 	{
 		$types = array_keys($available);
 		$type = self::getBestResponseType($types);
 		
-		header("Content-type: " . $type);
+        if (!headers_sent())
+            // @codeCoverageIgnoreStart
+            header("Content-type: " . $type);
+            // @codeCoverageIgnoreEnd
 		echo $available[$type];
 	}
 }
