@@ -43,15 +43,24 @@ class CLI
      */
     public function __construct()
     {
-        if (PHP_SAPI !== "cli" || !isset($_SERVER['argv']))
-            throw new CLIException("Not running on command line");
-        
+        // Make sure we're running on CLI
+        $this->checkCLI();
+
         // Add the default options
         $this
             ->addOption("l", "loglevel", "level", "Sets the log level for the output")
             ->addOption("f", "logfile", "filename", "Sets the log file where output will be written to")
             ->addOption("s", "silent", false, "If this is set, output is only written to logfile, not to stdout")
             ->addOption("h", "help", false, "Show this help");
+    }
+
+    /**
+     * @codeCoverageIgnore Tests are always run using CLI SAPI
+     */
+    private function checkCLI()
+    {
+        if (PHP_SAPI !== "cli" || !isset($_SERVER['argv']))
+            throw new CLIException("Not running on command line");
     }
 
     public function clearOptions()

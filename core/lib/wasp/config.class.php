@@ -41,9 +41,7 @@ class Config
             if (!file_exists($filename))
             {
                 Debug\critical("WASP.Config", "Failed to load config file {}", $filename);
-                if (!class_exists("WASP\\HttpError"))
-                    require_once WASP_LIB . '/wasp/httperror.class.php';
-
+                self::loadErrorClass();
                 throw new HttpError(500, "Configuration file is missing", "Configuration could not be loaded");
             }
 
@@ -61,5 +59,14 @@ class Config
         $filename = Path::$CONFIG . '/' . $scope . '.ini';
         $config = self::$repository[$scope];
         return $config->saveFile($filename);
+    }
+
+    /**
+     * @codeCoverageIgnore HttpError is always loaded in the tests
+     */
+    public static function loadErrorClass()
+    {
+        if (!class_exists("WASP\\HttpError"))
+            require_once WASP_LIB . '/wasp/httperror.class.php';
     }
 }

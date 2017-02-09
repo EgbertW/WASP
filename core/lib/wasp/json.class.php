@@ -213,8 +213,12 @@ class JSON
             $output = json_encode($obj_fixed);
             if ($output === false && json_last_error() === JSON_ERROR_UTF8)
             {
+                // @codeCoverageIgnoreStart
+                // The input has to be extremely weird to trigger this, so
+                // in practice it shouldn't happen.  
                 $rep = svar_dump($obj); 
                 throw new HttpError(500, "Invalid encoding: " + $rep); 
+                // @codeCoverageIgnoreEnd
             }
         }
 

@@ -42,7 +42,7 @@ final class CacheTest extends TestCase
     public function testConstruct()
     {
         $data = array('test' => array('a' => true, 'b' => false, 'c' => true), 'test2' => array(1, 2, 3));
-        $file = WASP_CACHE . '/testcache.cache';
+        $file = Path::$CACHE . '/testcache.cache';
 
         $dataser = serialize($data);
         file_put_contents($file, $dataser);
@@ -104,7 +104,7 @@ final class CacheTest extends TestCase
         $testdata = array('var1' => 'val1', 'var2' => 'var2');
         $data = serialize($testdata);
 
-        $file = WASP_CACHE . '/testcache.cache';
+        $file = Path::$CACHE . '/testcache.cache';
         $fh = fopen($file, 'w');
         fputs($fh, $data);
         fclose($fh);
@@ -130,7 +130,7 @@ final class CacheTest extends TestCase
         $config = new Dictionary();
         $config->set('cache', 'expire', 0);
 
-        $file = WASP_CACHE . '/testcache.cache';
+        $file = Path::$CACHE . '/testcache.cache';
         $fh = fopen($file, 'w');
         fputs($fh, 'garbage-data');
         fclose($fh);

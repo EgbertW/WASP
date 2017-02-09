@@ -1,7 +1,7 @@
 <?php
 
 use WASP\CLI;
-use WASP\Task;
+use WASP\TaskRunner;
 use WASP\Arguments;
 use WASP\File\Resolve;
 
@@ -17,11 +17,11 @@ if (isset($opts['help']))
 
 if ($opts->has('list'))
 {
-    Task::listTasks();
+    TaskRunner::listTasks();
     exit();
 }
 
 if (!$opts->has('run'))
     $a->syntax("Please specify the action to run");
 
-Task::runTask($opts->get('run'));
+TaskRunner::run($opts->get('run'));

@@ -25,15 +25,29 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP;
 
+/**
+ * Provide some tools for creating and removing directories.
+ */
 class Dir
 {
     private static $required_prefix = "";
 
+    /** 
+     * Security measure that prevents attempts of removing files outside of WASP
+     * Each rmtree'd path should have this prefix, otherwise the command is not executed.
+     * @param $prefix string The prefix that should be required on each path for rmtree
+     */
     public static function setRequiredPrefix($prefix)
     {
         self::$required_prefix = $prefix;
     }
 
+    /**
+     * Make a directory and its parents. When all directories already exist, nothing happens.
+     * Newly created directories are chmod'ded to 0770: RWX for owner and group.
+     *
+     * @param $path string The path to create
+     */
     public static function mkdir($path)
     {
         $parts = explode("/", $path);
@@ -43,10 +57,18 @@ class Dir
         {
             $path .= $p . '/';
             if (!is_dir($path))
+            {
                 mkdir($path);
+                chmod($path, 0770);
+            }
         }
     }
 
+    /**
+     * Delete a directory and its contents. The provided path must be inside the configured prefix.
+     * @param $path string The path to remove
+     * @return int Amount of files and directories that have been deleted
+     */
     public static function rmtree($path)
     {
         $path = realpath($path);
@@ -56,11 +78,7 @@ class Dir
         if (!empty(self::$required_prefix) && strpos($path, self::$required_prefix) !== 0)
             throw new \RuntimeException("Refusing to remove directory outside " . self::$required_prefix);
 
-        if (!is_writable($path))
-            @chmod($path, 0666);
-
-        if (!is_writable($path))
-            throw new \RuntimeException("Cannot delete $path - permission denied");
+        self::checkWrite($path);
 
         if (!is_dir($path))
             return unlink($path) ? 1 : 0;
@@ -73,11 +91,7 @@ class Dir
                 continue;
 
             $entry = $path . '/' . $entry;
-            if (!is_writable($entry))
-                @chmod($entry, 0666);
-
-            if (!is_writable($entry))
-                throw new \RuntimeException("Cannot delete directory $entry - permission denied");
+            self::checkWrite($entry);
 
             if (is_dir($entry))
                 $cnt += self::rmtree($entry);
@@ -88,4 +102,21 @@ class Dir
         rmdir($path);
         return $cnt + 1;
     }
+
+    /**
+     * @codeCoverageIgnore We cannot test this - to create a file that cannot
+     * be chmod'ed, it needs to be owned by someone else. This means that tests
+     * would have to be run as root partially, and that would be madness.
+     */
+    private static function checkWrite($path)
+    {
+        if (!is_writable($path) && @chmod($path, 0666) === false)
+            throw new \RuntimeException("Cannot delete $path - permission denied");
+    }
 }
+
+// Limit dir by default to the WASP var directory
+// @codeCoverageIgnoreStart
+// No need to test this, see pathTest
+Dir::setRequiredPrefix(Path::$VAR);
+// @codeCoverageIgnoreEnd

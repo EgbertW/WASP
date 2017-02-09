@@ -27,8 +27,9 @@ namespace WASP;
 
 use WASP\Debug;
 
-if (!defined('WASP_CACHE'))
-    define('WASP_CACHE', WASP_ROOT . '/var/cache');
+/** Cache requires Dictionary and Path, so always load it */
+require_once 'dictionary.class.php';
+require_once 'path.class.php';
 
 /**
  * Provides automatic persistent caching facilities. You can store and retrieve
@@ -84,10 +85,7 @@ class Cache
      */
     private static function loadCache($name)
     {
-        if (!class_exists('WASP\\Dictionary', false))
-            require_once 'dictionary.class.php';
-
-        $cache_file = WASP_CACHE . '/' . $name  . '.cache';
+        $cache_file = Path::$CACHE . '/' . $name  . '.cache';
 
         if (file_exists($cache_file))
         {
@@ -124,7 +122,7 @@ class Cache
      */
     public static function saveCache()
     {
-        $cache_dir = WASP_CACHE;
+        $cache_dir = Path::$CACHE;
         foreach (self::$repository as $name => $cache)
         {
             if (empty($cache['_changed']))
