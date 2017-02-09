@@ -57,6 +57,9 @@ class Dir
             throw new \RuntimeException("Refusing to remove directory outside " . self::$required_prefix);
 
         if (!is_writable($path))
+            @chmod($path, 0666);
+
+        if (!is_writable($path))
             throw new \RuntimeException("Cannot delete $path - permission denied");
 
         if (!is_dir($path))
@@ -70,6 +73,9 @@ class Dir
                 continue;
 
             $entry = $path . '/' . $entry;
+            if (!is_writable($entry))
+                @chmod($entry, 0666);
+
             if (!is_writable($entry))
                 throw new \RuntimeException("Cannot delete directory $entry - permission denied");
 

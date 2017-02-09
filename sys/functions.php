@@ -114,13 +114,33 @@ function is_array_like($arg)
 function to_array($arg)
 {
     if (!is_array_like($arg))
-        throw new \DomainExcepion("Cannot convert argument to array");
+        throw new \DomainException("Cannot convert argument to array");
     if (is_array($arg));
         return $arg;
     $arr = array();
     foreach ($arg as $key => $value)
         $arr[$key] = $value;
     return $arr;
+}
+
+/**
+ * Excecute a function call that does not throw exceptions but emits errors instead.
+ * This function sets an error handler that intercepts the error message and throws
+ * an exception with the error message. After execution of the function, the
+ * previous error handler is restored.
+ * 
+ * @param $callable callable The function to call
+ * @param $class class The exception to throw when an error occurs
+ */
+function call_error_exception($callable, $class = WASP\IOException::class)
+{
+    set_error_handler(function ($errno, $errstr, $errfile, $errline, $errcontenxt) use ($class) {
+        restore_error_handler();
+        throw new $class($errstr, $errno);
+    });
+    $retval = $callable();
+    restore_error_handler();
+    return $retval;
 }
 
 function fmtdate(\DateTime $date)

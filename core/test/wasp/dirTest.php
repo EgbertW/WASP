@@ -134,8 +134,8 @@ final class DirTest extends TestCase
         Dir::mkdir($dir1);
         chmod($dir1, 000);
 
-        $this->expectException(\RuntimeException::class);
         Dir::rmtree($dir1);
+        $this->assertFalse(file_exists($dir1));
     }
 
     /**
@@ -176,8 +176,8 @@ final class DirTest extends TestCase
         fclose($fh);
         chmod($file, 0000);
 
-        $this->expectException(\RuntimeException::class);
         Dir::rmtree($dir1);
+        $this->assertFalse(file_exists($dir1));
     }
 
     /**
@@ -193,8 +193,8 @@ final class DirTest extends TestCase
 
         chmod($dir2, 0000);
 
-        $this->expectException(\RuntimeException::class);
         Dir::rmtree($dir1);
+        $this->assertFalse(file_exists($dir1));
     }
 }
 

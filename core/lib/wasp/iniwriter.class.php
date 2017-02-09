@@ -97,6 +97,8 @@ class INIWriter
             else
                 $new_contents .= "\n";
 
+            $parameters = \to_array($parameters);
+
             $new_contents .= "[" . $section . "]\n";
             $comments = isset($section_comments[$section]) ? $section_comments[$section] : array();
             sort($comments, SORT_STRING);

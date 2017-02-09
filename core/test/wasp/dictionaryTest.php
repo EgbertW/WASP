@@ -36,32 +36,17 @@ final class DictionaryTest extends TestCase
 
     public function setUp()
     {
-        $this->path = WASP_ROOT . '/var/test';
-        if (is_dir($this->path))
-            $this->delDir($this->path);
-        mkdir($this->path);
+        Dir::setRequiredPrefix(Path::$VAR);
+        $this->path = Path::$VAR . '/test';
+        if (file_exists($this->path))
+            Dir::rmtree($this->path);
+        Dir::mkdir($this->path);
     }
     
-    private function delDir($path)
-    {
-        if (strpos($path, WASP_ROOT . '/var') === false)
-            throw new \RuntimeException("Only delete files within WASP/var");
-
-        foreach (glob($path . '/*') as $entry)
-        {
-            if (is_dir($entry))
-                $this->delDir($entry);
-            else
-                unlink($entry);
-        }
-
-        rmdir($path);
-    }
-
     public function tearDown()
     {
-        $this->delDir($this->path);
-
+        if ($this->path)
+            Dir::rmtree($this->path); 
     }
 
     /**
@@ -252,6 +237,9 @@ final class DictionaryTest extends TestCase
      */
     public function testYAML()
     {
+        if (!function_exists('yaml_emit'))
+            return;
+
         $filename = $this->path . '/test.yaml';
         $data = array(1, 2, 3, 'test' => 'data', 'test2' => array('test3' => array('test4', 'test5', 'test6'), 'test7' => 'test8'));
 
@@ -494,16 +482,207 @@ final class DictionaryTest extends TestCase
         $this->assertEquals($dict->getAll(), $dict2->getAll());
     }
 
+    /**
+     * @covers WASP\Dictionary::saveFile
+     * @covers WASP\INIWriter::write
+     */
+    public function testWriteINI()
+    {
+        $data = array('a' => array('a' => 'test', 'b' => 2));
+        $dict = new Dictionary($data);
+
+        $file = $this->path . '/test.ini';
+        $dict->saveFile($file);
+
+        $data = parse_ini_file($file, true, INI_SCANNER_TYPED);
+        $this->assertEquals($dict->getAll(), $data);
+    }
+
+    /**
+     * @covers WASP\Dictionary::saveFile
+     * @covers WASP\INIWriter::write
+     */
+    public function testWriteINIException()
+    {
+        $data = array('a' => 1, 'b' => 2);
+        $dict = new Dictionary($data);
+
+        $file = $this->path . '/test.ini';
+        $this->expectException(\DomainException::class);
+        $dict->saveFile($file);
+
+        $data = parse_ini_file($file, true, INI_SCANNER_TYPED);
+        $this->assertEquals($dict->getAll(), $data);
+    }
+
+    /**
+     * @covers WASP\Dictionary::loadFile
+     */
+    public function testReadINI()
+    {
+        $ini = <<<EOT
+[section1]
+var1 = "val1"
+var2 = "val2"
+
+[section2]
+var3 = 3.5
+var4 = 5
+var5 = null
+var6 = false
+
+EOT;
+        $file = $this->path . '/test.ini';
+        $ret = file_put_contents($file, $ini);
+        $this->assertEquals($ret, strlen($ini));
+
+        $dict = Dictionary::loadFile($file, 'ini');
+        $this->assertEquals($dict->get('section1', 'var1'), 'val1');
+        $this->assertEquals($dict->get('section1', 'var2'), 'val2');
+        $this->assertEquals($dict->get('section2', 'var3'), 3.5);
+        $this->assertEquals($dict->get('section2', 'var4'), 5);
+        $this->assertEquals($dict->get('section2', 'var5'), null);
+        $this->assertEquals($dict->get('section2', 'var6'), false);
+    }
+
+    /**
+     * @covers WASP\Dictionary::loadFile
+     */
+    public function testLoadJSONException()
+    {
+        $file = $this->path . '/test.json';
+        file_put_contents($file, '{garbage json]-');
+        
+        $this->expectException(IOException::class);
+        $dict = Dictionary::loadFile($file, 'json');
+    }
+
+    /**
+     * @covers WASP\Dictionary::loadFile
+     */
+    public function testLoadPHPSException()
+    {
+        $file = $this->path . '/test.phps';
+        file_put_contents($file, '{garbage phps]-');
+        
+        $this->expectException(IOException::class);
+        $dict = Dictionary::loadFile($file, 'phps');
+    }
+
+    /**
+     * @covers WASP\Dictionary::loadFile
+     */
+    public function testLoadYAMLException()
+    {
+        if (!function_exists('yaml_emit'))
+            return;
+
+        $file = $this->path . '/test.yaml';
+        file_put_contents($file, '{garbage yaml]-');
+        
+        $this->expectException(IOException::class);
+        $dict = Dictionary::loadFile($file, 'yaml');
+    }
+
+    public function testLoadNotExistingFileException()
+    {
+        $file = $this->path . '/test.json';
+        if (file_exists($file))
+            unlink($file);
+
+        $this->expectException(IOException::class);
+        $dict = Dictionary::loadFIle($file, 'json');
+    }
+
+    /**
+     * @covers WASP\Dictionary::saveFile
+     */
     public function testSaveException()
     {
         $a = new Dictionary();
-        $this->expectException(\RuntimeException::class);
+        $this->expectException(\DomainException::class);
         $a->saveFile('random_file', 'garbage');
     }
 
+    /**
+     * @covers WASP\Dictionary::loadFile
+     */
     public function testLoadException()
     {
-        $this->expectException(\RuntimeException::class);
-        Dictionary::loadFile('random_file', 'garbage');
+        $file = $this->path . '/random_file';
+        $fh = fopen($file, 'w');
+        fputs($fh, 'test');
+        fclose($fh);
+
+        $this->expectException(\DomainException::class);
+        Dictionary::loadFile($file, 'garbage');
+    }
+
+    /**
+     * @covers WASP\Dictionary::saveFile
+     */
+    public function testJSONWriteException()
+    {
+        $file = $this->path. '/test.json';
+
+        $fh = fopen($file, 'w');
+        fputs($fh, 'test');
+        fclose($fh);
+        chmod($file, 0000);
+
+        $a = new Dictionary();
+        $a['test'] = true;
+
+        $this->expectException(IOException::class);
+        $a->saveFile($file);
+    }
+
+    /**
+     * @covers WASP\Dictionary::saveFile
+     */
+    public function testPHPSWriteException()
+    {
+        $file = $this->path . '/test.phps';
+
+        $fh = fopen($file, 'w');
+        fputs($fh, 'test');
+        fclose($fh);
+        chmod($file, 0000);
+
+        $a = new Dictionary();
+        $a['test'] = true;
+
+        $this->expectException(IOException::class);
+        $a->saveFile($file);
+    }
+
+    /**
+     * @covers WASP\Dictionary::saveFile
+     */
+    public function testWriteException()
+    {
+        $file = $this->path . '/test.phps';
+        chmod($this->path, 0000);
+
+        $a = new Dictionary();
+        $a['test'] = true;
+
+        $this->expectException(IOException::class);
+        $a->saveFile($file);
+    }
+
+    /**
+     * @covers WASP\Dictionary::saveFile
+     */
+    public function testWriteNoDirectoryException()
+    {
+        $file = $this->path . '/test.phps';
+        Dir::rmtree($this->path);
+
+        $a = new Dictionary();
+        $a['test'] = true;
+
+        $this->expectException(IOException::class);
+        $a->saveFile($file);
     }
 }
