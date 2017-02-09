@@ -13,7 +13,7 @@ pushd $LOC
 
 echo "**** Running core tests..."
 mkdir -p var/codecoverage/core
-$PHPUNIT --bootstrap sys/init.php core/test --strict-coverage --whitelist core/lib --coverage-html var/codecoverage/core
+$PHPUNIT --bootstrap sys/init.php core/test --whitelist core/lib --coverage-html var/codecoverage/core
 if [ "$?" -ne 0 ]
 then
     echo "**** Core tests failed!"
@@ -22,13 +22,15 @@ fi
 echo "**** Core tests passed."
 echo ""
 
+exit 0
+
 for module in `ls modules`
 do
     if [ -d "modules/$module/test" ]
     then
         echo "**** Running tests for module ${module}..."
         mkdir -p var/codecoverage/${module}
-        $PHPUNIT --bootstrap sys/init.php core/test --strict-coverage --whitelist modules/${module}/lib --coverage-html var/codecoverage/${module}
+        $PHPUNIT --bootstrap sys/init.php core/test --whitelist modules/${module}/lib --coverage-html var/codecoverage/${module}
         if [ "$?" -ne 0 ]
         then
             echo "Tests for module $module failed!"

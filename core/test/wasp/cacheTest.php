@@ -73,5 +73,92 @@ final class CacheTest extends TestCase
 
         unlink($file);
     }
+
+    /**
+     * @covers WASP\Cache::__construct
+     * @covers WASP\Cache::loadCache
+     * @covers WASP\Cache::setHook
+     * @covers WASP\Cache::get
+     */
+    public function testHook()
+    {
+        $config = new Dictionary();
+        $config->set('cache', 'expire', 0);
+
+        $cc = new Cache('resolve');
+        Cache::setHook($config);
+        $class = $cc->get('class');
+        $this->assertEmpty($class);
+    }
+
+    /**
+     * @covers WASP\Cache::__construct
+     * @covers WASP\Cache::loadCache
+     * @covers WASP\Cache::get
+     */
+    public function testUnreadable()
+    {
+        $config = new Dictionary();
+        $config->set('cache', 'expire', 0);
+
+        $testdata = array('var1' => 'val1', 'var2' => 'var2');
+        $data = serialize($testdata);
+
+        $file = WASP_CACHE . '/testcache.cache';
+        $fh = fopen($file, 'w');
+        fputs($fh, $data);
+        fclose($fh);
+        chmod($file, 000);
+
+        $cc = new Cache('testcache');
+
+        $contents = $cc->get();
+        unset($contents['_timestamp']);
+        $this->assertEmpty($contents);
+
+        chmod($file, 666);
+        unlink($file);
+    }
+
+    /**
+     * @covers WASP\Cache::__construct
+     * @covers WASP\Cache::loadCache
+     * @covers WASP\Cache::get
+     */
+    public function testInvalidCache()
+    {
+        $config = new Dictionary();
+        $config->set('cache', 'expire', 0);
+
+        $file = WASP_CACHE . '/testcache.cache';
+        $fh = fopen($file, 'w');
+        fputs($fh, 'garbage-data');
+        fclose($fh);
+
+        $cc = new Cache('testcache');
+
+        $contents = $cc->get();
+        unset($contents['_timestamp']);
+        $this->assertEmpty($contents);
+
+        if (file_exists($file))
+            unlink($file);
+    }
+
+    /**
+     * @covers WASP\Cache::__construct
+     * @covers WASP\Cache::loadCache
+     */
+    public function testNewCache()
+    {
+        $config = new Dictionary();
+        $config->set('cache', 'expire', 0);
+
+        $cc = new Cache('testcache2');
+
+        $contents = $cc->get();
+        unset($contents['_timestamp']);
+        $this->assertEmpty($contents);
+    }
 }
 

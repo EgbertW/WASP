@@ -176,11 +176,9 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
                     throw new \DomainException("Key " . implode('.', $args) . " is not a string");
                 return (string)$val;
             case Dictionary::TYPE_ARRAY:
-                if ($val instanceof Dictionary)
-                    return $val->getAll();
-                if (!is_array($val))
+                if (!$val instanceof Dictionary)
                     throw new \DomainException("Key " . implode('.', $args) . " is not an array");
-                return $val;
+                return $val->getAll();
             case Dictionary::TYPE_OBJECT:
                 if (!is_object($val) || $val instanceof Dictionary)
                     throw new \DomainException("Key " . implode('.', $args) . " is not an object");
@@ -188,9 +186,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
             default:
         }
         
-        // Return the value as-is, or wrap it in a argument if it is an array
-        if (is_array($val))
-            return new Dictionary($val);
+        // Return the value as-is
         return $val;
     }
 
@@ -492,6 +488,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
             self::info("Saved {} bytes YAML-serialized data to: {}", $ret, $filename);
             return true;
         }
+        throw new \RuntimeException("Invalid data type: " . $ext);
     }
 
     private static function info()

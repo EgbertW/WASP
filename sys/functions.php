@@ -102,6 +102,27 @@ function parse_bool($val)
     return true;
 }
 
+function is_array_like($arg)
+{
+    if (is_array($arg))
+        return true;
+    if (!is_object($arg))
+        return false;
+    return $arg instanceof \Countable && $arg instanceof \ArrayAccess && $arg instanceof \Iterator;
+}
+
+function to_array($arg)
+{
+    if (!is_array_like($arg))
+        throw new \DomainExcepion("Cannot convert argument to array");
+    if (is_array($arg));
+        return $arg;
+    $arr = array();
+    foreach ($arg as $key => $value)
+        $arr[$key] = $value;
+    return $arr;
+}
+
 function fmtdate(\DateTime $date)
 {
     $conf = WASP\Config::getConfig();

@@ -87,6 +87,90 @@ final class bbcodeTest extends TestCase
             'The foo has * to * versions',
             $nstr
         );
+
+        // Try with a dictionary
+        $dict = new Dictionary();
+        $dict['bbcode'] = array(
+            'patterns' => $replc['patterns'],
+            'replacements' => $replc['replacements']
+        );
+
+        $a = new BBCode($dict);
+        $nstr = $a->apply($str);
+
+        $this->assertEquals(
+            'The foo has * to * versions',
+            $nstr
+        );
+    }
+
+    /**
+     * @covers WASP\BBCode::addRule
+     */
+    public function testExceptionInvalidPattern()
+    {
+        $a = new BBCode();
+        
+        $this->expectException(\RuntimeException::class);
+        $a->addRule(3.5, null);
+    }
+
+    /**
+     * @covers WASP\BBCode::addRule
+     */
+    public function testExceptionInvalidReplacement()
+    {
+        $a = new BBCode();
+        
+        $this->expectException(\RuntimeException::class);
+        $a->addRule(array('ab', 'cd'), "test");
+    }
+
+    public function replace($input)
+    {
+        return "foobar";
+    }
+
+    /**
+     * @covers WASP\BBCode::addRule
+     * @covers WASP\BBCode::apply
+     */
+    public function testCallback()
+    {
+        $str = "I like awesome cars";
+        $a = new BBCode();
+        $a->addRule("awesome", array($this, 'replace'));
+
+        $ostr = $a->apply($str);
+
+        $this->assertEquals(
+            $ostr,
+            'I like foobar cars'
+        );
+    }
+
+    /*
+     * @covers WASP\BBCode::addRule
+     * @covers WASP\BBCode::apply
+     */
+    public function testInvalidPattern()
+    {
+        $a = new BBCode();
+        $this->expectException(\RuntimeException::class);
+        $a->addRule("/(invalid pattern/", "foobar");
+    }
+
+    /*
+     * @covers WASP\BBCode::addRule
+     * @covers WASP\BBCode::apply
+     */
+    public function testInvalidString()
+    {
+        $a = new BBCode();
+        $a->addRule("foo", "bar");
+
+        $this->expectException(\RuntimeException::class);
+        $a->apply(array('test'));
     }
 
     /**

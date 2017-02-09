@@ -69,9 +69,8 @@ class Cache
         {
             $st = isset($cache['_timestamp']) ? $cache['_timestamp'] : 0;
 
-            if (time() - $st > $timeout)
+            if (time() - $st > $timeout || $timeout === 0)
             {
-                Debug\info("WASP.Cache", "Cache {$name} is more than {} seconds old ({}), invalidating", $timeout, $st);
                 self::$repository[$name] = new Dictionary();
                 self::$repository[$name]['_timestamp'] = time();
             }
@@ -145,6 +144,9 @@ class Cache
      */
     public function &get()
     {
+        if (func_num_args() === 0)
+            return self::$repository[$this->cache_name]->getAll();
+
         return self::$repository[$this->cache_name]->dget(func_get_args(), null);
     }
     

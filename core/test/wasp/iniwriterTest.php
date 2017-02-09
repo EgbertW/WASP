@@ -32,11 +32,92 @@ use PHPUnit\Framework\TestCase;
  */
 class INIWriterTest extends TestCase
 {
+    public function setUp()
+    {
+        Dir::setRequiredPrefix(WASP_ROOT);
+        $dir = WASP_ROOT . '/var/test';
+        Dir::mkdir($dir);
+    }
+
+    public function tearDown()
+    {
+        $dir = WASP_ROOT . '/var/test';
+        Dir::rmtree($dir);
+    }
+
     /**
      * @covers WASP\INIWriter::write
      * @covers WASP\INIWriter::writeParameter
      */
-    public function testIniWriter()
+    public function testIniWriterException()
+    {
+        $cfg = array('sec1' => array('nest1' => array('nest2' => array('nest3' => 1))));
+        $file = WASP_ROOT . '/var/test/test.ini';
+        $this->expectException(\DomainException::class);
+        INIWriter::write($file, $cfg);
+    }
+
+    /**
+     * @covers WASP\INIWriter::write
+     * @covers WASP\INIWriter::writeParameter
+     */
+    public function testIniWriterHierarchical()
+    {
+        $cfg = array(
+            'section1' => array(
+                'var1' => array(
+                    1, 2, 3, 4
+                ),
+                'var2' => array(
+                    'a' => 'z',
+                    'b' => 'y',
+                    'c' => 'x'
+                ),
+            ),
+            'section2' => array(
+                'var2' => true,
+                'var3' => 1,
+                'var4' => (float)3.0,
+                'var5' => false,
+                'var6' => null,
+                'var7' => (float)3.5,
+            )
+        );
+
+        $file = WASP_ROOT . '/var/test/test.ini';
+        INIWriter::write($file, $cfg);
+
+        $ini = file_get_contents($file);
+        $expected_ini = <<<EOT
+[section1]
+var1[0] = 1
+var1[1] = 2
+var1[2] = 3
+var1[3] = 4
+var2[a] = "z"
+var2[b] = "y"
+var2[c] = "x"
+
+[section2]
+var2 = true
+var3 = 1
+var4 = 3.0
+var5 = false
+var6 = null
+var7 = 3.5
+
+EOT;
+        $this->assertEquals($ini, $expected_ini);
+
+        $cfg2 = parse_ini_file($file, true, INI_SCANNER_TYPED);
+        $this->assertEquals($cfg, $cfg2);
+    }
+
+    /**
+     * @covers WASP\INIWriter::write
+     * @covers WASP\INIWriter::writeParameter
+     */
+    public function testIniWriterComments()
     {
         $ini = <<<EOT
 ;precomment about this file
@@ -51,6 +132,10 @@ var2 = "value2"
 ;testcomment for section 2
 var3 = "value3"
 var4 = "value4"
+
+[sec4]
+var9 = "test"
+
 EOT;
         $ini_expected = <<<EOT
 ;precomment about this file
@@ -71,11 +156,7 @@ var4 = "value4"
 var5 = "value5"
 
 EOT;
-        $dir = WASP_ROOT . '/test';
-        if (!is_dir($dir))
-            mkdir($dir);
-
-        $file = $dir . '/test.ini';
+        $file = WASP_ROOT . '/var/test/test.ini';
         file_put_contents($file, $ini);
 
         // Read contents
@@ -86,12 +167,10 @@ EOT;
         $this->assertEquals($cfg['sec2']['var4'], 'value4');
         
         $cfg['sec3']['var5'] = 'value5';
+        unset($cfg['sec4']);
         INIWriter::write($file, $cfg);
 
         $ini_out = file_get_contents($file);
         $this->assertEquals($ini_out, $ini_expected);
-
-        unlink($file);
-        rmdir($dir);
     }
 }

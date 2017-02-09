@@ -99,12 +99,10 @@ class INIWriter
 
             $new_contents .= "[" . $section . "]\n";
             $comments = isset($section_comments[$section]) ? $section_comments[$section] : array();
+            sort($comments, SORT_STRING);
+            ksort($parameters, SORT_STRING);
+
             $lines = array_merge($comments, $parameters);
-            uasort($lines, function ($l, $r) {
-                $cmp1 = ltrim($l, "; \t");
-                $cmp2 = ltrim($l, "; \t");
-                return strcasecmp($l, $r);
-            });
 
             foreach ($lines as $name => $line)
             {
@@ -126,15 +124,18 @@ class INIWriter
      * @param $name string The name of the parameter
      * @param $parameter mixed The parameter to write
      */
-    private static function writeParameter($name, $parameter)
+    private static function writeParameter($name, $parameter, $depth = 0)
     {
+        if ($depth > 1)
+            throw new \DomainException("Cannot nest arrays more than once in INI-file");
+
         $str = "";
-        if (is_array($parameter))
+        if (\is_array_like($parameter))
         {
             foreach ($parameter as $key => $val)
             {
                 $prefix = $name . "[" . $key . "]";
-                $str .= self::writeParameter($prefix, $val); 
+                $str .= self::writeParameter($prefix, $val, $depth + 1); 
             }
             return $str;
             
@@ -143,6 +144,10 @@ class INIWriter
             $str = "$name = " . ($parameter ? "true" : "false") . "\n";
         elseif (is_null($parameter))
             $str = "$name = null\n";
+        elseif (is_float($parameter) && \is_int_val((string)$parameter))
+            $str = "$name = " . sprintf("%.1f", $parameter) . "\n";
+        elseif (is_float($parameter))
+            $str = "$name = " . $parameter . "\n";
         elseif (is_numeric($parameter))
             $str = "$name = " . $parameter . "\n";
         else

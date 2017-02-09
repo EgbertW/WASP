@@ -80,6 +80,7 @@ final class DictionaryTest extends TestCase
      * @covers WASP\Dictionary::get
      * @covers WASP\Dictionary::dget
      * @covers WASP\Dictionary::offsetGet
+     * @covers WASP\Dictionary::has
      */
     public function testConstructArray()
     {
@@ -99,6 +100,8 @@ final class DictionaryTest extends TestCase
 
         // Test if referenced array is updated
         $this->assertEquals($data['var3'], 'val3');
+
+        $this->assertFalse($dict->has('var1', 'var2'));
     }
 
     /**
@@ -298,6 +301,9 @@ final class DictionaryTest extends TestCase
         $arr = array(1, 2, 3, 4);
         $dict['arr'] = $arr;
 
+        $arr2 = array(5, 6, 7, 8);
+        $dict['arr2'] = new Dictionary($arr2);
+
         $this->assertTrue($dict->has('obj', Dictionary::TYPE_OBJECT));
         $this->assertFalse($dict->has('obj', Dictionary::TYPE_ARRAY));
         $this->assertFalse($dict->has('obj', Dictionary::TYPE_INT));
@@ -314,9 +320,70 @@ final class DictionaryTest extends TestCase
         $this->assertFalse($dict->has('arr', Dictionary::TYPE_STRING));
         $this->assertEquals($dict->getArray('arr'), $arr);
 
+        $this->assertEquals($dict->getArray('arr2'), $arr2);
+
+        $this->assertInstanceOf(Dictionary::class, $dict->getType('arr2', Dictionary::EXISTS));
 
         $this->expectException(\DomainException::class);
         $this->expectException(is_array($dict->getType(0, Dictionary::TYPE_ARRAY)));
+    }
+
+    public function testOverwriteType()
+    {
+        $a = new Dictionary();
+        $a['test'] = "string";
+
+        $a->set('test', 'test2', 'test3');
+        $this->assertEquals($a->get('test', 'test2'), 'test3');
+    }
+    /** 
+     * @covers WASP\Dictionary::getType
+     */ 
+    public function testGetTypeNotExistsException()
+    {
+        $a = new Dictionary();
+        $this->expectException(\OutOfRangeException::class);
+        $a->getType('a', Dictionary::TYPE_INT);
+    }
+
+    public function testGetTypeIntException()
+    {
+        $a = new Dictionary();
+        $a['int'] = "str";
+        $this->expectException(\DomainException::class);
+        $a->getType('int', Dictionary::TYPE_INT);
+    }
+
+    public function testGetTypeFloatException()
+    {
+        $a = new Dictionary();
+        $a['float'] = array();
+        $this->expectException(\DomainException::class);
+        $a->getType('float', Dictionary::TYPE_FLOAT);
+    }
+
+    public function testGetTypeStringException()
+    {
+        $a = new Dictionary();
+        $a['string'] = array();
+        $this->expectException(\DomainException::class);
+        $a->getType('string', Dictionary::TYPE_STRING);
+    }
+
+    public function testGetTypeArrayException()
+    {
+        $a = new Dictionary();
+        $a['array'] = 1;
+        $this->expectException(\DomainException::class);
+        $a->getType('array', Dictionary::TYPE_ARRAY);
+    }
+
+    public function testGetTypeObjectException()
+    {
+        $a = new Dictionary();
+        $a['object'] = 1;
+        $this->expectException(\DomainException::class);
+        $a->getType('object', Dictionary::TYPE_OBJECT);
     }
 
     /**
@@ -397,5 +464,46 @@ final class DictionaryTest extends TestCase
         $data2 = $dict->toArray();
         $data2['c'] = 3;
         $this->assertEmpty($dict->get('c'));
+    }
+
+    /**
+     * @covers WASP\Dictionary::jsonSerialize
+     */
+    public function testJsonSerialize()
+    {
+        $data = array('a' => 1, 'b' => 2);
+        $dict = new Dictionary($data);
+
+        $json = json_encode($dict);
+        $json_orig = json_encode($data);
+        $this->assertEquals($json, $json_orig);
+    }
+
+    /**
+     * @covers WASP\Dictionary::serialize
+     * @covers WASP\Dictionary::unserialize
+     */
+    public function testPHPSerialize()
+    {
+        $data = array('a' => 1, 'b' => 2);
+        $dict = new Dictionary($data);
+
+        $ser = serialize($dict);
+        $dict2 = unserialize($ser);
+
+        $this->assertEquals($dict->getAll(), $dict2->getAll());
+    }
+
+    public function testSaveException()
+    {
+        $a = new Dictionary();
+        $this->expectException(\RuntimeException::class);
+        $a->saveFile('random_file', 'garbage');
+    }
+
+    public function testLoadException()
+    {
+        $this->expectException(\RuntimeException::class);
+        Dictionary::loadFile('random_file', 'garbage');
     }
 }

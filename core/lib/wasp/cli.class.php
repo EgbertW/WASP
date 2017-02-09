@@ -35,7 +35,6 @@ class CLI
 {
     const MAX_LINE_LENGTH = 80;
 
-    private $arguments = array();
     private $parameters = array();
 
     /**
@@ -53,6 +52,11 @@ class CLI
             ->addOption("f", "logfile", "filename", "Sets the log file where output will be written to")
             ->addOption("s", "silent", false, "If this is set, output is only written to logfile, not to stdout")
             ->addOption("h", "help", false, "Show this help");
+    }
+
+    public function clearOptions()
+    {
+        $this->parameters = array();
     }
 
     /**
@@ -73,13 +77,7 @@ class CLI
         return $this;
     }
 
-    /**
-     * Parse the provided arguments and options.
-     *
-     * @param $arguments array The list of arguments to parse
-     * @return array Associative array of option => argument pairs. For option without an argument, the argument === false
-     */
-    public function parse()
+    public function getOptString()
     {
         $opt_str = "";
         $long_opts = array();
@@ -109,9 +107,26 @@ class CLI
                 $long_opts[] = $long;
             }
         }
+        return array($opt_str, $long_opts, $mapping);
+    }
 
+    /**
+     * Parse the provided arguments and options.
+     *
+     * @param $arguments array The list of arguments to parse
+     * @return array Associative array of option => argument pairs. For option without an argument, the argument === false
+     * @codeCoverageIgnore We cannot fool getopt to modify the arguments, so this cannot be unit tested
+     */
+    public function parse()
+    {
+        list($opt_str, $long_opts, $mapping) = $this->getOptString();
         $opts = \getopt($opt_str, $long_opts);
+        $options = $this->mapOptions($opts, $mapping);
+        return new Dictionary($res);
+    }
 
+    public function mapOptions(array $opts, array $mapping)
+    {
         // Map short options to the long options where available
         $res = array();
         foreach ($opts as $k => $v)
@@ -121,8 +136,7 @@ class CLI
             else
                 $res[$k] = $v;
         }
-
-        return new Dictionary($res);
+        return $res;
     }
 
     /**
@@ -131,6 +145,7 @@ class CLI
      * @param $default string What to return in case the user enters nothing. If not specified,
      *                        this function keeps asking until input is provided
      * @return string The input or default if no input was specified
+     * @codeCoverageIgnore STDIN can't be reliably unit tested - test manually
      */
     public static function input($prompt, $default = null)
     {
@@ -175,6 +190,7 @@ class CLI
 
     /**
      * Show the help text, generated based on the configured options
+     * @codeCoverageIgnore Validate output manually - formatText is unit tested. 
      */
     public function syntax($error = "Please specify valid options")
     {

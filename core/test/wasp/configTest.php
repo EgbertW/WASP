@@ -78,4 +78,55 @@ EOT;
         rmdir(Path::$CONFIG);
         Path::$CONFIG = $old_val;
     }
+
+    /**
+     * @covers WASP\Config::getConfig
+     */
+    public function testGetConfigFailSafe()
+    {
+        $cfgdir = Path::$CONFIG;
+        // Make sure we have a non-existing config file
+        for ($i = 0; $i < 10000; ++$i)
+        {
+            $confname = 'foobar' . $i;
+            $filename = $cfgdir . '/' . $confname . '.ini';
+            if (!file_exists($filename))
+                break;
+        }
+        if ($i == 10000)
+            throw new \RuntimeException("You have too many foobar config files for this test");
+
+       $config = Config::getConfig($confname, true);
+       $this->assertNull($config);
+    }
+
+    /**
+     * @covers WASP\Config::getConfig
+     */
+    public function testGetConfigNonExisting()
+    {
+        $cfgdir = Path::$CONFIG;
+        // Make sure we have a non-existing config file
+        for ($i = 0; $i < 10000; ++$i)
+        {
+            $confname = 'foobar' . $i;
+            $filename = $cfgdir . '/' . $confname . '.ini';
+            if (!file_exists($filename))
+                break;
+        }
+        if ($i == 10000)
+            throw new \RuntimeException("You have too many foobar config files for this test");
+
+        $this->expectException(HttpError::class);
+        $config = Config::getConfig($confname);
+    }
+
+    /**
+     * @covers WASP\Config::writeConfig
+     */
+    public function testWriteConfigException()
+    {
+        $this->expectException(\RuntimeException::class);
+        $config = Config::writeConfig('foobar' . rand(100, 10000));
+    }
 }

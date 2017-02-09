@@ -56,4 +56,47 @@ class CLITest extends TestCase
 
         $this->assertEquals($ostr, "12345 \n  67890 \n  12345 \n  67890 \n  12345 \n  67890 \n  12345 \n  67890 \n");
     }
+
+    /**
+     * @covers WASP\CLI::__construct
+     * @covers WASP\CLI::addOption
+     * @covers WASP\CLI::getOptString
+     * @covers WASP\CLI::mapOptions
+     */
+    public function testGetOptString()
+    {
+        $cli = new CLI();
+        $cli->clearOptions();
+        $cli->addOption('a', 'archive', true, 'Archive to file');
+        $cli->addOption('b', 'bootstrap', false, 'Perform bootstrap sequence');
+        $cli->addOption('c', null, true, 'Compile a file');
+        $cli->addOption('d', null, false, 'Run developer mode');
+        $cli->addOption(null, 'indicate', true, 'Indicate a file');
+        $cli->addOption(null, 'jar', false, 'Generate JAR output');
+
+        list($short, $long, $mapping) = $cli->getOptString();
+
+        $this->assertEquals($short, 'a:bc:d');
+
+        $this->assertEquals($long, array(
+            'archive:',
+            'bootstrap',
+            'indicate:',
+            'jar'
+        ));
+
+        $this->assertEquals($mapping, array(
+            'a' => 'archive',
+            'b' => 'bootstrap'
+        ));
+    
+        $args = array('a' => 'filename', 'b' => 0, 'c' => 'filename2');
+        $mapped = $cli->mapOptions($args, $mapping);
+
+        $this->assertEquals($mapped, array(
+            'archive' => 'filename',
+            'bootstrap' => 0,
+            'c' => 'filename2'
+        ));
+    }
 }
