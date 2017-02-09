@@ -59,7 +59,16 @@ class JSON
         );
     }
 
+    /**
+     * Remove all colllected output data
+     */
+    public static function clear()
+    {
+        self::$output = array();
+    }
+
     /** Print JSON headers, including cache control directives
+      * @codeCoverageIgnore Not checkable from unit test
       */
     public static function printHeaders()
     {
@@ -74,6 +83,7 @@ class JSON
      * max-age = 0 will be used.
      *
      * @param $cc string The Cache Control policy
+      * @codeCoverageIgnore Not checkable from unit test
      */
     public static function setCacheControl($cc)
     {
@@ -114,6 +124,7 @@ class JSON
     public static function setPrettyPrinting($pprint)
     {
         self::$pretty_print = $pprint == true;
+        return self::$pretty_print;
     }
 
     /**
@@ -121,6 +132,7 @@ class JSON
      * 
      * @param $field string The name of the field to return
      * @return mixed The value of the field
+     */
     public static function get($field)
     {
         if (!isset(self::$output[$field]))
@@ -138,6 +150,7 @@ class JSON
     public static function setCallback($cb)
     {
         self::$callback = $cb;
+        return self::$callback;
     }
 
     /**
@@ -154,6 +167,8 @@ class JSON
      * output outputs the currently set JSON values and terminates. If
      * arguments are specified, those are first added to the JSON output, as if
      * add($arguments) was called.
+     * @codeCoverageIgnore Not unit testable as it terminates by design,
+     *                     helper method UTF8SafeEncode and pprint are tested
      */
     public static function output()
     {
