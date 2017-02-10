@@ -38,6 +38,7 @@ class Request
         '*/*' => 0.5
     );
 
+    public static $server;
     public static $host;
     public static $uri;
     public static $app;
@@ -87,24 +88,13 @@ class Request
             self::$language = self::$session->get('language');
     }
 
-    public static function dispatch()
+    public static function parseAccept($accept)
     {
-        self::$host = $_SERVER['HTTP_HOST'];
-        self::$uri = $_SERVER['REQUEST_URI'];
-        self::$secure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == "on";
-        self::$protocol = self::$secure ? "https://" : "http://";
-        self::$ajax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
-        if (isset($_GET['ajax']) || isset($_POST['ajax']))
-            self::$ajax = true;
-
-        self::$remote_ip = $_SERVER['REMOTE_ADDR'];
-        self::$remote_host = gethostbyaddr(self::$remote_ip);
-
-        $accept = isset($_SERVER['HTTP_ACCEPT']) ? $_SERVER['HTTP_ACCEPT'] : null;
         if (empty($accept))
             $accept = "text/html";
 
 		$accept = explode(",", $accept);
+        $accepted = array();
 		foreach ($accept as $type)
 		{
 			if (preg_match("/^([^;]+);q=([\d.]+)$/", $type, $matches))
@@ -115,19 +105,34 @@ class Request
 			else
 				$prio = 1.0;
 
-			self::$accept[$type] = $prio;
+			$accepted[$type] = $prio;
 		}
-		if (count(self::$accept) === 0)
+
+		if (count($accept) === 0)
 			throw new HttpError(400, "No accept type requested");
 
-        // Get request data
+        return $accepted;
+    }
+
+    public static function dispatch()
+    {
+        self::$server = new Dictionary($_SERVER);
         self::$get = new Dictionary($_GET);
         self::$post = new Dictionary($_POST);
         self::$cookie = new Dictionary($_COOKIE);
-        self::$method = $_SERVER['REQUEST_METHOD'];
+        self::$method = self::$server->get('REQUEST_METHOD');
 
-        Util\Redirection::checkRedirect();
-        self::setupSession();
+        self::$host = strtolower(self::$server->get('HTTP_HOST'));
+        self::$uri = self::$server->get('REQUEST_URI');
+        self::$secure = self::$server->dget('HTTPS' ,'off') === "on";
+        self::$protocol = self::$secure ? "https://" : "http://";
+        self::$ajax = self::$server->get('HTTP_X_REQUESTED_WITH') === 'xmlhttprequest';
+        if (self::$get->has('ajax') || self::$post->has('ajax'))
+            self::$ajax = true;
+
+        self::$remote_ip = self::$server->get('REMOTE_ADDR');
+        self::$remote_host = gethostbyaddr(self::$remote_ip);
+        self::$accept = self::parseAccept(self::$server->get('HTTP_ACCEPT'));
 
         $qpos = strpos(self::$uri, "?");
         if ($qpos !== false)
@@ -135,6 +140,9 @@ class Request
             self::$query = substr(self::$uri, $qpos);
             self::$uri = substr(self::$uri, 0, $qpos);
         }
+
+        Util\Redirection::checkRedirect();
+        self::setupSession();
 
         $resolved = Resolve::app(self::$uri);
         if ($resolved === null)
