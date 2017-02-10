@@ -21,7 +21,7 @@ class URL implements \ArrayAccess
     private $query = null;
     private $fragment = null;
 
-    public function __construct($url = "")
+    public function __construct($url = "", $default_scheme = '')
     {
         if (empty($url))
             return;
@@ -29,19 +29,19 @@ class URL implements \ArrayAccess
         if ($url instanceof URL)
             $parts = $url;
         else
-            $parts = self::parse($url);
+            $parts = self::parse($url, $default_scheme);
 
         $this->scheme = $parts['scheme'];
         $this->port = $parts['port'];
         $this->username = $parts['username'];
         $this->password = $parts['password'];
-        $this->host = $parts['host'];
+        $this->setHost($parts['host']);
         $this->path = $parts['path'];
         $this->query = $parts['query'];
         $this->fragment = $parts['fragment'];
     }
 
-    public static function parse(string $url, $default_scheme = 'http')
+    public static function parse(string $url, string $default_scheme = '')
     {
         if (!preg_match('/^(((([a-z]+):)?\/\/)?((([^:]+):([^@]+)@)?([\w\d.-]+))(:([1-9][0-9]*))?)?(\/.*)?$/u', $url, $matches))
             throw new URLException("Invalid URL: " . $url);
@@ -51,7 +51,7 @@ class URL implements \ArrayAccess
         $pass   = !empty($matches[8]) ? $matches[8] : null;
         $host   = !empty($matches[9]) ? $matches[9] : null;
         $port   = !empty($matches[11]) ? (int)$matches[11] : null;
-        $path   = !empty($matches[12]) ? $matches[12] : null;
+        $path   = !empty($matches[12]) ? $matches[12] : '/';
 
         if (empty($scheme))
             $scheme = $default_scheme;
@@ -82,6 +82,11 @@ class URL implements \ArrayAccess
 
     public function __toString()
     {
+        return $this->toString();
+    }
+
+    public function toString($idn = false)
+    {
         $o = "";
         if (!empty($this->scheme))
             $o .= $this->scheme . "://";
@@ -89,14 +94,19 @@ class URL implements \ArrayAccess
         if (!empty($this->username) && !empty($this->password))
             $o .= $this->username . ':' . $this->password . '@';
 
-        $o .= $this->host;
+        // Check for IDN
+        $host = $this->host;
+        if ($idn && preg_match('/[^\x20-\x7f]/', $host))
+            $host = \idn_to_ascii($host);
+        $o .= $host;
+
         if (!empty($this->port))
         {
-            if (!
-                ($this->scheme === "http" && $this->port === 80) ||
-                ($this->scheme === "https" && $this->port === 443)
-                ($this->scheme === "21" && $this->port === 21)
-            )
+            if (!(
+                ($this->scheme === "http"  && $this->port === 80) ||
+                ($this->scheme === "https" && $this->port === 443) || 
+                ($this->scheme === "ftp"   && $this->port === 21)
+            ))
                 $o .= ":" . $this->port;
         }
 
@@ -106,6 +116,14 @@ class URL implements \ArrayAccess
         if (!empty($this->fragment))
             $o .= '#' . $this->fragment;
         return $o;
+    }
+
+    public function setHost($hostname)
+    {
+        if (substr($hostname, 0, 4) === "xn--")
+            $hostname = \idn_to_utf8($hostname);
+        $this->host = $hostname;
+        return $this;
     }
 
     // ArrayAccess implementation
@@ -118,6 +136,8 @@ class URL implements \ArrayAccess
 
     public function offsetSet($offset, $value)
     {
+        if ($offset === 'host')
+            return $this->setHost($value);
         if (!property_exists($this, $offset))
             throw new \OutOfRangeException($offset);
         $this->$offset = $value;
@@ -125,7 +145,7 @@ class URL implements \ArrayAccess
 
     public function offsetExists($offset)
     {
-        return !property_exists($this, $offset);
+        return property_exists($this, $offset);
     }
 
     public function offsetUnset($offset)
@@ -143,6 +163,8 @@ class URL implements \ArrayAccess
 
     public function __set($field, $value)
     {
+        if ($field === 'host')
+            return $this->setHost($value);
         if (!property_exists($this, $field))
             throw new \OutOfRangeException($field);
         $this->$field = $value;
