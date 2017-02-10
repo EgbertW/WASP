@@ -55,17 +55,17 @@ class FlashMessage
             return;
         }
 
-        if (session_status() !== PHP_SESSION_ACTIVE)
+        if (empty(Request::$session))
             throw new \RuntimeException("No session available - cannot store Flash Message");
 
         $this->msg = $msg;
         $this->type = $type;
         $this->date = new \DateTime();
 
-        if (!isset($_SESSION[self::$KEY]))
-            $_SESSION[self::$KEY] = array();
+        if (!Request::$session->has(self::$KEY, Dictionary::TYPE_ARRAY))
+            Request::$session->set(self::$KEY, array());
 
-        $_SESSION[self::$KEY][] = array($this->msg, $this->type, $this->date->getTimestamp());
+        Request::$session->get(self::$KEY)[] = array($this->msg, $this->type, $this->date->getTimestamp());
     }
 
     public function getMessage()

@@ -61,6 +61,8 @@ class Request
     public static $language;
     public static $domain;
     public static $subdomain;
+
+    private static $session_cache = null;
     
     public static function setupSession()
     {
@@ -69,21 +71,29 @@ class Request
         $domain = self::$domain;
         $sub = self::$subdomain;
 
-        $lifetime = $conf->dget('cookie', 'lifetime', 30 * 24 * 3600);
-        $path = '/';
-        $domain = (!empty($sub) && $sub !== "www") ? $sub . "." . $domain : $domain;
-        $secure = self::$secure;
-        $httponly = $conf->dget('cookie', 'httponly', true) == true;
-        $session_name = (string)$conf->dget('cookie', 'prefix', 'cms_') . str_replace(".", "_", $domain);
+        if (!self::CLI())
+        {
+            $lifetime = $conf->dget('cookie', 'lifetime', 30 * 24 * 3600);
+            $path = '/';
+            $domain = (!empty($sub) && $sub !== "www") ? $sub . "." . $domain : $domain;
+            $secure = self::$secure;
+            $httponly = $conf->dget('cookie', 'httponly', true) == true;
+            $session_name = (string)$conf->dget('cookie', 'prefix', 'cms_') . str_replace(".", "_", $domain);
 
-        session_set_cookie_params($lifetime, $path, $domain, $secure, $httponly);
-        session_name($session_name);
-        session_start();
+            session_set_cookie_params($lifetime, $path, $domain, $secure, $httponly);
+            session_name($session_name);
+            session_start();
 
-        // Make sure the cookie expiry is updated every time.
-        setcookie(session_name(), session_id(), time() + $lifetime);
+            // Make sure the cookie expiry is updated every time.
+            setcookie(session_name(), session_id(), time() + $lifetime);
+        }
+        else
+        {
+            self::$session_cache = new Cache('cli-session');
+            $GLOBALS['_SESSION'] = self::$session_cache->get();
+        }
 
-        self::$session = new Dictionary($_SESSION);
+        self::$session = new Dictionary($GLOBALS['_SESSION']);
         if (self::$session->has('language'))
             self::$language = self::$session->get('language');
     }

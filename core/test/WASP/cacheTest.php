@@ -69,6 +69,7 @@ final class CacheTest extends TestCase
         $dataser = file_get_contents($file);
         $dataunser = unserialize($dataser);
         unset($dataunser['_timestamp']); // Added by cache
+        unset($emptyarr['_timestamp']);
         $this->assertEquals($dataunser, $emptyarr);
 
         unlink($file);

@@ -5,16 +5,27 @@ namespace WASP;
 class URLException extends \RuntimeException
 {}
 
+/**
+ * URL is a class that parses and modifies URLs. This
+ * class is limited to a limited set of schemes - it
+ * supports http, https and ftp.
+ */
 class URL implements \ArrayAccess
 {
-    private $scheme;
-    private $port;
-    private $host;
-    private $path;
-    private $query;
+    private $scheme = null;
+    private $port = null;
+    private $username = null;
+    private $password = null;
+    private $host = null;
+    private $path = null;
+    private $query = null;
+    private $fragment = null;
 
     public function __construct($url = "")
     {
+        if (empty($url))
+            return;
+
         if ($url instanceof URL)
             $parts = $url;
         else
@@ -22,38 +33,50 @@ class URL implements \ArrayAccess
 
         $this->scheme = $parts['scheme'];
         $this->port = $parts['port'];
+        $this->username = $parts['username'];
+        $this->password = $parts['password'];
         $this->host = $parts['host'];
         $this->path = $parts['path'];
         $this->query = $parts['query'];
-        $this->hash = $parts['hash'];
+        $this->fragment = $parts['fragment'];
     }
 
-    public static function parse(string $url)
+    public static function parse(string $url, $default_scheme = 'http')
     {
-        if (!preg_match('/^(((([a-z]+):)?\/\/)?([\w\d.-]+)(:([1-9][0-9]*))?)?(\/.*)?$/u', $url, $matches))
+        if (!preg_match('/^(((([a-z]+):)?\/\/)?((([^:]+):([^@]+)@)?([\w\d.-]+))(:([1-9][0-9]*))?)?(\/.*)?$/u', $url, $matches))
             throw new URLException("Invalid URL: " . $url);
 
-        $scheme = !empty($matches[3]) ? $matches[3] : null;
-        $host   = !empty($matches[5]) ? $matches[5] : null;
-        $port   = !empty($matches[7]) ? (int)$matches[7] : null;
-        $path   = !empty($matches[8]) ? $matches[8] : null;
+        $scheme = !empty($matches[4]) ? $matches[4] : null;
+        $user   = !empty($matches[7]) ? $matches[7] : null;
+        $pass   = !empty($matches[8]) ? $matches[8] : null;
+        $host   = !empty($matches[9]) ? $matches[9] : null;
+        $port   = !empty($matches[11]) ? (int)$matches[11] : null;
+        $path   = !empty($matches[12]) ? $matches[12] : null;
+
+        if (empty($scheme))
+            $scheme = $default_scheme;
+
+        if (!in_array($scheme, array('http', 'https', 'ftp')))
+            throw new URLException("Unsupported scheme: '" . $scheme . "'");
 
         $query = null;
-        $hash = null;
-        if (preg_match('/^(.*?)(\\?(.*))?(#(.*))$/u', $path, $matches))
+        $fragment = null;
+        if (preg_match('/^(.*?)(\\?([^#]*))?(#(.*))?$/u', $path, $matches))
         {
             $path = $matches[1];
-            $query = $matches[3];
-            $hash = $matches[5];
+            $query = !empty($matches[3]) ? $matches[3] : null;
+            $fragment = !empty($matches[5]) ? $matches[5] : null;
         }
 
         return array(
             'scheme' => $scheme,
+            'username' => $user,
+            'password' => $pass,
             'host' => $host,
             'port' => $port,
             'path' => $path,
             'query' => $query,
-            'hash' => $hash
+            'fragment' => $fragment
         );
     }
 
@@ -63,6 +86,9 @@ class URL implements \ArrayAccess
         if (!empty($this->scheme))
             $o .= $this->scheme . "://";
         
+        if (!empty($this->username) && !empty($this->password))
+            $o .= $this->username . ':' . $this->password . '@';
+
         $o .= $this->host;
         if (!empty($this->port))
         {
@@ -77,15 +103,16 @@ class URL implements \ArrayAccess
         $o .= $this->path;
         if (!empty($this->query))
             $o .= '?' . $this->query;
-        if (!empty($this->hash))
-            $o .= '#' . $this->hash;
+        if (!empty($this->fragment))
+            $o .= '#' . $this->fragment;
         return $o;
     }
 
+    // ArrayAccess implementation
     public function offsetGet($offset)
     {
         if (property_exists($this, $offset))
-            return $this->offset;
+            return $this->$offset;
         throw new \OutOfRangeException($offset);
     }
 
@@ -93,7 +120,7 @@ class URL implements \ArrayAccess
     {
         if (!property_exists($this, $offset))
             throw new \OutOfRangeException($offset);
-        $this->$offset = $offset;
+        $this->$offset = $value;
     }
 
     public function offsetExists($offset)
@@ -105,5 +132,19 @@ class URL implements \ArrayAccess
     {
         if (property_exists($this, $offset))
             $this->$offset = null;
+    }
+
+    public function __get($field)
+    {
+        if (property_exists($this, $field))
+            return $this->$field;
+        throw new \OutOfRangeException($field);
+    }
+
+    public function __set($field, $value)
+    {
+        if (!property_exists($this, $field))
+            throw new \OutOfRangeException($field);
+        $this->$field = $value;
     }
 }

@@ -168,7 +168,7 @@ class Cache
      *
      * @param $replacement array The replacement for the cache
      */
-    public function replace(array $replacement)
+    public function replace(array &$replacement)
     {
         self::$repository[$this->cache_name] = new Dictionary($replacement);
         self::$repository[$this->cache_name]['_changed'] = true;

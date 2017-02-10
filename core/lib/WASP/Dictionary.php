@@ -337,7 +337,10 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
 
     public function offsetSet($offset, $value)
     {
-        $this->set($offset, $value);
+        if ($offset === null)
+            $this->values[] = $value;
+        else
+            $this->set($offset, $value);
     }
 
     public function offsetUnset($offset)

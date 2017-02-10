@@ -34,14 +34,11 @@ final class FlashMessageTest extends TestCase
 {
     public function setUp()
     {
-        @session_start();
-        $GLOBALS['_SESSION'] = array();
+        Request::setupSession();
     }
 
     public function tearDown()
     {
-        @session_destroy();
-        $GLOBALS['_SESSION'] = array();
     }
 
     /**
@@ -55,6 +52,10 @@ final class FlashMessageTest extends TestCase
      */
     public function testFlashMessage()
     {
+        // Makre sure there are no flash messages in the queue
+        while (FlashMessage::hasNext())
+            FlashMessage::next();
+
         $msgs = array(
             "Message 1" => FlashMessage::ERROR,
             "Message 2" => FlashMessage::WARNING,
@@ -77,8 +78,8 @@ final class FlashMessageTest extends TestCase
         while (FlashMessage::hasNext())
         {
             $fm = FlashMessage::next();
-            $this->assertEquals($fm, $fms[$cnt]);
 
+            $this->assertEquals($fm->getDate()->getTimestamp(), $fms[$cnt]->getDate()->getTimestamp());
             if ($cnt === 0)
             {
                 $this->assertEquals($fm->getMessage(), "Message 1");
@@ -131,7 +132,7 @@ final class FlashMessageTest extends TestCase
      */
     public function testNoSession()
     {
-        @session_destroy();
+        Request::$session = null;
 
         $this->expectException(\RuntimeException::class);
         $fm = new FlashMessage('error');
