@@ -37,7 +37,7 @@ class Log
 {
     private $module;
     private static $level = TRACE;
-    private static $filename = WASP_ROOT . '/var/log/cms.log';
+    private static $filename = WASP_ROOT . '/var/log/wasp.log';
     private static $file = NULL;
 
     private static $LEVEL_NAMES = array(
