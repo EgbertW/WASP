@@ -57,7 +57,7 @@ class Resolve
         if (self::$cache !== null)
             return;
         
-        $p = dirname(dirname(__FILE__)) . '/cache.class.php';
+        $p = dirname(dirname(__FILE__)) . '/Cache.php';
         require_once $p;
 
         self::$cache = new Cache('resolve');

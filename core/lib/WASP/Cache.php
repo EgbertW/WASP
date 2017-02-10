@@ -28,8 +28,8 @@ namespace WASP;
 use WASP\Debug;
 
 /** Cache requires Dictionary and Path, so always load it */
-require_once 'dictionary.class.php';
-require_once 'path.class.php';
+require_once 'Dictionary.php';
+require_once 'Path.php';
 
 /**
  * Provides automatic persistent caching facilities. You can store and retrieve

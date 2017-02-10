@@ -67,6 +67,6 @@ class Config
     public static function loadErrorClass()
     {
         if (!class_exists("WASP\\HttpError"))
-            require_once WASP_LIB . '/wasp/httperror.class.php';
+            require_once WASP_LIB . '/WASP/HttpError.php';
     }
 }

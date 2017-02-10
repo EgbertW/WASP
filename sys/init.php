@@ -26,6 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ini_set('default_charset', 'UTF-8');
 mb_internal_encoding('UTF-8');
 
+use WASP\Autoload\Autoloader;
 use WASP\Debug;
 use WASP\Request;
 use WASP\Path;
@@ -53,7 +54,7 @@ else
     ini_set('error_log', WASP_ROOT . '/var/log/error-php.log');
 
 // Check required modules
-require_once WASP_ROOT . "/core/lib/wasp/debug/log.class.php";
+require_once WASP_ROOT . "/core/lib/WASP/Debug/Log.php";
 if (isset($_SERVER['REQUEST_URI']))
     Debug\info("Sys.init", "*** Starting processing for {} request to {}", $_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
 
@@ -61,7 +62,8 @@ if (isset($_SERVER['REQUEST_URI']))
 require_once WASP_ROOT . "/sys/functions.php";
 
 // Set up the autoloader
-require_once WASP_ROOT . "/core/lib/wasp/autoload/autoloader.class.php";
+require_once WASP_ROOT . "/core/lib/WASP/Autoload/Autoloader.php";
+Autoloader::registerNS('WASP', WASP_ROOT . '/core/lib/WASP');
 
 Request::setErrorHandler();
 Path::setup();

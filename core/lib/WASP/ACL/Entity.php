@@ -25,12 +25,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\ACL;
 
-require_once "hierarchy.class.php";
-require_once "role.class.php";
-require_once "rule.class.php";
-require_once "exception.class.php";
-require_once "iruleloader.class.php";
-require_once "iactionvalidator.class.php";
+require_once "Hierarchy.php";
+require_once "Role.php";
+require_once "Rule.php";
+require_once "Exception.php";
+require_once "IRuleLoader.php";
+require_once "IActionValidator.php";
 
 /**
  * An Entity is any object or class of objects that rules can be applied to.
