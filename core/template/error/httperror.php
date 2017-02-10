@@ -26,7 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 $type = $this->chooseResponse(array("text/html", "application/json", "text/xml", "text/plain"));
 
 $error_code = 500;
-if ($exception instanceof HttpError)
+if ($exception instanceof WASP\HttpError)
     $error_code = (int)$exception->getCode();
 
 $error_title = "Unexpected error";
@@ -50,8 +50,8 @@ switch ($error_code)
 if ($dev || $cli)
 {
     $error_description .= 
-        "\nDescription: " . $exception->getMessage() . "\n";
-        $exception->getTraceAsString();
+        "\nDescription: " . $exception->getMessage() . "\n" 
+        . $exception->getTraceAsString();
 }
 elseif (method_exists($exception, 'getUserMessage'))
 {
@@ -61,8 +61,8 @@ elseif (method_exists($exception, 'getUserMessage'))
 $type_name = str_replace("/", "_" ,$type) . ".php";
 
 $path = WASP\File\Resolve::template($type_name);
-if ($type !== null)
-    require $type_name;
+if ($path !== null)
+    require $path;
 else
     require tpl('error/text_html');
 

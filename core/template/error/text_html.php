@@ -22,26 +22,19 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
-
-    ?><!doctype html>
-<html>
-    <head>
-        <meta charset="utf-8" />
-        <title><?=$error_code;?> - <?=escape($error_title);?></title>
-    </head>
-    <body>
-        <div class="large-9 medium-9 columns">
-            <h1><?=$error_code;?> - <?=escape($error_title);?></h1>
+include tpl('parts/header');
+?>
+        <div class="large-12 medium-12 columns callout">
+            <h1><?=$error_code;?> - <?=txt($error_title);?></h1>
             <p>
-                <?=escape($error_title);?>
+                <?=txt($error_title);?>
             </p>
             <div class="row">
                 <div class="large-12 columns">
-                    <div class="callout">
-                        <pre><?=escape($error_description);?></pre>
+                    <div class="callout" style="max-width: 100%; overflow: auto;">
+                        <pre><?=txt($error_description);?></pre>
                     </div>
                 </div>
             </div>
-        </div>
-    </body>
-</html>
+        </div><?php
+include tpl('parts/footer');
