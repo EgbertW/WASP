@@ -40,7 +40,7 @@ class Request
 
     public static $server;
     public static $host;
-    public static $uri;
+    public static $url;
     public static $app;
     public static $route;
     public static $query;
@@ -61,6 +61,9 @@ class Request
     public static $language;
     public static $domain;
     public static $subdomain;
+
+    public static $sites = array();
+    public static $vhost = null;
 
     private static $session_cache = null;
     
@@ -98,6 +101,60 @@ class Request
             self::$language = self::$session->get('language');
     }
 
+    public static function dispatch()
+    {
+        self::$server = new Dictionary($_SERVER);
+        self::$get = new Dictionary($_GET);
+        self::$post = new Dictionary($_POST);
+        self::$cookie = new Dictionary($_COOKIE);
+        self::$method = self::$server->get('REQUEST_METHOD');
+
+        self::$url = new URL(self::$server->get('REQUEST_URI'));
+        self::$ajax = 
+            self::$server->get('HTTP_X_REQUESTED_WITH') === 'xmlhttprequest' ||
+            self::$get->has('ajax') || self::$post->has('ajax'));
+
+        self::$remote_ip = self::$server->get('REMOTE_ADDR');
+        self::$remote_host = gethostbyaddr(self::$remote_ip);
+        self::$accept = self::parseAccept(self::$server->get('HTTP_ACCEPT'));
+
+        $cfg = Config::getConfig()->getSection('site');
+        $sites = self::setupSites($cfg);
+        $vhost = self::findVirtualHost(self::$url, self::$sites);
+        if ($vhost === null)
+        {
+            // Determine behaviour on unknown host
+            $on_unknown = strtoupper($cfg->dget('unknown_host_policy', "IGNORE"));
+            $best_matching = self::findBestMatching(self::$url, self::$sites);
+            switch ($on_unknown)
+            {
+                case "ERROR":
+                    throw new HttpErrror(404, "Not found: " . self::$url);
+                case "REDIRECT":
+                    $redir = $best_matching->URL(self::$url->getPath);
+                    Util\Redirection::redirect($redir);
+                case "IGNORE":
+                default:
+                    $url = new URL(self::$url);
+                    $url->setPath('/')->setQuery(null)->setFragment(null);
+                    self::$vhost = new VirtualHost($base, self::$default_language);
+                    $best_matching->getSite()->addVirtualHost(self::$vhost);
+            }
+        }
+        
+        self::setupSession();
+
+        $resolved = Resolve::app(self::$route);
+        if ($resolved === null)
+            throw new HttpError(404, 'Could not resolve ' . self::$url);
+
+        self::$route = $resolved['route'];
+        self::$url_args = new Dictionary($resolved['remainder']);
+        self::$app = $resolved['path'];
+
+        self::execute($resolved['path']);
+    }
+
     public static function parseAccept($accept)
     {
         if (empty($accept))
@@ -124,45 +181,68 @@ class Request
         return $accepted;
     }
 
-    public static function dispatch()
+    public static function setupSites(Dictionary $config)
     {
-        self::$server = new Dictionary($_SERVER);
-        self::$get = new Dictionary($_GET);
-        self::$post = new Dictionary($_POST);
-        self::$cookie = new Dictionary($_COOKIE);
-        self::$method = self::$server->get('REQUEST_METHOD');
+        $urls = $config->getSection('url')); 
+        $languages = $config->getSection('language'));
+        $sitenames = $config->getSection('site');
+        $default_language = $config->get('default_language');
+        $sites = array();
 
-        self::$host = strtolower(self::$server->get('HTTP_HOST'));
-        self::$uri = self::$server->get('REQUEST_URI');
-        self::$secure = self::$server->dget('HTTPS' ,'off') === "on";
-        self::$protocol = self::$secure ? "https://" : "http://";
-        self::$ajax = self::$server->get('HTTP_X_REQUESTED_WITH') === 'xmlhttprequest';
-        if (self::$get->has('ajax') || self::$post->has('ajax'))
-            self::$ajax = true;
-
-        self::$remote_ip = self::$server->get('REMOTE_ADDR');
-        self::$remote_host = gethostbyaddr(self::$remote_ip);
-        self::$accept = self::parseAccept(self::$server->get('HTTP_ACCEPT'));
-
-        $qpos = strpos(self::$uri, "?");
-        if ($qpos !== false)
+        $keys = array_keys($urls);
+        foreach ($keys as $host_idx)
         {
-            self::$query = substr(self::$uri, $qpos);
-            self::$uri = substr(self::$uri, 0, $qpos);
+            $url = $url[$host_idx];
+            $lang = isset($languages[$host_idx]) ? $languages[$host_idx] : $default_language;
+            $site = isset($sitenames[$host_idx]) ? $sitenames[$host_idx] : "default";
+
+            if (!isset($sites[$site]))
+                $sites[$site] = new Site();
+
+            $sites->addVirtualHost(
+                new VirtualHost($url, $lang)
+            );
         }
+        return $sites;
+    }
 
-        Util\Redirection::checkRedirect();
-        self::setupSession();
+    public static function findVirtualHost(URL $url, array $sites)
+    {
+        foreach ($sites as $site)
+        {
+            $vhost = $site->match(self::$url);
+            if (self::$vhost !== null)
+                return $vhost;
+        }
+        return null;
+    }
 
-        $resolved = Resolve::app(self::$uri);
-        if ($resolved === null)
-            throw new HttpError(404, 'Could not resolve ' . self::$uri);
+    public static function findBestMatching(URL $url, array $sites)
+    {
+        $vhosts = array();
+        foreach ($sites as $site)
+            foreach ($site->getVirtualHosts() as $vhost)
+                $vhosts[] = $vhost;
 
-        self::$route = $resolved['route'];
-        self::$url_args = new Dictionary($resolved['remainder']);
-        self::$app = $resolved['path'];
+        $my_url = new URL($url);
+        $my_url = $my_url->set('query', null)->set('fragment', null)->toString();
 
-        self::execute($resolved['path']);
+        $best_percentage = 0;
+        $best_idx = null;
+        foreach ($paths as $idx => $vhost)
+        {
+            $host = $vhost->getHost()->toString();
+            similar_text($my_url, $host, $percentage);
+            if ($best_idx === null || $percentage > $best_percentage)
+            {
+                $best_idx = $idx;
+                $best_percentage = $percentage;
+            }
+        }
+        
+        if ($idx === null)
+            return null;
+        return $vhosts[$idx];
     }
 
     private static function execute($path)
@@ -178,7 +258,7 @@ class Request
         include $path;
 
         if (Template::$last_template === null)
-            throw new HttpError(400, self::$uri);
+            throw new HttpError(400, self::$url);
     }
 
     /**
@@ -253,7 +333,7 @@ class Request
         Debug\error("WASP.Request", "Exception: {}: {}", get_class($exception), $exception->getMessage());
         Debug\error("WASP.Request", "In: {}({})", $exception->getFile(), $exception->getLine());
         Debug\error("WASP.Request", $exception->getTraceAsString());
-        Debug\info("WASP.Request", "*** [{}] Failed processing {} request to {}", $code, self::$method, self::$uri);
+        Debug\info("WASP.Request", "*** [{}] Failed processing {} request to {}", $code, self::$method, self::$url);
 
         try
         {

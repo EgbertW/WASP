@@ -35,19 +35,19 @@ function is_int_val($val)
 /** Convert any value to a bool, somewhat more intelligently than PHP does
   * itself: this function will also take strings
   */
-function parse_bool($val)
+function parse_bool($val, float $float_delta = 0.0001)
 {
     // For booleans, the value is already known
     if (is_bool($val))
         return $val;
 
     // Consider some 'empty' values as false
-    if ($val === null || $val === "" || $val === 0 || $val === 0.0 || $val === "0")
+    if (empty($val))
         return false;
 
     // For numeric types, consider near-0 to be false
     if (is_float($val))
-        return abs($val) > ERROR_MARGIN;
+        return abs($val) > $float_delta;
 
     // Consider empty arrays false, non-empty arrays true
     if (is_array($val))
@@ -55,7 +55,7 @@ function parse_bool($val)
 
     // If it is a numeric string, consider it false if it is close to 0
     if (is_string($val) && is_numeric($val))
-        return (float)abs($val) > ERROR_MARGIN;
+        return (float)abs($val) > $float_delta;
 
     // Parse some textual values representing a boolean
     if (is_string($val))
@@ -88,11 +88,11 @@ function parse_bool($val)
             {
                 $ret = $val->$fn();
 
-                // One last possibility to use string booleans as no, false, off etc
-                if (is_string($ret))
-                    return parse_bool($ret);
+                // One last possibility to use scalar booleans as no, false, off etc
+                if (is_scalar($ret))
+                    return parse_bool($ret, $float_delta);
         
-                // Otherwise live it to PHP
+                // Otherwise leave it to PHP
                 return $ret == true;
             }
     }
@@ -121,6 +121,18 @@ function to_array($arg)
     foreach ($arg as $key => $value)
         $arr[$key] = $value;
     return $arr;
+}
+
+function cast_array($arg)
+{
+    try
+    {
+        return to_array($arg);
+    }
+    catch (DomainException $e)
+    {
+        return empty($arg) ? array() : array($arg);
+    }
 }
 
 /**

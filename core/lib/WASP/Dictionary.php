@@ -28,12 +28,13 @@ namespace WASP;
 class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, \JsonSerializable
 {
     const EXISTS = -1;
-    const TYPE_NUMERIC = -2;
-    const TYPE_FLOAT = -3;
-    const TYPE_INT = -4;
-    const TYPE_STRING = -5;
-    const TYPE_ARRAY = -6;
-    const TYPE_OBJECT = -7;
+    const TYPE_BOOL = -2;
+    const TYPE_NUMERIC = -3;
+    const TYPE_FLOAT = -4;
+    const TYPE_INT = -5;
+    const TYPE_STRING = -6;
+    const TYPE_ARRAY = -7;
+    const TYPE_OBJECT = -8;
 
     private static $logger = null;
     private $values = array();
@@ -183,11 +184,23 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
                 if (!is_object($val) || $val instanceof Dictionary)
                     throw new \DomainException("Key " . implode('.', $args) . " is not an object");
                 return $val;
+            case Dictionary::TYPE_BOOL:
+                return \parse_bool($val);
             default:
         }
         
         // Return the value as-is
         return $val;
+    }
+
+    /**
+     * Get the key as a bool
+     * @param $key scalar The key to get. May be repeated to go deeper
+     * @return bool The value as bool
+     */
+    public function getBool($key)
+    {
+        return $this->getType(func_get_args(), Dictionary::TYPE_BOOL);
     }
 
     /**
@@ -218,6 +231,19 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
     public function getString($key)
     {
         return $this->getType(func_get_args(), Dictionary::TYPE_STRING);
+    }
+
+    /**
+     * Get the parameter as a Dictionary.
+     * @param $key scalar The key to get. May be repeated to go deeper
+     * @return Dictionary The section as a Dictionary. If the key does not
+     *                    exist, an empty Dictionay is returned. If the key
+     *                    is not array-like, it will be wrapped in an array.
+     */
+    public function getSection($key)
+    {
+        $val = $this->dget(func_get_args());
+        return $val instanceof Dictionary ? $val : new Dictionary(\cast_array($val));
     }
 
     /**
