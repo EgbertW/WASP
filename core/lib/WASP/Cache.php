@@ -147,6 +147,11 @@ class Cache
 
         return self::$repository[$this->cache_name]->dget(func_get_args(), null);
     }
+
+    public function has()
+    {
+        return call_user_func_array(array(self::$repository[$this->cache_name], 'has'), func_get_args());
+    }
     
     /**
      * Put a value in the cache

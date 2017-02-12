@@ -327,6 +327,15 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
             $ref = $value;
         return $this;
     }
+
+    public function addAll($values)
+    {
+        if (!\is_array_like($values))
+            throw new \DomainException("Invalid value to merge: $values");
+        foreach ($values as $key => $val)
+            $this->set($key, $val);
+        return $this;
+    }
     
     // Iterator implementation
     public function current()

@@ -112,7 +112,8 @@ class Request
         self::$url = new URL(self::$server->get('REQUEST_URI'));
         self::$ajax = 
             self::$server->get('HTTP_X_REQUESTED_WITH') === 'xmlhttprequest' ||
-            self::$get->has('ajax') || self::$post->has('ajax'));
+            self::$get->has('ajax') || 
+            self::$post->has('ajax');
 
         self::$remote_ip = self::$server->get('REMOTE_ADDR');
         self::$remote_host = gethostbyaddr(self::$remote_ip);
@@ -183,8 +184,8 @@ class Request
 
     public static function setupSites(Dictionary $config)
     {
-        $urls = $config->getSection('url')); 
-        $languages = $config->getSection('language'));
+        $urls = $config->getSection('url'); 
+        $languages = $config->getSection('language');
         $sitenames = $config->getSection('site');
         $default_language = $config->get('default_language');
         $sites = array();

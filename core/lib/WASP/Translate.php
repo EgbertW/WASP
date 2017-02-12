@@ -24,11 +24,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 namespace WASP {
+    use WASP\Translator\Translator;
+
     class TranslateException extends \RuntimeException
     {}
 
     class Translate
     {
+        private static $translate = null;
         private static $stack = array();
 
         public static function translate($msg)
@@ -42,6 +45,7 @@ namespace WASP {
                 throw new TranslateException("Not enough parameters specified");
             $msg = array_shift($args);
 
+            $str = $this->translator->translate($msg);
             $str = gettext($msg);
             if (count($args))
             {
@@ -64,7 +68,7 @@ namespace WASP {
             $domain = array_shift($args);
             $msg = array_shift($args);
 
-            $str = dgettext($domain, $msg);
+            $str = $this->translator->translate($msg, $domain);
             if (count($args))
             {
                 array_unshift($args, $str);
@@ -88,7 +92,7 @@ namespace WASP {
             $msg_plural = array_shift($args);
             $msg_number = $args[0];
 
-            $str = ngettext($msg_singular, $msg_plural, $msg_number);
+            $str = $this->translator->translatePlural($msg_singular, $msg_plural, $msg_number);
 
             if (count($args))
             {
@@ -114,7 +118,7 @@ namespace WASP {
             $msg_plural = array_shift($args);
             $msg_number = $args[0];
 
-            $str = dngettext($domain, $msg_singular, $msg_plural, $msg_number);
+            $str = $this->translator->translatePlural($msg_singular, $msg_plural, $msg_number, $msg_domain);
 
             if (count($args))
             {
@@ -127,19 +131,22 @@ namespace WASP {
 
         public static function pushDomain($domain)
         {
-            array_push(self::$stack, textdomain(NULL));
-            textdomain($domain);
+            array_push(self::$stack, self::$translator->getTextDomain());
+            self::$translator->setTextDomain($domain);
         }
 
         public static function popDomain()
         {
             $prev = array_pop(self::$stack);
             if ($prev)
-                textdomain($prev);
+                self::$translator->setTextDomain($prev);
         }
 
         public static function setupTranslation($module, $path, $classname)
         {
+            if (self::$translator === null)
+                self::$translator = new Translator();
+
             if ($classname !== null)
             {
                 $domains = $classname::getTextDomains();
@@ -166,7 +173,7 @@ namespace WASP {
             {
                 if (is_string($domain))
                 {
-                    bindtextdomain($domain, $lang_path);
+                    self::$translator->addPattern($lang_path, '%s/' . $domain . '.mo', $domain);
                     Debug\debug("WASP.Translate", "Bound text domain {} to path {}", $domain, $lang_path);
                 }
             }
