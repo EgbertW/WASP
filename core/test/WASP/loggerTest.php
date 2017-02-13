@@ -28,12 +28,18 @@ namespace WASP\Debug;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
+use Psr\Log\LoggerTrait;
+use Psr\Log\NullLogger;
+use Psr\Log\LoggerAwareTrait;
+use Psr\Log\LoggerAwareInterface;
+use Psr\Log\AbstractLogger;
 
 /**
- * Provides a base test class for ensuring compliance with the LoggerInterface.
- *
- * Implementors can extend the class and implement abstract methods to run this
- * as part of their test suite.
+ * @covers Psr\Log\LoggerInterface
+ * @covers Psr\Log\LoggerTrait
+ * @covers Psr\Log\AbstractLogger
+ * @covers Psr\Log\NullLogger
+ * @covers Psr\Log\LoggerAwareTrait
  */
 class LoggerTest extends TestCase
 {
@@ -162,6 +168,57 @@ class LoggerTest extends TestCase
         );
         $this->assertEquals($expected, $this->getLogs());
     }
+
+    public function testTrait()
+    {
+        $a = new DummyLogger(array($this, 'log'));
+        
+        foreach ($this->provideLevelsAndMessages() as $level => $msg)
+        {
+            $a->$level($msg[1], array('user' => 'Bob'));
+            $logs = $this->getLogs();
+            $this->assertEquals(
+                $logs,
+                array("${msg[0]} message of level ${msg[0]} with context: Bob")
+            );
+        }
+    }
+
+    public function testNullLogger()
+    {
+        $exception = null;
+        $a = new NullLogger;
+        foreach ($this->provideLevelsAndMessages() as $level => $msg)
+        {
+            try
+            {
+                call_error_exception(function () use ($a, $level, $msg) {
+                    $a->$level($msg[1], array('user' => 'Bob'));
+                });
+            }
+            catch (\Throwable $e)
+            {
+                $exception = $e;
+                throw $e;
+            }
+        }
+        $this->assertNull($exception);
+    }
+
+    public function testLoggerAware()
+    {
+        $a = new DummyLoggable();
+
+        $logger = $this->getLogger();
+        $a->test();
+
+        $this->assertEquals(array(), $this->getLogs());
+
+        $a->setLogger($logger);
+        $a->test();
+
+        $this->assertEquals(array('info ok'), $this->getLogs());
+    }
 }
 
 class DummyTest
@@ -169,5 +226,33 @@ class DummyTest
     public function __toString()
     {
         return "DUMMY";
+    }
+}
+
+class DummyLogger implements LoggerInterface
+{
+    use LoggerTrait;
+
+    private $cb;
+
+    public function __construct($callback)
+    {
+        $this->cb = $callback;
+    }
+
+    public function log($level, $message, array $context = array())
+    {
+        call_user_func($this->cb, $level, $message, $context);
+    }
+}
+
+class DummyLoggable implements LoggerAwareInterface
+{
+    use LoggerAwareTrait;
+
+    public function test()
+    {
+        if ($this->logger)
+            $this->logger->info('ok');
     }
 }
