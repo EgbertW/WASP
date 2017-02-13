@@ -15,7 +15,7 @@
  * @license   http://framework.zend.com/license/new-bsd New BSD License
  */
 
-namespace WASP\Translator;
+namespace WASP\I18n\Translator;
 
 use Locale;
 use WASP\Cache;

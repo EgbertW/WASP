@@ -26,9 +26,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP
 {
     use WASP\File\Resolve;
+    use WASP\Debug\LoggerAwareStaticTrait;
 
     class Template
     {
+        use LoggerAwareStaticTrait;
+
         protected static $log = null;
 
         private $arguments = array();
@@ -263,6 +266,10 @@ namespace WASP
             return $list;
         }
     }
+
+    // @codeCoverageIgnoreStart
+    Template::setLogger();
+    // @codeCoverageIgnoreEnd
 }
 
 namespace 

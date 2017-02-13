@@ -25,8 +25,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP;
 
+use WASP\Debug\LoggerAwareStaticTrait;
+
 class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, \JsonSerializable
 {
+    use LoggerAwareStaticTrait;
+
     const EXISTS = -1;
     const TYPE_BOOL = -2;
     const TYPE_NUMERIC = -3;
@@ -36,7 +40,6 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
     const TYPE_ARRAY = -7;
     const TYPE_OBJECT = -8;
 
-    private static $logger = null;
     private $values = array();
     private $keys = null;
     private $iterator = null;
@@ -563,3 +566,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
         return $ret;
     }
 }
+
+// @codeCoverageIgnoreStart
+Dictionary::setLogger();
+// @codeCoverageIgnoreEnd

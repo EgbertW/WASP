@@ -15,9 +15,9 @@
  * @license   http://framework.zend.com/license/new-bsd New BSD License
  */
 
-namespace WASP\Translator;
+namespace WASP\I18n\Translator;
 
-use WASP\Translator\Plural\Rule as PluralRule;
+use WASP\I18n\Translator\Plural\Rule as PluralRule;
 
 /**
  * GetText loader.

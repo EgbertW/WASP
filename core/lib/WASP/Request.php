@@ -25,11 +25,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP;
 
+use WASP\Debug\LoggerAwareStaticTrait;
 use WASP\File\Resolve;
 use WASP\DB\DB;
 
 class Request
 {
+    use LoggerAwareStaticTrait;
+
     public static $CLI_MIME = array(
         'text/plain' => 1.0,
         'text/html' => 0.9,
@@ -435,3 +438,7 @@ class Request
 		echo $available[$type];
 	}
 }
+
+// @codeCoverageIgnoreStart
+Request::setLogger();
+// @codeCoverageIgnoreEnd

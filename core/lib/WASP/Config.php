@@ -25,8 +25,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP;
 
+use WASP\Debug\LoggerAwareStaticTrait;
+
 class Config
 {
+    use LoggerAwareStaticTrait;
+
     private static $repository = array();
 
     public static function getConfig($scope = 'main', $fail_safe = false)
@@ -70,3 +74,7 @@ class Config
             require_once WASP_LIB . '/WASP/HttpError.php';
     }
 }
+
+// @codeCoverageIgnoreStart
+Config::setLogger();
+// @codeCoverageIgnoreEnd

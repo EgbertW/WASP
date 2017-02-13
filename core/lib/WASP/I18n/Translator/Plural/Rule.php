@@ -15,7 +15,7 @@
  * @license   http://framework.zend.com/license/new-bsd New BSD License
  */
 
-namespace Zend\Translator\Plural;
+namespace WASP\I18n\Translator\Plural;
 
 /**
  * Plural rule evaluator.

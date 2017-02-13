@@ -26,6 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP;
 
 use WASP\Debug;
+use WASP\Debug\LoggerAwareStaticTrait;
 
 /** Cache requires Dictionary and Path, so always load it */
 require_once 'Dictionary.php';
@@ -40,7 +41,8 @@ require_once 'Path.php';
  */ 
 class Cache
 {
-    public static $logger = null;
+    use LoggerAwareStaticTrait;
+
     private static $repository = array();
     private $cache_name;
 
@@ -111,7 +113,7 @@ class Cache
         }
         else
         {
-            self::$logger->info("Cache {} does not exist - creating", [$cache_file]);
+            self::$logger->info("Cache {0} does not exist - creating", [$cache_file]);
             self::$repository[$name] = new Dictionary();
         }
     }
@@ -181,4 +183,6 @@ class Cache
     }
 }
 
-Cache::$logger = Debug\Logger::getLogger("WASP.Cache");
+// @codeCoverageIgnoreStart
+Cache::setLogger();
+// @codeCoverageIgnoreEnd

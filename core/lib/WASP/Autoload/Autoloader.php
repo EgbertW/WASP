@@ -25,7 +25,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 namespace WASP\Autoload;
 
-use WASP\Debug;
+use WASP\Debu;
+use Psr\Log\LoggerInterface;
 
 /**
  * Autoloader that implements PSR-0 and PSR-4 standards. By default it will use
@@ -38,7 +39,13 @@ final class Autoloader
     const PSR0 = 0;
     const PSR4 = 4;
 
+    protected static $logger = null;
     private static $loaders = array();
+
+    public static function setLogger(LoggerInterface $logger)
+    {
+        self::$logger = $logger;
+    }
     
     /**
      * Register a namespace with the autoloader.
@@ -178,15 +185,15 @@ final class Autoloader
         require_once $path;
             
         // Perform some logging when the logger is available
-        if (class_exists('WASP\\Debug\\Logger', false))
+        if (self::$logger)
         {
             if (class_exists($class_name))
-                Debug\info("WASP.Autoload.Autoloader", "Loaded class {0} from path {1}", [$class_name, $path]);
+                self::$logger->info("Loaded class {0} from path {1}", [$class_name, $path]);
             else
-                Debug\error("WASP.Autoload.Autoloader", "File {0} does not contain class {1}", [$path, $class_name]);
+                self::$logger->error("File {0} does not contain class {1}", [$path, $class_name]);
         }
     }
 }
 
 // Set up the autoloader
-spl_autoload_register(array('WASP\\Autoload\\Autoloader', 'autoload'));
+spl_autoload_register(array(Autoloader::class, 'autoload'));

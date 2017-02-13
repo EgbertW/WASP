@@ -62,14 +62,18 @@ require_once WASP_ROOT . "/core/lib/WASP/Autoload/Autoloader.php";
 Autoloader::registerNS('WASP', WASP_ROOT . '/core/lib/WASP');
 Autoloader::registerNS('Psr\\Log', WASP_ROOT . '/core/lib/Psr/Log');
 
-// Load required modules
+// Autoloader requires manual logger setup to avoid depending on external files
+Debug\LoggerFactory::setLoggerFactory(new Debug\LoggerFactory());
+Autoloader::setLogger(Debug\LoggerFactory::getLogger([Autoloader::class]));
+
+// Set up root logger
 $root = Debug\Logger::getLogger();
 $root->setLevel(LogLevel::DEBUG);
 $root->addLogHandler(array(Debug\Logger::class, 'writeFile'));
+unset($root);
 
 if (isset($_SERVER['REQUEST_URI']))
     Debug\info("Sys.init", "*** Starting processing for {} request to {}", $_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
-
 
 Request::setErrorHandler();
 Path::setup();

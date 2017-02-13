@@ -25,13 +25,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP;
 
-use WASP\Debug;
+use WASP\Debug\LoggerAwareStaticTrait;
 
 /**
  * Provide an interface for searching / replacing specifically formed code
  */
 class BBCode
 {
+    use LoggerAwareStaticTrait;
+
     private static $default = null;
     private $rules = array();
     private $tokens = array();
@@ -156,3 +158,7 @@ class BBCode
         return self::$default;
     }
 }
+
+// @codeCoverageIgnoreStart
+BBCode::setLogger();
+// @codeCoverageIgnoreEnd

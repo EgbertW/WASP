@@ -25,10 +25,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP;
 
+use Directory;
+use Iterator;
+
 /**
  * Provide some tools for creating and removing directories.
  */
-class Dir
+class Dir implements Iterator
 {
     private static $required_prefix = "";
 
@@ -112,6 +115,84 @@ class Dir
     {
         if (!is_writable($path) && @chmod($path, 0666) === false)
             throw new \RuntimeException("Cannot delete $path - permission denied");
+    }
+
+    private $path;
+    private $dir;
+    private $iter_cur = array(null, null);
+    private $iter_next = null;
+    private $reader = null;
+    private $read_what;
+
+    const READ_ALL = 1;
+    const READ_FILE = 2;
+    const READ_DIR = 3;
+
+    public function __construct($path, $what = Dir::READ_ALL)
+    {
+        $this->path = realpath($path);
+        $this->dir = \dir($this->path);
+        $this->read_what = $what;
+
+        var_dump($this->dir->read());
+    }
+
+    public function next()
+    {
+        if ($this->iter_next === null)
+            $this->hasNext();
+
+        $this->iter_cur = $this->iter_next;
+        $this->iter_next = null;
+    }
+
+    public function key()
+    {
+        return $this->iter_cur[0];
+    }
+
+    public function current()
+    {
+        return $this->iter_cur[1];
+    }
+
+    public function rewind()
+    {
+        $this->dir->rewind();
+        $this->iter_cur = array(0, $this->dir->read());
+        $this->iter_next = null;
+    }
+
+    public function hasNext()
+    {
+        while ($this->iter_next === null)
+        {
+            $nv = $this->dir->read();
+            if ($nv === "." || $nv === "..")
+            {
+                continue;
+            }
+            elseif ($this->read_what === Dir::READ_DIR)
+            {
+                $path = $this->path . $nv;
+                if (!is_dir($path))
+                    continue;
+            }
+            elseif ($this->read_what === Dir::READ_FILE)
+            {
+                $path = $this->path . $nv;
+                if (!is_file($path))
+                    continue;
+            }
+
+            $this->iter_next = array($this->iter_cur[0] + 1, $nv);
+        }
+        return $this->iter_next[1] !== false;
+    }
+
+    public function valid()
+    {
+        return $this->iter_cur[1] !== false;
     }
 }
 

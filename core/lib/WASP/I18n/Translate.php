@@ -23,16 +23,23 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP {
-    use WASP\Translator\Translator;
-
-    class TranslateException extends \RuntimeException
-    {}
+namespace WASP\I18n
+{
+    use WASP\I18n\Translator\Translator;
+    use WASP\Dir;
+    use WASP\Debug;
 
     class Translate
     {
-        private static $translate = null;
+        private static $translator = null;
         private static $stack = array();
+        private static $locales = array();
+        private static $domains = array();
+
+        public static function getLocaleList($textDomain = null)
+        {
+
+        }
 
         public static function translate($msg)
         {
@@ -42,7 +49,7 @@ namespace WASP {
                 $args = func_get_args();
 
             if (count($args) < 1)
-                throw new TranslateException("Not enough parameters specified");
+                throw new I18nException("Not enough parameters specified");
             $msg = array_shift($args);
 
             $str = $this->translator->translate($msg);
@@ -64,7 +71,7 @@ namespace WASP {
                 $args = func_get_args();
 
             if (count($args) < 2)
-                throw new TranslateException("Not enough parameters specified");
+                throw new I18nException("Not enough parameters specified");
             $domain = array_shift($args);
             $msg = array_shift($args);
 
@@ -86,7 +93,7 @@ namespace WASP {
                 $args = func_get_args();
 
             if (count($args) < 3)
-                throw new TranslateException("Not enough parameters specified");
+                throw new I18nException("Not enough parameters specified");
 
             $msg_singular = array_shift($args);
             $msg_plural = array_shift($args);
@@ -111,7 +118,7 @@ namespace WASP {
                 $args = func_get_args();
 
             if (count($args) < 4)
-                throw new TranslateException("Not enough parameters specified");
+                throw new I18nException("Not enough parameters specified");
 
             $msg_domain = array_shift($args);
             $msg_singular = array_shift($args);
@@ -161,10 +168,10 @@ namespace WASP {
             if (count($domains) === 0)
                 return;
 
-            $lang_path = $path . "/language";
+            $lang_path = $path;
             if (!file_exists($lang_path) || !is_dir($lang_path))
             {
-                Debug\error("WASP.Translate", "Language directory does not exist for module {0}", [$module]);
+                Debug\error("WASP.Translate", "Language directory {0} does not exist for module {1}", [$lang_path, $module]);
                 return;
             }
 
@@ -174,16 +181,30 @@ namespace WASP {
                 if (is_string($domain))
                 {
                     self::$translator->addPattern($lang_path, '%s/' . $domain . '.mo', $domain);
-                    Debug\debug("WASP.Translate", "Bound text domain {} to path {0}", [$domain, $lang_path]);
+                    Debug\debug("WASP.Translate", "Bound text domain {0} to path {1}", [$domain, $lang_path]);
+                }
+
+                if (!isset($domains[$domain]))
+                    self::$domains[$domain] = array();
+
+                foreach (new Dir($lang_path, Dir::READ_DIR) as $entry)
+                {
+                    if (!isset(self::$locales[$entry]))
+                        self::$locales[$entry] = array($domain);
+                    else
+                        self::$locales[$entry][] = $domain;
+                    self::$domains[$domain][$entry] = true;
                 }
             }
         }
+
     }
 
     Translate::setupTranslation('core', WASP_ROOT . '/core/language', null);
 }
 
-namespace {
+namespace
+{
     function t()
     {
         return Translate::translate(func_get_args()); 
