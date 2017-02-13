@@ -35,6 +35,7 @@ use Psr\Log\LoggerAwareInterface;
 use Psr\Log\AbstractLogger;
 
 /**
+ * @covers WASP\Debug\Logger
  * @covers Psr\Log\LoggerInterface
  * @covers Psr\Log\LoggerTrait
  * @covers Psr\Log\AbstractLogger
