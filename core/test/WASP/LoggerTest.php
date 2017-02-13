@@ -1,7 +1,31 @@
 <?php
+/*
+This is part of WASP, the Web Application Software Platform.
+It is published under the MIT Open Source License.
 
-namespace Psr\Log\Test;
+Copyright 2017, Egbert van der Wal
 
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+
+namespace WASP\Debug;
+
+use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 
@@ -11,43 +35,61 @@ use Psr\Log\LogLevel;
  * Implementors can extend the class and implement abstract methods to run this
  * as part of their test suite.
  */
-abstract class LoggerInterfaceTest extends \PHPUnit_Framework_TestCase
+class LoggerTest extends TestCase
 {
-    /**
-     * @return LoggerInterface
-     */
-    abstract public function getLogger();
+    private $logs = array();
+
+    public function getLogger()
+    {
+        $logger = Logger::getLogger('WASP.Debug.Log');
+        $logger->removeLogHandlers();
+        $logger->addLogHandler($this)->setLevel(LogLevel::DEBUG);
+        return $logger;
+    }
+
+    public function log($level, $message, $context = array())
+    {
+        $this->logs[] = array($level, $message, $context); 
+    }
 
     /**
      * This must return the log messages in order.
-     *
      * The simple formatting of the messages is: "<LOG LEVEL> <MESSAGE>".
-     *
-     * Example ->error('Foo') would yield "error Foo".
+     * $log->error('Foo') would yield "error Foo".
      *
      * @return string[]
      */
-    abstract public function getLogs();
+    public function getLogs()
+    {
+        $lines = array();
+        foreach ($this->logs as $l)
+            $lines[] = $l[0] . " " . Logger::fillPlaceholders($l[1], $l[2]);
+        $this->logs = array();
+        return $lines;
+    }
 
     public function testImplements()
     {
         $this->assertInstanceOf('Psr\Log\LoggerInterface', $this->getLogger());
     }
 
-    /**
-     * @dataProvider provideLevelsAndMessages
-     */
-    public function testLogsAtAllLevels($level, $message)
+    public function testLogsAtAllLevels()
     {
-        $logger = $this->getLogger();
-        $logger->{$level}($message, array('user' => 'Bob'));
-        $logger->log($level, $message, array('user' => 'Bob'));
+        foreach ($this->provideLevelsAndMessages() as $msg)
+        {
+            $level = $msg[0];
+            $message = $msg[1];
+            $logger = $this->getLogger();
+            $logger->{$level}($message, array('user' => 'Bob'));
+            $logger->log($level, $message, array('user' => 'Bob'));
 
-        $expected = array(
-            $level.' message of level '.$level.' with context: Bob',
-            $level.' message of level '.$level.' with context: Bob',
-        );
-        $this->assertEquals($expected, $this->getLogs());
+            $expected = array(
+                $level.' message of level '.$level.' with context: Bob',
+                $level.' message of level '.$level.' with context: Bob',
+            );
+            $logs = $this->getLogs();
+            $this->assertEquals($expected, $logs);
+        }
     }
 
     public function provideLevelsAndMessages()
@@ -64,12 +106,10 @@ abstract class LoggerInterfaceTest extends \PHPUnit_Framework_TestCase
         );
     }
 
-    /**
-     * @expectedException \Psr\Log\InvalidArgumentException
-     */
     public function testThrowsOnInvalidLevel()
     {
         $logger = $this->getLogger();
+        $this->expectException(\Psr\Log\InvalidArgumentException::class);
         $logger->log('invalid level', 'Foo');
     }
 
@@ -84,15 +124,7 @@ abstract class LoggerInterfaceTest extends \PHPUnit_Framework_TestCase
 
     public function testObjectCastToString()
     {
-        if (method_exists($this, 'createPartialMock')) {
-            $dummy = $this->createPartialMock('Psr\Log\Test\DummyTest', array('__toString'));
-        } else {
-            $dummy = $this->getMock('Psr\Log\Test\DummyTest', array('__toString'));
-        }
-        $dummy->expects($this->once())
-            ->method('__toString')
-            ->will($this->returnValue('DUMMY'));
-
+        $dummy = new DummyTest();
         $this->getLogger()->warning($dummy);
 
         $expected = array('warning DUMMY');
@@ -136,5 +168,6 @@ class DummyTest
 {
     public function __toString()
     {
+        return "DUMMY";
     }
 }

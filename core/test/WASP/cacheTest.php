@@ -44,6 +44,9 @@ final class CacheTest extends TestCase
         $data = array('test' => array('a' => true, 'b' => false, 'c' => true), 'test2' => array(1, 2, 3));
         $file = Path::$CACHE . '/testcache.cache';
 
+        if (file_exists($file))
+            Dir::rmtree($file);
+
         $dataser = serialize($data);
         file_put_contents($file, $dataser);
         unset($dataser);

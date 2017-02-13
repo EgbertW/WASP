@@ -26,7 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP\Module;
 
 use WASP\Autoload\Resolve;
-use WASP\Debug\Log;
+use WASP\Debug\Logger;
 
 /**
  * Find, initialize and manage modules.
@@ -49,7 +49,7 @@ class Manager
         if (self::$initialized)
             return;
 
-        self::$logger = new Log('WASP.Module.Manager');
+        self::$logger = Logger::getLogger('WASP.Module.Manager');
 
         $module_path = realpath($config->dget('site', 'module_path', WASP_ROOT . '/modules'));
         $modules = Resolve::listModules($module_path);

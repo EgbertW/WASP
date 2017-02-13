@@ -181,4 +181,4 @@ class Cache
     }
 }
 
-Cache::$logger = new Debug\Log("WASP.Cache");
+Cache::$logger = Debug\Logger::getLogger("WASP.Cache");

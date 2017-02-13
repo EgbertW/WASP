@@ -178,7 +178,7 @@ final class Autoloader
         require_once $path;
             
         // Perform some logging when the logger is available
-        if (class_exists('WASP\\Debug\\Log', false))
+        if (class_exists('WASP\\Debug\\Logger', false))
         {
             if (class_exists($class_name))
                 Debug\info("WASP.Autoload.Autoloader", "Loaded class {0} from path {1}", [$class_name, $path]);

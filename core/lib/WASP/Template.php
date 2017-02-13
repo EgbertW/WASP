@@ -44,7 +44,7 @@ namespace WASP
         public function __construct($name)
         {
             if (self::$log === null)
-                self::$log = new Debug\Log("WASP.Template");
+                self::$log = Debug\Logger::getLogger("WASP.Template");
 
             $tpl = Resolve::template($name);
             
@@ -175,7 +175,7 @@ namespace WASP
                     if (is_array($value))
                         $this->writeXMLRecursive($writer, $value);
                     else
-                        $this->text(Debug\Log::str($value));
+                        $this->text(Debug\Logger::str($value));
                     $writer->endElement();
                 }
             }

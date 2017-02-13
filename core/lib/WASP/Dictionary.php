@@ -59,13 +59,13 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
 
         $last = end($args);     
         $type = Dictionary::EXISTS;
-        if (is_int($last) && $last < 0 && $last >= -7)
+        if (is_int($last) && $last < 0 && $last >= -8)
             $type = array_pop($args);
 
         $val = $this->values;
         foreach ($args as $arg)
         {
-            if (!isset($val[$arg]))
+            if (!\is_array_like($val) || !isset($val[$arg]))
                 return false;
             $val = $val[$arg];
         }
@@ -448,7 +448,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
                 return unserialize($contents);
             });
 
-            self::info("Loaded {} bytes serialized data from: {}", strlen($contents), $filename);
+            self::info("Loaded {0} bytes serialized data from: {1}", [strlen($contents), $filename]);
             return new Dictionary($arr);
         }
 
@@ -461,7 +461,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
                 return yaml_parse($contents);
             });
 
-            self::info("Loaded {} bytes serialized YAML-data from: {}", strlen($contents), $filename);
+            self::info("Loaded {0} bytes serialized YAML-data from: {1}", [strlen($contents), $filename]);
             return new Dictionary($arr);
         }
 
@@ -496,7 +496,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
         {
             $data = serialize($this->values);
             $bytes = self::writeData($filename, $data);
-            self::info("Saved {} bytes serialized data to: {}", $bytes, $filename);
+            self::info("Saved {0} bytes serialized data to: {1}", [$bytes, $filename]);
             return true;
         }
 
@@ -504,7 +504,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
         {
             $json = JSON::pprint($this->values);
             $bytes = self::writeData($filename, $json);
-            self::info("Saved {} bytes JSON-serialized data to: {}", $bytes, $filename);
+            self::info("Saved {0} bytes JSON-serialized data to: {1}", [$bytes, $filename]);
             return true;
         }
 
@@ -513,7 +513,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
             self::checkYAML();
             $yaml = yaml_emit($this->values);
             $bytes = self::writeData($filename, $yaml);
-            self::info("Saved {} bytes YAML-serialized data to: {}", $bytes, $filename);
+            self::info("Saved {0} bytes YAML-serialized data to: {1}", [$bytes, $filename]);
             return true;
         }
         throw new \DomainException("Invalid data type: " . $ext);
@@ -524,8 +524,8 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
      */
     private static function info()
     {
-        if (self::$logger === null && class_exists("WASP\\Debug\\Log", false))
-            self::$logger = new \WASP\Debug\Log("WASP.Dictionary");
+        if (self::$logger === null && class_exists("WASP\\Debug\\Logger", false))
+            self::$logger = \WASP\Debug\Logger::getLogger("WASP.Dictionary");
 
         if (self::$logger === null)
             return;

@@ -162,7 +162,7 @@ class URL implements \ArrayAccess
 
     public function offsetSet($offset, $value)
     {
-        return $this->set($field, $value);
+        return $this->set($offset, $value);
     }
 
     public function offsetExists($offset)
@@ -177,7 +177,7 @@ class URL implements \ArrayAccess
 
     public function __get($field)
     {
-        return $this->get($offset);
+        return $this->get($field);
     }
 
     public function __set($field, $value)
@@ -196,10 +196,12 @@ class URL implements \ArrayAccess
                 $value = empty($value) ? null : (int)$value;
             case "username":
             case "password":
-            case "path":
             case "query":
             case "fragment":
                 $this->$field = $value;
+                return;
+            case "path":
+                $this->setPath($value);
                 return;
             case "host":
                 return $this->setHost($value);

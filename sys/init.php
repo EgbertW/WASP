@@ -63,8 +63,10 @@ Autoloader::registerNS('WASP', WASP_ROOT . '/core/lib/WASP');
 Autoloader::registerNS('Psr\\Log', WASP_ROOT . '/core/lib/Psr/Log');
 
 // Load required modules
-echo "INIT LOGGER\n";
-Debug\Log::setDefaultLevel(LogLevel::DEBUG);
+$root = Debug\Logger::getLogger();
+$root->setLevel(LogLevel::DEBUG);
+$root->addLogHandler(array(Debug\Logger::class, 'writeFile'));
+
 if (isset($_SERVER['REQUEST_URI']))
     Debug\info("Sys.init", "*** Starting processing for {} request to {}", $_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
 
