@@ -28,6 +28,7 @@ mb_internal_encoding('UTF-8');
 
 use WASP\Autoload\Autoloader;
 use WASP\Debug;
+use PSR\Log\LogLevel;
 use WASP\Request;
 use WASP\Path;
 
@@ -53,17 +54,20 @@ if (PHP_SAPI === 'cli')
 else
     ini_set('error_log', WASP_ROOT . '/var/log/error-php.log');
 
-// Check required modules
-require_once WASP_ROOT . "/core/lib/WASP/Debug/Log.php";
-if (isset($_SERVER['REQUEST_URI']))
-    Debug\info("Sys.init", "*** Starting processing for {} request to {}", $_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
-
 // Some general utility functions. Move to class?
 require_once WASP_ROOT . "/sys/functions.php";
 
 // Set up the autoloader
 require_once WASP_ROOT . "/core/lib/WASP/Autoload/Autoloader.php";
 Autoloader::registerNS('WASP', WASP_ROOT . '/core/lib/WASP');
+Autoloader::registerNS('Psr\\Log', WASP_ROOT . '/core/lib/Psr/Log');
+
+// Load required modules
+echo "INIT LOGGER\n";
+Debug\Log::setDefaultLevel(LogLevel::DEBUG);
+if (isset($_SERVER['REQUEST_URI']))
+    Debug\info("Sys.init", "*** Starting processing for {} request to {}", $_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
+
 
 Request::setErrorHandler();
 Path::setup();

@@ -91,7 +91,7 @@ class Cache
         {
             if (!is_readable($cache_file))
             {
-                self::$logger->error("Cannot read cache from {}", $cache_file);
+                self::$logger->error("Cannot read cache from {0}", [$cache_file]);
                 return;
             }
 
@@ -102,8 +102,8 @@ class Cache
             }
             catch (\Throwable $t)
             {
-                self::$logger->error("Failure loading cache {} - removing", $name);
-                self::$logger->error("Error", $t);
+                self::$logger->error("Failure loading cache {0} - removing", [$name]);
+                self::$logger->error("Error", [$t]);
                 if (is_writable($cache_file))
                     unlink($cache_file);
                 return;
@@ -111,7 +111,7 @@ class Cache
         }
         else
         {
-            self::$logger->info("Cache {} does not exist - creating", $cache_file);
+            self::$logger->info("Cache {} does not exist - creating", [$cache_file]);
             self::$repository[$name] = new Dictionary();
         }
     }

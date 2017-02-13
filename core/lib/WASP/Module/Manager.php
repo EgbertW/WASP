@@ -56,7 +56,7 @@ class Manager
 
         foreach ($modules as $mod_name => $path)
         {
-            self::$logger->info("WASP.Autoload.Resolve", "Found module {} in path {}", $mod_name, $path);
+            self::$logger->info("Found module {0} in path {1}", [$mod_name, $path]);
             Resolve::registerModule($mod_name, $path);
             self::$modules[$mod_name] = $path;
 
@@ -68,7 +68,7 @@ class Manager
                 if (is_subclass_of($mod_class, 'WASP\\Module\\Module'))
                     $load_class = $mod_class;
                 else
-                    self::$logger->warn('Module {} has class {} but it does not implement WASP\\Module\\Module', $mod_name, $mod_class);
+                    self::$logger->warn('Module {0} has class {1} but it does not implement WASP\\Module\\Module', [$mod_name, $mod_class]);
             }
 
             self::$modules[$mod_name] = new $load_class($mod_name, $path);

@@ -117,7 +117,7 @@ class BBCode
 
         if ($ret === null)
         {
-            Debug\error("Invalid pattern / replacement: {} / {}", $pattern, $replacement);
+            Debug\error("Invalid pattern / replacement: {0} / {1}", [$pattern, $replacement]);
             throw new \RuntimeException("Invalid pattern or replacement: {$pattern}");
         }
 

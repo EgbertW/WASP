@@ -25,28 +25,25 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\Debug;
 
-const TRACE = 0;
-const DEBUG = 1;
-const INFO = 2;
-const WARN = 3;
-const WARNING = 3;
-const ERROR = 4;
-const CRITICAL = 5;
+use Psr\Log\LogLevel;
+use Psr\Log\AbstractLogger;
 
-class Log
+class Log extends AbstractLogger
 {
     private $module;
-    private static $level = TRACE;
+    private static $level = LogLevel::DEBUG;
     private static $filename = WASP_ROOT . '/var/log/wasp.log';
     private static $file = NULL;
 
     private static $LEVEL_NAMES = array(
-        TRACE => 'TRACE',
-        DEBUG => 'DEBUG',
-        INFO => 'INFO',
-        WARN => 'WARNING',
-        ERROR => 'ERROR',
-        CRITICAL => 'CRITICAL'
+        LogLevel::DEBUG => 'DEBUG',
+        LogLevel::INFO => 'INFO',
+        LogLevel::NOTICE => 'NOTICE',
+        LogLevel::WARNING => 'WARNING',
+        LogLevel::ERROR => 'ERROR',
+        LogLevel::CRITICAL => 'CRITICAL',
+        LogLevel::ALERT => 'ALERT',
+        LogLevel::EMERGENCY => 'EMERGENCY'
     );
 
     public function __construct($module)
@@ -62,12 +59,12 @@ class Log
         $this->module = $module;
     }
 
-    public static function setLevel($lvl)
+    public static function setDefaultLevel($lvl)
     {
-        if (!is_int($lvl) || $lvl < TRACE || $lvl > CRITICAL)
-            throw new DomainException("Invalid log level: $lvl");
+        if (!isset(self::$LEVEL_NAMES[$lvl]))
+            throw new \DomainException("Invalid log level: $lvl");
 
-        $this->level = $lvl;
+        self::$level = $lvl;
     }
 
     public static function html($obj)
@@ -114,42 +111,26 @@ class Log
         return $str;
     }
 
-    public static function log($level, $module, $message = null)
+    public function log($level, $message, array $context = array())
+    {
+        self::logModule($level, $this->module, $message, $context);
+        return $this;
+    }
+
+    public static function logModule($level, $module, $message, array $context = array())
     {
         if ($level < self::$level)
             return;
 
-        if (is_array($level) && $module === null)
+        foreach ($context as $key => $value)
         {
-            $module = $level;
-            $level = array_shift($module);
-        }
-
-        if (is_array($module) && $message === null)
-        {
-            $message = $module;
-            $module = array_shift($message);
-        }
-
-        if (is_array($message))
-        {
-            $parameters = $message;
-            $message = array_shift($parameters);
-        }
-        else
-        { 
-            $parameters = func_get_args();
-            array_splice($parameters, 0, 3);
-        }
-
-        while (count($parameters))
-        {
-            $pos = strpos($message, '{}');
-            if ($pos === false)
-                break;
-            
-            $param = array_shift($parameters);
-            $message = substr($message, 0, $pos) . self::str($param) . substr($message, $pos + 2);
+            $placeholder = '{' . $key . '}';
+            $strval = null;
+            while (($pos = strpos($message, $placeholder)) !== false)
+            {
+                $strval = $strval ?: self::str($value);
+                $message = substr($message, 0, $pos) . $strval . substr($message, $pos + strlen($placeholder));
+            }
         }
 
         $fmt = "[" . date('Y-m-d H:i:s') . '][' . $module . ']';
@@ -177,74 +158,49 @@ class Log
         if (self::$file)
             fwrite(self::$file, $str . "\n");
     }
-
-    public function trace()
-    {
-        self::log(TRACE, $this->module, func_get_args());
-    }
-
-    public function debug()
-    {
-        self::log(DEBUG, $this->module, func_get_args());
-    }
-
-    public function info()
-    {
-        self::log(INFO, $this->module, func_get_args());
-    }
-
-    public function warn()
-    {
-        self::log(WARN, $this->module, func_get_args());
-    }
-
-    public function warning()
-    {
-        self::log(WARN, $this->module, func_get_args());
-    }
-
-    public function error()
-    {
-        self::log(ERROR, $this->module, func_get_args());
-    }
-
-    public function critical()
-    {
-        self::log(CRITICAL, $this->module, func_get_args());
-    }
 }
 
-function trace()
+function debug($module, $message, array $context = array())
 {
-    Log::log(TRACE, func_get_args());
+    Log::logModule(LogLevel::DEBUG, $module, $message, $context);
 }
 
-function debug()
+function info($module, $message, array $context = array())
 {
-    Log::log(DEBUG, func_get_args());
+    Log::logModule(LogLevel::INFO, $module, $message, $context);
 }
 
-function info()
+function notice($module, $message, array $context = array())
 {
-    Log::log(INFO, func_get_args());
+    Log::logModule(LogLevel::NOTICE, $module, $message, $context);
 }
 
-function warn()
+function warn($module, $message, array $context = array())
 {
-    Log::log(WARN, func_get_args());
+    Log::logModule(LogLevel::WARN, $module, $message, $context);
 }
 
-function warning()
+function warning($module, $message, array $context = array())
 {
-    Log::log(WARN, func_get_args());
+    Log::logModule(LogLevel::WARN, $module, $message, $context);
 }
 
-function error()
+function error($module, $message, array $context = array())
 {
-    Log::log(ERROR, func_get_args());
+    Log::logModule(LogLevel::ERROR, $module, $message, $context);
 }
 
-function critical()
+function critical($module, $message, array $context = array())
 {
-    Log::log(CRITICAL, func_get_args());
+    Log::logModule(LogLevel::CRITICAL, $module, $message, $context);
+}
+
+function alert($module, $message, array $context = array())
+{
+    Log::logModule(LogLevel::ALERT, $module, $message, $context);
+}
+
+function emergency($module, $message, array $context = array())
+{
+    Log::logModule(LogLevel::EMERGENCY, $module, $message, $context);
 }

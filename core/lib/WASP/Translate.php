@@ -164,7 +164,7 @@ namespace WASP {
             $lang_path = $path . "/language";
             if (!file_exists($lang_path) || !is_dir($lang_path))
             {
-                Debug\error("WASP.Translate", "Language directory does not exist for module {}", $module);
+                Debug\error("WASP.Translate", "Language directory does not exist for module {0}", [$module]);
                 return;
             }
 
@@ -174,7 +174,7 @@ namespace WASP {
                 if (is_string($domain))
                 {
                     self::$translator->addPattern($lang_path, '%s/' . $domain . '.mo', $domain);
-                    Debug\debug("WASP.Translate", "Bound text domain {} to path {}", $domain, $lang_path);
+                    Debug\debug("WASP.Translate", "Bound text domain {} to path {0}", [$domain, $lang_path]);
                 }
             }
         }

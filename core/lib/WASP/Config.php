@@ -37,10 +37,10 @@ class Config
                 return null;
 
             $filename = Path::$CONFIG . '/' . $scope . '.ini';
-            Debug\debug("WASP.Config", "Loading config from {}", $filename);
+            Debug\debug("WASP.Config", "Loading config from {0}", [$filename]);
             if (!file_exists($filename))
             {
-                Debug\critical("WASP.Config", "Failed to load config file {}", $filename);
+                Debug\critical("WASP.Config", "Failed to load config file {0}", [$filename]);
                 self::loadErrorClass();
                 throw new HttpError(500, "Configuration file is missing", "Configuration could not be loaded");
             }

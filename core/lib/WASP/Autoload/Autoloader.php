@@ -181,9 +181,9 @@ final class Autoloader
         if (class_exists('WASP\\Debug\\Log', false))
         {
             if (class_exists($class_name))
-                Debug\info("WASP.Autoload.Autoloader", "Loaded class {} from path {}", $class_name, $path);
+                Debug\info("WASP.Autoload.Autoloader", "Loaded class {0} from path {1}", [$class_name, $path]);
             else
-                Debug\error("WASP.Autoload.Autoloader", "File {} does not contain class {}", $path, $class_name);
+                Debug\error("WASP.Autoload.Autoloader", "File {0} does not contain class {1}", [$path, $class_name]);
         }
     }
 }

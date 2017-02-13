@@ -255,7 +255,7 @@ class Request
         $post = self::$post;
         $url_args = self::$url_args;
 
-        Debug\debug("WASP.Request", "Including {}", $path);
+        Debug\debug("WASP.Request", "Including {0}", [$path]);
         include $path;
 
         if (Template::$last_template === null)
@@ -285,7 +285,7 @@ class Request
      */
     public static function handleError($errno, $errstr, $errfile, $errline, $errcontext)
     {
-        Debug\error("WASP.Request", "PHP Error {}: {} on {}({})", $errno, $errstr, $errfile, $errline);
+        Debug\error("WASP.Request", "PHP Error {0}: {1} on {2}({3})", [$errno, $errstr, $errfile, $errline]);
         throw new \ErrorException($errstr, 0, $errno, $errfile, $errline);
     }
 
@@ -312,7 +312,7 @@ class Request
             }
             catch (Exception $e2)
             {
-                Debug\error("WASP.Request", "Exception while resolving error template: {}: {}", get_class($exception), $exception->getMessage());
+                Debug\error("WASP.Request", "Exception while resolving error template: {0}: {1}", [get_class($exception), $exception->getMessage()]);
             }
         }
         else
@@ -331,10 +331,10 @@ class Request
         if (!headers_sent())
             http_response_code($code);
 
-        Debug\error("WASP.Request", "Exception: {}: {}", get_class($exception), $exception->getMessage());
-        Debug\error("WASP.Request", "In: {}({})", $exception->getFile(), $exception->getLine());
+        Debug\error("WASP.Request", "Exception: {0}: {1}", [get_class($exception), $exception->getMessage()]);
+        Debug\error("WASP.Request", "In: {0}({1})", [$exception->getFile(), $exception->getLine()]);
         Debug\error("WASP.Request", $exception->getTraceAsString());
-        Debug\info("WASP.Request", "*** [{}] Failed processing {} request to {}", $code, self::$method, self::$url);
+        Debug\info("WASP.Request", "*** [{0}] Failed processing {1} request to {2}", [$code, self::$method, self::$url]);
 
         try
         {
@@ -345,9 +345,9 @@ class Request
         }
         catch (HttpError $ex)
         {
-            Debug\critical("WASP.Request", "An exception of type {} (code: {}, message: {}) occurred. Additionally, the error template ({}) cannot be loaded", get_class($exception), $exception->getCode(), $exception->getMessage(), $tpln);
-            Debug\critical("WASP.Request", "The full stacktrace follows: {}", $exception);
-            Debug\critical("WASP.Request", "The full stacktrace of the failed template is: {}", $ex);
+            Debug\critical("WASP.Request", "An exception of type {0} (code: {1}, message: {2}) occurred. Additionally, the error template ({3}) cannot be loaded", [get_class($exception), $exception->getCode(), $exception->getMessage(), $tpln]);
+            Debug\critical("WASP.Request", "The full stacktrace follows: {0}", [$exception]);
+            Debug\critical("WASP.Request", "The full stacktrace of the failed template is: {0}", [$ex]);
             if (!headers_sent())
                 header("Content-type: text/html");
 
