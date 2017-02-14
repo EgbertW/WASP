@@ -25,8 +25,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP
 {
-    use WASP\File\Resolve;
+    use WASP\Autoload\Resolve;
     use WASP\Debug\LoggerAwareStaticTrait;
+    use WASP\Http\Error as HttpError;
 
     class Template
     {
@@ -67,7 +68,7 @@ namespace WASP
 
         public function resolve($name)
         {
-            $path = File\Resolve::template($name);
+            $path = Resolve::template($name);
 
             if ($path === null)
                 throw new HttpError(500, "Template file could not be found: " . $name);
@@ -77,7 +78,7 @@ namespace WASP
         public function render()
         {
             extract($this->arguments);
-            $language = Request::$language;
+            $language = Request::current()->language;
             $config = Config::getConfig('main', true);
             $dev = $config === null ? true : $config->get('site', 'dev');
             $cli = array_key_exists('argv', $_SERVER);
@@ -123,7 +124,7 @@ namespace WASP
 
         public function want($mime, $charset = null)
         {
-            $priority = Request::isAccepted($mime);
+            $priority = Request::current()->isAccepted($mime);
             if ($priority === false)
                 return false;
             if (!empty($charset))
@@ -221,12 +222,12 @@ namespace WASP
                 $relpath = "js/" . $l;
                 $devpath = $relpath . ".js";
                 $prodpath = $relpath . ".min.js";
-                self::$log->info("Development js path: {}", $devpath);
-                self::$log->info("Production js path: {}", $prodpath);
+                self::$logger->info("Development js path: {0}", [$devpath]);
+                self::$logger->info("Production js path: {0}", [$prodpath]);
                 $dev_file = Resolve::asset($devpath);
                 $prod_file = Resolve::asset($prodpath);
-                self::$log->info("Development js file: {}", $dev_file);
-                self::$log->info("Production js file: {}", $prod_file);
+                self::$log->info("Development js file: {0}", [$dev_file]);
+                self::$log->info("Production js file: {0}", [$prod_file]);
 
                 if ($dev && $dev_file)
                     $list[] = "/assets/" .$devpath;

@@ -27,6 +27,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 require "../bootstrap/init.php";
 
 // Dispatch the request
-WASP\Request::dispatch();
+$config = WASP\Config::getConfig();
+$request = new WASP\Request($_SERVER, $_GET, $_POST, $_COOKIE, $_SERVER, $config);
+$request->dispatch();
 
 die();

@@ -23,7 +23,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP;
+namespace WASP\Http;
 
 class URLException extends \RuntimeException
 {}
@@ -191,7 +191,7 @@ class URL implements \ArrayAccess
         {
             case "scheme":
                 $this->scheme = strtolower($value);
-                return;
+                return $this;
             case "port":
                 $value = empty($value) ? null : (int)$value;
             case "username":
@@ -199,10 +199,10 @@ class URL implements \ArrayAccess
             case "query":
             case "fragment":
                 $this->$field = $value;
-                return;
+                return $this;
             case "path":
                 $this->setPath($value);
-                return;
+                return $this;
             case "host":
                 return $this->setHost($value);
         }

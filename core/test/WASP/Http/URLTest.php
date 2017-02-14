@@ -23,19 +23,19 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP;
+namespace WASP\Http;
 
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers WASP\URL
+ * @covers WASP\Http\URL
  */
 final class URLTest extends TestCase
 {
     /**
-     * @covers WASP\URL::__construct
-     * @covers WASP\URL::parse
-     * @covers WASP\URL::__get
+     * @covers WASP\Http\URL::__construct
+     * @covers WASP\Http\URL::parse
+     * @covers WASP\Http\URL::__get
      */
     public function testURL()
     {
@@ -161,15 +161,15 @@ final class URLTest extends TestCase
     }
     
     /**
-     * @covers WASP\URL::__construct
-     * @covers WASP\URL::__set
-     * @covers WASP\URL::__get
-     * @covers WASP\URL::__toString
-     * @covers WASP\URL::toString
-     * @covers WASP\URL::offsetGet
-     * @covers WASP\URL::offsetSet
-     * @covers WASP\URL::offsetExists
-     * @covers WASP\URL::offsetUnset
+     * @covers WASP\Http\URL::__construct
+     * @covers WASP\Http\URL::__set
+     * @covers WASP\Http\URL::__get
+     * @covers WASP\Http\URL::__toString
+     * @covers WASP\Http\URL::toString
+     * @covers WASP\Http\URL::offsetGet
+     * @covers WASP\Http\URL::offsetSet
+     * @covers WASP\Http\URL::offsetExists
+     * @covers WASP\Http\URL::offsetUnset
      */
     public function testConstruct()
     {
@@ -228,7 +228,7 @@ final class URLTest extends TestCase
     }
     
     /**
-     * @covers WASP\URL::__get
+     * @covers WASP\Http\URL::__get
      */
     public function testGetException()
     {
@@ -238,7 +238,7 @@ final class URLTest extends TestCase
     }
 
     /**
-     * @covers WASP\URL::__set
+     * @covers WASP\Http\URL::__set
      */
     public function testSetException()
     {
@@ -248,7 +248,7 @@ final class URLTest extends TestCase
     }
 
     /**
-     * @covers WASP\URL::offsetGet
+     * @covers WASP\Http\URL::offsetGet
      */
     public function testOffsetGetException()
     {
@@ -258,7 +258,7 @@ final class URLTest extends TestCase
     }
 
     /**
-     * @covers WASP\URL::offsetSet
+     * @covers WASP\Http\URL::offsetSet
      */
     public function testOffsetSetException()
     {
@@ -268,9 +268,9 @@ final class URLTest extends TestCase
     }
 
     /**
-     * @covers WASP\URL::__construct
-     * @covers WASP\URL::__get
-     * @covers WASP\URL::get
+     * @covers WASP\Http\URL::__construct
+     * @covers WASP\Http\URL::__get
+     * @covers WASP\Http\URL::get
      */
     public function testDefaultScheme()
     {
@@ -289,7 +289,7 @@ final class URLTest extends TestCase
     }
 
     /**
-     * @covers WASP\URL::__construct
+     * @covers WASP\Http\URL::__construct
      */
     public function testCopyConstruct()
     {
@@ -300,8 +300,8 @@ final class URLTest extends TestCase
     }
 
     /**
-     * @covers WASP\URL::__construct
-     * @covers WASP\URL::parse
+     * @covers WASP\Http\URL::__construct
+     * @covers WASP\Http\URL::parse
      */
     public function testUnsupported()
     {
@@ -310,8 +310,8 @@ final class URLTest extends TestCase
     }
 
     /**
-     * @covers WASP\URL::__construct
-     * @covers WASP\URL::parse
+     * @covers WASP\Http\URL::__construct
+     * @covers WASP\Http\URL::parse
      */
     public function testInvalid()
     {
@@ -320,8 +320,8 @@ final class URLTest extends TestCase
     }
 
     /**
-     * @covers WASP\URL::__construct
-     * @covers WASP\URL::toString
+     * @covers WASP\Http\URL::__construct
+     * @covers WASP\Http\URL::toString
      */
     public function testIDN()
     {

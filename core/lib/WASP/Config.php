@@ -27,6 +27,7 @@ namespace WASP;
 
 use WASP\Path;
 use WASP\Debug\LoggerAwareStaticTrait;
+use WASP\Http\Error as HttpError;
 
 class Config
 {

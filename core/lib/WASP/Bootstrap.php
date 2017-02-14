@@ -26,6 +26,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP;
 
 use WASP\Autoload\Autoloader;
+use WASP\Http\Request;
+use WASP\Http\Error as HttpError;
 use WASP\Debug\{Logger, LoggerFactory, FileWriter};
 use PSR\Log\LogLevel;
 

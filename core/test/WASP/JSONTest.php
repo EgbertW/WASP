@@ -46,10 +46,11 @@ final class JSONTest extends TestCase
             'application/json' => 1.0,
             '*/*' => 0.5
         );
-
-        $this->assertNotEquals(Request::$accept, $accept);
+            
+        $request = Http\Request::current();
+        $this->assertNotEquals($request->accept, $accept);
         JSON::init();
-        $this->assertEquals(Request::$accept, $accept);
+        $this->assertEquals($request->accept, $accept);
         JSON::clear();
         
         JSON::add('var1', 'val1');

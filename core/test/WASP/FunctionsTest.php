@@ -168,7 +168,7 @@ final class FunctionsTest extends TestCase
     {
         Functions::load();
 
-        $this->expectException(HttpError::class);
+        $this->expectException(Http\Error::class);
         check_extension('non_existing_extension', 'non_existing_namespace\\non_existing_class');
     }
 
@@ -179,7 +179,7 @@ final class FunctionsTest extends TestCase
     {
         Functions::load();
 
-        $this->expectException(HttpError::class);
+        $this->expectException(Http\Error::class);
         check_extension('non_existing_extension', null, 'non_existing_namespace\\non_existing_function');
     }
 

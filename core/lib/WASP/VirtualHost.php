@@ -25,11 +25,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP;
 
+use WASP\Http\URL;
+
 class VirtualHost
 {
     private $url;
+    private $site = null;
     private $redirect;
-    private $locale;
+    private $locales;
 
     public function __construct($hostname, $locale)
     {
@@ -37,19 +40,37 @@ class VirtualHost
         $this->setLocale($locale);
     }
 
+    public function setSite(Site $site)
+    {
+        $this->site = $site;
+    }
+
+    public function getSite()
+    {
+        return $this->site;
+    }
+
     public function matchLocale($locale)
     {
-        return $redirect === null && $this->locale === $locale;
+        if (!empy($redirect))
+            return false;
+            
+        return in_array($locale, $this->locale);
     }
 
-    public function getLocale()
+    public function getLocales()
     {
-        return $this->locale;
+        return $this->locales;
     }
 
-    public function setLocale(string $locale)
+    public function setLocale($locale)
     {
-        $this->locale = \Locale::canonicalize($locale);
+        $locale = cast_array($locale);
+        foreach ($locale as $l)
+            $this->locales[] = \Locale::canonicalize($l);
+
+        // Remove duplicate locales
+        $this->locales = array_unique($this->locales);
         return $this;
     }
 
@@ -58,7 +79,7 @@ class VirtualHost
         if (!empty($hostname))
         {
             $this->redirect = new URL($hostname); 
-            $this->redirect->set('path', rtrim($this->redirect->path, '/');
+            $this->redirect->set('path', rtrim($this->redirect->path, '/'));
         }
         else
             $this->redirect = false;
@@ -81,7 +102,7 @@ class VirtualHost
     public function getPath($url)
     {
         $url = new URL($url);
-        $path = str_replace($this->url->path, '', $url->path);
+        $path = '/' . str_replace($this->url->path, '', $url->path);
 
         return $path; 
     }
@@ -107,7 +128,7 @@ class VirtualHost
             return false;
         }
 
-        return $url->getHost() === $this->url->getHost();
+        return $url->host === $this->url->host;
     }
 
     public function getRedirect()

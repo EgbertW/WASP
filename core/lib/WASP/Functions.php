@@ -27,6 +27,7 @@ namespace WASP;
 
 use DomainException;
 use td;
+use WASP\Http\Error as HttpError;
 
 /**
  * This is a class which use is only to allow

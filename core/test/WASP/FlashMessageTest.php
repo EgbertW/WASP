@@ -26,6 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP;
 
 use PHPUnit\Framework\TestCase;
+use WASP\Http\Request;
 
 /**
  * @covers WASP\FlashMessage
@@ -34,7 +35,13 @@ final class FlashMessageTest extends TestCase
 {
     public function setUp()
     {
-        Request::setupSession();
+        $config = Config::getConfig();
+        $this->request = new Request($_GET, $_POST, $_COOKIE, $_SERVER, $config);
+
+        // Make sure there are no session variables to begin with
+        $keys = array_keys($_SESSION);
+        foreach ($keys as $key)
+            unset($_SESSION[$key]);
     }
 
     public function tearDown()
@@ -132,7 +139,7 @@ final class FlashMessageTest extends TestCase
      */
     public function testNoSession()
     {
-        Request::$session = null;
+        $this->request->session = null;
 
         $this->expectException(\RuntimeException::class);
         $fm = new FlashMessage('error');

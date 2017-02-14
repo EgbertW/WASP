@@ -117,7 +117,7 @@ EOT;
         if ($i == 10000)
             throw new \RuntimeException("You have too many foobar config files for this test");
 
-        $this->expectException(HttpError::class);
+        $this->expectException(Http\Error::class);
         $config = Config::getConfig($confname);
     }
 

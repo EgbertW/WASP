@@ -28,7 +28,7 @@ namespace WASP;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers WASP\HttpError
+ * @covers WASP\Path
  */
 final class PathTest extends TestCase
 {

@@ -26,6 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP;
 
 use WASP\Util\Encoding;
+use WASP\Http\Error as HttpError;
 
 /**
  * This class provides JSON-related functions. It can be used to
@@ -53,7 +54,7 @@ class JSON
      */
     public static function init()
     {
-        Request::$accept = array(
+        Http\Request::current()->accept = array(
             'application/json' => 1.0,
             '*/*' => 0.5
         );

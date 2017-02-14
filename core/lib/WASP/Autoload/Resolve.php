@@ -143,14 +143,14 @@ class Resolve
 
         if ($route === null)
         {
-            Debug\info("WASP.Util.Resolve", "Failed to resolve route for request to {}", $request);
+            self::$logger->info("Failed to resolve route for request to {0}", [$request]);
             return null;
         }
 
         $r = '/' . implode('/', $used_parts);
         $remain = array_slice($parts, count($used_parts));
         
-        Debug\info("WASP.Util.Resolve", "Resolved route for {} to {} (module: {})", $r, $route['path'], $route['module']);
+        self::$logger->info("Resolved route for {0} to {1} (module: {2})", [$r, $route['path'], $route['module']]);
         return array("route" => $r, "path" => $route['path'], 'module' => $route['module'], 'remainder' => $remain);
     }
     
@@ -382,7 +382,7 @@ class Resolve
             }
             else
             {
-                self::$logger->debug("Trying path: {0}/{1}/{2}", [$location, $type, $glob_pattern]);
+                self::$logger->debug("Trying path: {0}/{1}/{2}", [$location, $type, $file]);
                 $path = $location . '/' . $type . '/' . $file;
             }
 

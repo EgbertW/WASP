@@ -25,6 +25,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP;
 
+use WASP\Http\URL;
+
 class Site
 {
     private $vhosts = array();
@@ -42,14 +44,26 @@ class Site
 
     public function addVirtualHost(VirtualHost $host)
     {
+        $host->setSite($this);
         $this->vhosts[] = $host;
-        $this->locales[$host->getLocale()] = true;
+        foreach ($host->getLocales() as $locale)
+            $this->locales[$locale] = true;
+    }
+
+    public function getVirtualHosts()
+    {
+        return $this->vhosts;
+    }
+
+    public function getLocales()
+    {
+        return array_keys($this->locales);
     }
 
     public function match($url)
     {
         $url = new URL($url);
-        foreach ($vhosts as $vhost)
+        foreach ($this->vhosts as $vhost)
         {
             if ($vhost->match($url))
                 return $vhost;
@@ -60,7 +74,7 @@ class Site
     public function checkRedirect($url)
     {
         $url = new URL($url);
-        foreach ($vhosts as $vhost)
+        foreach ($this->vhosts as $vhost)
         {
             if (!$vhost->match($url))
                 continue;
@@ -88,7 +102,7 @@ class Site
             $locale = getlocale(LC_MESSAGES, 0);
 
         $locale = Locale::canonicalize($locale);
-        foreach ($vhosts as $vhost)
+        foreach ($this->vhosts as $vhost)
         {
             if ($vhost->matchLocale($locale))
                 return $vhost->URL($path);

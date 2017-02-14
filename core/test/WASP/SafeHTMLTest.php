@@ -28,7 +28,7 @@ namespace WASP;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers WASP\HttpError
+ * @covers WASP\SafeHTML
  */
 final class SafeHTMLTest extends TestCase
 {

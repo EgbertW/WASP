@@ -23,25 +23,25 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP;
+namespace WASP\Http;
 
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers WASP\HttpError
+ * @covers WASP\Http\Error
  */
 final class HttpErrorTest extends TestCase
 {
     /**
-     * @covers WASP\HttpError::__construct
-     * @covers WASP\HttpError::getUserMessage
+     * @covers WASP\Http\Error::__construct
+     * @covers WASP\Http\Error::getUserMessage
      */
     public function testHttpError()
     {
-        $a = new HttpError(400, "Error");
+        $a = new Error(400, "Error");
         $this->assertNull($a->getUserMessage());
 
-        $a = new HttpError(400, "Error", "User message");
+        $a = new Error(400, "Error", "User message");
         $this->assertEquals($a->getUserMessage(), "User message");
     }
 }
