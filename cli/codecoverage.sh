@@ -30,7 +30,7 @@ do
     then
         echo "**** Running tests for module ${module}..."
         mkdir -p var/codecoverage/${module}
-        $PHPUNIT --bootstrap sys/init.php core/test --whitelist modules/${module}/lib --coverage-html var/codecoverage/${module} $2
+        $PHPUNIT --bootstrap sys/initTest.php core/test --whitelist modules/${module}/lib --coverage-html var/codecoverage/${module} $2
         if [ "$?" -ne 0 ]
         then
             echo "Tests for module $module failed!"

@@ -25,26 +25,27 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 namespace WASP\Autoload;
 
+use WASP\Debug\LoggerAwareStaticTrait;
 use WASP\Debug;
 use WASP\HttpError;
 use WASP\Autoloader;
 use WASP\Translate;
 use WASP\Cache;
+use WASP\Path;
 
 /**
  * Resolve templates, routes, clases and assets from the core and modules.
  */
 class Resolve
 {
+    use LoggerAwareStaticTrait;
+
     /** A list of installed modules */
-    private static $modules = array('core' => WASP_ROOT . '/core');
+    private static $modules;
 
     /** The cache of templates, assets, routes */
     private static $cache = null;
 
-    /** The logger instance */
-    private static $logger;
-    
     /** Set to true after a call to findModules */
     private static $module_init = false;
 
@@ -56,10 +57,9 @@ class Resolve
     {
         if (self::$cache !== null)
             return;
-        
-        $p = dirname(dirname(__FILE__)) . '/Cache.php';
-        require_once $p;
 
+        self::setLogger();
+        self::$modules = array('core' => Path::$ROOT . '/core');
         self::$cache = new Cache('resolve');
     }
 
@@ -71,7 +71,7 @@ class Resolve
     {
         $dirs = glob($module_path . '/*');
 
-        $modules = array('core' => WASP_ROOT . '/core');
+        $modules = array('core' => Path::$ROOT . '/core');
         foreach ($dirs as $dir)
         {
             if (!is_dir($dir))
@@ -84,7 +84,7 @@ class Resolve
 
             if (!($has_lib || $has_template || $has_app || $has_assets))
             {
-                Debug\info("WASP.Autoload.Resolve", "Path {} does not contain any usable elements", $dir);
+                self::$logger->info("WASP.Autoload.Resolve", "Path {} does not contain any usable elements", $dir);
                 continue;
             }
             
@@ -272,7 +272,7 @@ class Resolve
      */
     public static function class($class_name)
     {
-        Debug\debug("WASP.Res", "Lookup up class {}", $class_name);
+        self::$logger->debug("Lookup up class {0}", [$class_name]);
         $resolved = self::$cache->get('class', $class_name);
         if ($resolved === null)
         {
@@ -346,11 +346,11 @@ class Resolve
         {
             if (file_exists($cached['path']) && is_readable($cached['path']))
             {
-                Debug\debug("WASP.Autoload.Resolve", "Resolved {} {} to path {} (module: {}) (cached)", $type, $file, $cached['path'], $cached['module']);
+                self::$logger->debug("Resolved {0} {1} to path {2} (module: {3}) (cached)", [$type, $file, $cached['path'], $cached['module']]);
                 return $cached['path'];
             }
             else
-                Debug\error("WASP.Autoload.Resolve", "Cached path for {} {} from module {} cannot be read: {}", $type, $file, $cached['module'], $cached['path']);
+                self::$logger->error("Cached path for {0} {1} from module {2} cannot be read: {3}", [$type, $file, $cached['module'], $cached['path']]);
         }
 
         $path = null;
@@ -382,7 +382,7 @@ class Resolve
             }
             else
             {
-                Debug\debug("WASP.Res", "Trying path: {}/{}/{}", $location, $type, $glob_pattern);
+                self::$logger->debug("Trying path: {0}/{1}/{2}", [$location, $type, $glob_pattern]);
                 $path = $location . '/' . $type . '/' . $file;
             }
 
@@ -395,7 +395,7 @@ class Resolve
 
         if ($found_module !== null)
         {
-            Debug\debug("WASP.Autoload.Resolve", "Resolved {} {} to path {} (module: {})", $type, $file, $path, $found_module);
+            self::$logger->debug("Resolved {0} {1} to path {2} (module: {3})", [$type, $file, $path, $found_module]);
             self::$cache->put($type, $file, array("module" => $found_module, "path" => $path));
             return $path;
         }

@@ -32,22 +32,70 @@ use PHPUnit\Framework\TestCase;
  */
 final class PathTest extends TestCase
 {
+    private $wasproot;
+
+    public function setUp()
+    {
+        $this->wasproot = dirname(dirname(dirname(dirname(realpath(__FILE__)))));
+    }
+
+    public function tearDown()
+    {
+        $this->wasproot = dirname(dirname(dirname(dirname(realpath(__FILE__)))));
+        Path::setup($this->wasproot);
+    }
+
     /**
      * @covers WASP\Path::setup
      */
     public function testPath()
     {
-        Path::setup();
-        $this->assertTrue(defined('WASP_ROOT'));
-        $this->assertTrue(defined('WASP_CONFIG'));
-        $this->assertTrue(defined('WASP_SYS'));
-        $this->assertTrue(defined('WASP_VAR'));
-        $this->assertTrue(defined('WASP_CACHE'));
+        $path = $this->wasproot;
+        Path::setup($path);
+        $this->assertEquals($path, Path::$ROOT);
+        $this->assertEquals($path . '/config', Path::$CONFIG);
+        $this->assertEquals($path . '/sys', Path::$SYS);
+        $this->assertEquals($path . '/var', Path::$VAR);
+        $this->assertEquals($path . '/var/cache', Path::$CACHE);
 
-        $this->assertTrue(defined('WASP_HTTP'));
-        $this->assertTrue(defined('WASP_ASSETS'));
-        $this->assertTrue(defined('WASP_JS'));
-        $this->assertTrue(defined('WASP_CSS'));
-        $this->assertTrue(defined('WASP_IMG'));
+        $this->assertEquals($path . '/http', Path::$HTTP);
+        $this->assertEquals($path . '/http/assets', Path::$ASSETS);
+        $this->assertEquals($path . '/http/assets/js', Path::$JS);
+        $this->assertEquals($path . '/http/assets/css', Path::$CSS);
+        $this->assertEquals($path . '/http/assets/img', Path::$IMG);
+
+        Path::setup($path, $path . '/var');
+        $this->assertEquals($path, Path::$ROOT);
+        $this->assertEquals($path . '/config', Path::$CONFIG);
+        $this->assertEquals($path . '/sys', Path::$SYS);
+        $this->assertEquals($path . '/var', Path::$VAR);
+        $this->assertEquals($path . '/var/cache', Path::$CACHE);
+
+        $this->assertEquals($path . '/var', Path::$HTTP);
+        $this->assertEquals($path . '/var/assets', Path::$ASSETS);
+        $this->assertEquals($path . '/var/assets/js', Path::$JS);
+        $this->assertEquals($path . '/var/assets/css', Path::$CSS);
+        $this->assertEquals($path . '/var/assets/img', Path::$IMG);
+    }
+
+    /**
+     * @covers WASP\Path::setup
+     */
+    public function testExceptionRootInvalid()
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage("Root does not exist");
+        Path::setup('/tmp/non/existing/dir', '/tmp/another/non/existing/dir');
+    }
+
+    /**
+     * @covers WASP\Path::setup
+     */
+    public function testExceptionWebrootInvalid()
+    {
+        $path = $this->wasproot;
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage("Webroot does not exist");
+        Path::setup($path, '/tmp/non/existing/dir');
     }
 }

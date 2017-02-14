@@ -119,8 +119,9 @@ class Dir implements Iterator
 
     private $path;
     private $dir;
-    private $iter_cur = array(null, null);
-    private $iter_next = null;
+    private $iter = 0;
+    private $cur_entry = null;
+    private $next_entry = null;
     private $reader = null;
     private $read_what;
 
@@ -133,66 +134,66 @@ class Dir implements Iterator
         $this->path = realpath($path);
         $this->dir = \dir($this->path);
         $this->read_what = $what;
-
-        var_dump($this->dir->read());
     }
 
     public function next()
     {
-        if ($this->iter_next === null)
+        if ($this->next_entry === null)
             $this->hasNext();
 
-        $this->iter_cur = $this->iter_next;
-        $this->iter_next = null;
+        $this->cur_entry = $this->next_entry;
+        $this->next_entry = null;
+        ++$this->iter;
     }
 
     public function key()
     {
-        return $this->iter_cur[0];
+        return $this->iter;
     }
 
     public function current()
     {
-        return $this->iter_cur[1];
+        return $this->cur_entry;
     }
 
     public function rewind()
     {
         $this->dir->rewind();
-        $this->iter_cur = array(0, $this->dir->read());
-        $this->iter_next = null;
+        $this->iter = 0;
+        $this->hasNext();
+        $this->cur_entry = $this->next_entry;
+        $this->next_entry = null;
     }
 
     public function hasNext()
     {
-        while ($this->iter_next === null)
+        while ($this->next_entry === null)
         {
             $nv = $this->dir->read();
-            if ($nv === "." || $nv === "..")
+            if ($nv === false)
             {
-                continue;
-            }
-            elseif ($this->read_what === Dir::READ_DIR)
-            {
-                $path = $this->path . $nv;
-                if (!is_dir($path))
-                    continue;
-            }
-            elseif ($this->read_what === Dir::READ_FILE)
-            {
-                $path = $this->path . $nv;
-                if (!is_file($path))
-                    continue;
+                $this->next_entry = null;
+                break;
             }
 
-            $this->iter_next = array($this->iter_cur[0] + 1, $nv);
+            if ($nv === "." || $nv === "..")
+                continue;
+
+            $path = $this->path . '/' . $nv;
+            if ($this->read_what === Dir::READ_DIR && !is_dir($path))
+                continue;
+            elseif ($this->read_what === Dir::READ_FILE && !is_file($path))
+                continue;
+
+            $this->next_entry = $nv;
+            break;
         }
-        return $this->iter_next[1] !== false;
+        return !empty($this->next_entry);
     }
 
     public function valid()
     {
-        return $this->iter_cur[1] !== false;
+        return !empty($this->cur_entry);
     }
 }
 

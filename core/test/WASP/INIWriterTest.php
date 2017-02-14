@@ -32,17 +32,18 @@ use PHPUnit\Framework\TestCase;
  */
 class INIWriterTest extends TestCase
 {
+    private $path;
+
     public function setUp()
     {
-        Dir::setRequiredPrefix(WASP_ROOT);
-        $dir = WASP_ROOT . '/var/test';
-        Dir::mkdir($dir);
+        Dir::setRequiredPrefix(Path::$ROOT);
+        $this->path = Path::$VAR . '/test';
+        Dir::mkdir($this->path);
     }
 
     public function tearDown()
     {
-        $dir = WASP_ROOT . '/var/test';
-        Dir::rmtree($dir);
+        Dir::rmtree($this->path);
     }
 
     /**
@@ -52,7 +53,7 @@ class INIWriterTest extends TestCase
     public function testIniWriterException()
     {
         $cfg = array('sec1' => array('nest1' => array('nest2' => array('nest3' => 1))));
-        $file = WASP_ROOT . '/var/test/test.ini';
+        $file = $this->path . '/test.ini';
         $this->expectException(\DomainException::class);
         INIWriter::write($file, $cfg);
     }
@@ -84,7 +85,7 @@ class INIWriterTest extends TestCase
             )
         );
 
-        $file = WASP_ROOT . '/var/test/test.ini';
+        $file = $this->path . '/test.ini';
         INIWriter::write($file, $cfg);
 
         $ini = file_get_contents($file);
@@ -156,7 +157,7 @@ var4 = "value4"
 var5 = "value5"
 
 EOT;
-        $file = WASP_ROOT . '/var/test/test.ini';
+        $file = $this->path . '/test.ini';
         file_put_contents($file, $ini);
 
         // Read contents

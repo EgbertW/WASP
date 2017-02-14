@@ -83,8 +83,12 @@ final class DictionaryTest extends TestCase
         $dict->set('var3', 'val3');
         $this->assertEquals($dict->dget('var3', 'foo'), 'val3');
 
+        // Test alternative invocation
+        $dict->set(['var3', 'val4'], null);
+        $this->assertEquals($dict->dget('var3', 'foo'), 'val4');
+
         // Test if referenced array is updated
-        $this->assertEquals($data['var3'], 'val3');
+        $this->assertEquals($data['var3'], 'val4');
 
         $this->assertFalse($dict->has('var1', 'var2'));
     }
@@ -254,6 +258,7 @@ final class DictionaryTest extends TestCase
 
     /** 
      * @covers WASP\Dictionary::getType
+     * @covers WASP\Dictionary::getBool
      * @covers WASP\Dictionary::getInt
      * @covers WASP\Dictionary::getFloat
      * @covers WASP\Dictionary::getString
@@ -280,9 +285,19 @@ final class DictionaryTest extends TestCase
         $dict['int'] = '3';
         $dict['fl'] = '3.5';
         $dict['str'] = 3;
+        $dict['bool'] = true;
+        $dict['bool2'] = false;
         $this->assertTrue($dict->getInt('int') === 3);
         $this->assertTrue($dict->getFloat('fl') === 3.5);
         $this->assertTrue($dict->getString('str') === '3');
+        $this->assertTrue($dict->getBool('bool') === true);
+        $this->assertTrue($dict->getBool('bool2') === false);
+
+        $dict['bool'] = 'on';
+        $dict['bool2'] = 'off';
+        $this->assertTrue($dict->getBool('bool') === true);
+        $this->assertTrue($dict->getBool('bool2') === false);
+
 
         $obj = new \StdClass();
         $dict['obj'] = $obj;
@@ -439,6 +454,68 @@ final class DictionaryTest extends TestCase
         $dict = new Dictionary($data);
 
         $this->assertEquals(count($dict), count($data));
+    }
+
+    /**
+     * @covers WASP\Dictionary::offsetSet
+     * @covers WASP\Dictionary::offsetGet
+     */
+    public function testNumericIndex()
+    {
+        $dict = new Dictionary();
+        $dict[] = 'val1';
+        $dict[] = 'val2';
+        $dict[] = 'val3';
+
+        $this->assertEquals(count($dict), 3);
+        $this->assertEquals($dict[0], 'val1');
+        $this->assertEquals($dict[2], 'val3');
+        $this->assertEquals($dict[1], 'val2');
+    }
+
+    /** 
+     * @covers WASP\Dictionary::getSection
+     * @covers WASP\Dictionary::getArray
+     * @covers WASP\Dictionary::toArray
+     */
+    public function testSections()
+    {
+        $data = array('test' => 4, 'test2' => array('test1', 'test2', 'test'));
+        $dict = new Dictionary($data);
+
+        $this->assertEquals($data['test2'], $dict['test2']->toArray());
+        $this->assertEquals($data['test2'], $dict->getArray('test2'));
+        $this->assertEquals($data['test2'], $dict->getSection('test2')->toArray());
+
+        $extracted = $dict->getSection('test');
+        $extracted = $extracted->toArray();
+        $this->assertEquals(array($data['test']), $extracted);
+    }
+
+    /** 
+     * @covers WASP\Dictionary::addAll
+     * @covers WASP\Dictionary::getArray
+     * @covers WASP\Dictionary::toArray
+     */
+    public function testAddAll()
+    {
+        $data = array('a' => 1, 'b' => 2, 'c' => 3);
+        $data2 = array('b' => 5, 'g' => 10, 'h' => 20, 'i' => 30);
+
+        $dict = new Dictionary($data);
+        $dict->addAll($data2);
+
+        $this->assertEquals($dict->get('a'), 1);
+        $this->assertEquals($dict->get('b'), 5);
+        $this->assertEquals($dict->get('c'), 3);
+        $this->assertEquals($dict->get('g'), 10);
+        $this->assertEquals($dict->get('h'), 20);
+        $this->assertEquals($dict->get('i'), 30);
+
+        $obj = new \StdClass;
+        $this->expectException(\DomainException::class);
+        $this->expectExceptionMessage("Invalid value to merge");
+        $dict->addAll($obj);
     }
 
     /**

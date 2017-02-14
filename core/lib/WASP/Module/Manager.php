@@ -25,8 +25,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 namespace WASP\Module;
 
+use WASP\Path;
 use WASP\Autoload\Resolve;
-use WASP\Debug\Logger;
+use WASP\Debug\LoggerAwareStaticTrait;
 
 /**
  * Find, initialize and manage modules.
@@ -35,7 +36,8 @@ use WASP\Debug\Logger;
  */
 class Manager
 {
-    private static $logger = null;
+    use LoggerAwareStaticTrait;
+
     private static $initialized = false;
     private static $modules = array();
 
@@ -49,9 +51,8 @@ class Manager
         if (self::$initialized)
             return;
 
-        self::$logger = Logger::getLogger('WASP.Module.Manager');
-
-        $module_path = realpath($config->dget('site', 'module_path', WASP_ROOT . '/modules'));
+        self::setLogger();
+        $module_path = realpath($config->dget('site', 'module_path', Path::$ROOT . '/modules'));
         $modules = Resolve::listModules($module_path);
 
         foreach ($modules as $mod_name => $path)

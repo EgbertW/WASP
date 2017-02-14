@@ -25,13 +25,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\Debug;
 
+use WASP\Path;
 use Psr\Log\LogLevel;
 use Psr\Log\AbstractLogger;
 
 class Logger extends AbstractLogger
 {
     private static $module_loggers = array();
-    private static $filename = WASP_ROOT . '/var/log/wasp.log';
+    private static $filename = '/var/log/wasp.log';
     private static $file = NULL;
 
     private $module;
@@ -245,7 +246,7 @@ class Logger extends AbstractLogger
     private static function write($str)
     {
         if (!self::$file)
-            self::$file = fopen(self::$filename, 'a');
+            self::$file = fopen(Path::$ROOT . self::$filename, 'a');
 
         if (self::$file)
             fwrite(self::$file, $str . "\n");

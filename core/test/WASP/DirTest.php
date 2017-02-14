@@ -34,11 +34,11 @@ final class DirTest extends TestCase
 {
     public function setUp()
     {
-        if (empty(WASP_ROOT))
-            throw new \RuntimeException("Need a proper WASP_ROOT");
+        if (empty(Path::$ROOT))
+            throw new \RuntimeException("Need a proper WASP Root");
 
-        Dir::setRequiredPrefix(WASP_ROOT);
-        $dir0 = WASP_ROOT . '/var';
+        Dir::setRequiredPrefix(Path::$ROOT);
+        $dir0 = Path::$VAR;
         $dir1 = $dir0 . '/testdir';
         if (file_exists($dir1))
         {
@@ -49,7 +49,7 @@ final class DirTest extends TestCase
 
     public function tearDown()
     {
-        $dir0 = WASP_ROOT . '/var';
+        $dir0 = Path::$VAR;
         $dir1 = $dir0 . '/testdir';
         if (!file_exists($dir1))
             return;
@@ -73,7 +73,7 @@ final class DirTest extends TestCase
      */
     public function testDir()
     {
-        $dir0 = WASP_ROOT . '/var';
+        $dir0 = Path::$VAR;
         $dir1 = $dir0 . '/testdir';
 
         $dir2 = $dir1 . '/test2';
@@ -128,7 +128,7 @@ final class DirTest extends TestCase
      */
     public function testRMDirPermission()
     {
-        $dir0 = WASP_ROOT . '/var';
+        $dir0 = Path::$VAR;
         $dir1 = $dir0 . '/testdir';
 
         Dir::mkdir($dir1);
@@ -144,7 +144,7 @@ final class DirTest extends TestCase
      */
     public function testRMFile()
     {
-        $dir0 = WASP_ROOT . '/var';
+        $dir0 = Path::$VAR;
         $dir1 = $dir0 . '/testdir';
         Dir::mkdir($dir1);
 
@@ -166,7 +166,7 @@ final class DirTest extends TestCase
      */
     public function testRMFilePermission()
     {
-        $dir0 = WASP_ROOT . '/var';
+        $dir0 = Path::$VAR;
         $dir1 = $dir0 . '/testdir';
         Dir::mkdir($dir1);
 
@@ -186,7 +186,7 @@ final class DirTest extends TestCase
      */
     public function testRMDirDeepPermission()
     {
-        $dir0 = WASP_ROOT . '/var';
+        $dir0 = Path::$VAR;
         $dir1 = $dir0 . '/testdir';
         $dir2 = $dir1 . '/test2';
         Dir::mkdir($dir2);
@@ -195,6 +195,62 @@ final class DirTest extends TestCase
 
         Dir::rmtree($dir1);
         $this->assertFalse(file_exists($dir1));
+    }
+
+    /**
+     * @covers WASP\Dir::__construct
+     * @covers WASP\Dir::current
+     * @covers WASP\Dir::key
+     * @covers WASP\Dir::hasNext
+     * @covers WASP\Dir::next
+     * @covers WASP\Dir::rewind
+     */
+    public function testDirRead()
+    {
+        $files = glob("/usr/lib/*");
+
+        // Split into files and dirs
+        $file_list = array();
+        $dir_list = array();
+        foreach ($files as $f)
+        {
+            $bf = basename($f);
+            if ($bf === "." || $bf === "..")
+                continue;
+
+            if (is_file($f))
+                $file_list[] = $bf;
+            elseif (is_dir($f))
+                $dir_list[] = $bf;
+        }
+        sort($file_list);
+        sort($dir_list);
+
+        $dir = new Dir("/usr/lib", Dir::READ_FILE);
+        $files = array();
+        $iter = 0;
+        foreach ($dir as $k => $f)
+        {
+            $this->assertEquals($iter++, $k);
+            $files[] = $f;
+        }
+
+        sort($files);
+        $this->assertEquals($files, $file_list);
+
+        $dir = new Dir("/usr/lib", Dir::READ_DIR);
+        $files = array();
+        $iter = 0;
+        foreach ($dir as $k => $d)
+        {
+            $this->assertEquals($k, $iter++);
+            $dirs[] = $d;
+        }
+        sort($dirs);
+        $this->assertEquals($dirs, $dir_list);
+
+        $this->assertNull($dir->next());
+        $this->assertFalse($dir->hasNext());
     }
 }
 

@@ -23,18 +23,22 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-// Set up the autoloader
-$root = 
-    dirname( // WASP
-        dirname( // sys
-            realpath(__FILE__) // init.php
-        )
-    );
+namespace WASP;
 
-require_once $root . "/core/lib/WASP/Autoload/Autoloader.php";
-WASP\Autoload\Autoloader::registerNS('WASP', $root . '/core/lib/WASP');
+use PHPUnit\Framework\TestCase;
 
-// Disable some testing code with a define, because they cannot be overridden.
-define('WASP_TEST', 0);
-
-WASP\Bootstrap::bootstrap($root);
+/**
+ * @covers WASP\Bootstrap
+ */
+final class BootstrapTest extends TestCase
+{
+    /**
+     * @covers WASP\Bootstrap::bootstrap
+     */
+    public function testNotDouble()
+    {
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage("Cannot bootstrap more than once");
+        Bootstrap::bootstrap("garbage");
+    }
+}

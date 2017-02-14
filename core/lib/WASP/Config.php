@@ -25,6 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP;
 
+use WASP\Path;
 use WASP\Debug\LoggerAwareStaticTrait;
 
 class Config
@@ -45,7 +46,6 @@ class Config
             if (!file_exists($filename))
             {
                 Debug\critical("WASP.Config", "Failed to load config file {0}", [$filename]);
-                self::loadErrorClass();
                 throw new HttpError(500, "Configuration file is missing", "Configuration could not be loaded");
             }
 
@@ -63,15 +63,6 @@ class Config
         $filename = Path::$CONFIG . '/' . $scope . '.ini';
         $config = self::$repository[$scope];
         return $config->saveFile($filename);
-    }
-
-    /**
-     * @codeCoverageIgnore HttpError is always loaded in the tests
-     */
-    public static function loadErrorClass()
-    {
-        if (!class_exists("WASP\\HttpError"))
-            require_once WASP_LIB . '/WASP/HttpError.php';
     }
 }
 

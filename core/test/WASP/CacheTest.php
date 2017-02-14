@@ -158,11 +158,20 @@ final class CacheTest extends TestCase
         $config = new Dictionary();
         $config->set('cache', 'expire', 0);
 
+        if (file_exists(Path::$CACHE . '/testcache2.cache'))
+            unlink(Path::$CACHE . '/testcache2.cache');
         $cc = new Cache('testcache2');
 
         $contents = $cc->get();
         unset($contents['_timestamp']);
         $this->assertEmpty($contents);
+
+        $cc->put('test', 'bar', true);
+        $this->assertTrue($cc->has('test', 'bar'));
+        $this->assertFalse($cc->has('test', 'foo'));
+
+        if (file_exists(Path::$CACHE . '/testcache2.cache'))
+            unlink(Path::$CACHE . '/testcache2.cache');
     }
 }
 

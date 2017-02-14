@@ -107,12 +107,25 @@ final class bbcodeTest extends TestCase
     /**
      * @covers WASP\BBCode::addRule
      */
+    public function testExceptionInvalidArguments()
+    {
+        $a = new BBCode();
+        
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage("Arguments must be string or array, or implement toArray method");
+        $a->addRule(3.5, null);
+    }
+
+    /**
+     * @covers WASP\BBCode::addRule
+     */
     public function testExceptionInvalidPattern()
     {
         $a = new BBCode();
         
         $this->expectException(\RuntimeException::class);
-        $a->addRule(3.5, null);
+        $this->expectExceptionMessage("Invalid pattern or replacement: /foobar /");
+        $a->addRule("/foobar", null);
     }
 
     /**

@@ -54,7 +54,7 @@ var4 = "value4"
 EOT;
 
         $old_val = Path::$CONFIG;
-        Path::$CONFIG = WASP_ROOT . '/var/test';
+        Path::$CONFIG = Path::$ROOT . '/var/test';
         if (!is_dir(Path::$CONFIG))
             mkdir(Path::$CONFIG);
 

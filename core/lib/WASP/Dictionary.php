@@ -246,7 +246,10 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
     public function getSection($key)
     {
         $val = $this->dget(func_get_args());
-        return $val instanceof Dictionary ? $val : new Dictionary(\cast_array($val));
+        if ($val instanceof Dictionary)
+            return $val;
+        $val = \cast_array($val);
+        return new Dictionary($val);
     }
 
     /**
@@ -328,13 +331,14 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
             $ref = $value->getAll();
         else
             $ref = $value;
+
         return $this;
     }
 
     public function addAll($values)
     {
         if (!\is_array_like($values))
-            throw new \DomainException("Invalid value to merge: $values");
+            throw new \DomainException("Invalid value to merge: " . Debug\Logger::str($values));
         foreach ($values as $key => $val)
             $this->set($key, $val);
         return $this;

@@ -39,47 +39,35 @@ class Path
     public static $CSS;
     public static $IMG;
 
-    private static $is_setup = false;
-
     /**
-     * @codeCoverageIgnore Since this is run in bootstrap, the code coverage will not detect it
+     * Fill the variables with proper (default) values, called by Bootstrap
+     * 
+     * @param string $root The WASP root directory
+     * @param string $webroot The webroot, where the index.php resides. If omitted,
+     *                        it defaults to WASP/http
      */
-    public static function setup()
+    public static function setup(string $root, string $webroot = null)
     {
-        if (self::$is_setup)
-            return;
+        self::$ROOT = realpath($root);
+        if (self::$ROOT === false)
+            throw new \RuntimeException("Root does not exist");
+
+        self::$CONFIG = self::$ROOT . '/config';
+        self::$SYS = self::$ROOT . '/sys';
+        self::$VAR = self::$ROOT . '/var';
+        self::$CACHE = self::$VAR . '/cache';
+
+        if (empty($webroot))
+            self::$HTTP = self::$ROOT . '/http';
+        else
+            self::$HTTP = realpath($webroot);
         
-        if (!defined('WASP_ROOT'))
-            define('WASP_ROOT', dirname(dirname(dirname(dirname(realpath(__FILE__))))));
+        if (self::$HTTP === false || !is_dir(self::$HTTP))
+            throw new \RuntimeException("Webroot does not exist");
 
-        define('WASP_CONFIG', WASP_ROOT . '/config');
-        define('WASP_SYS', WASP_ROOT . '/sys');
-        define('WASP_VAR', WASP_ROOT . '/var');
-
-        if (!defined('WASP_CACHE'))
-            define('WASP_CACHE', WASP_VAR . '/cache');
-
-        if (!defined('WASP_HTTP'))
-            define('WASP_HTTP', WASP_ROOT . '/http');
-
-        define('WASP_ASSETS', WASP_HTTP . '/assets');
-        define('WASP_JS', WASP_ASSETS . '/js');
-        define('WASP_CSS', WASP_ASSETS . '/css');
-        define('WASP_IMG', WASP_ASSETS . '/img');
-
-        self::$ROOT = WASP_ROOT;
-        self::$CONFIG = WASP_CONFIG;
-        self::$SYS = WASP_SYS;
-        self::$VAR = WASP_VAR;
-        self::$CACHE = WASP_CACHE;
-
-        self::$HTTP = WASP_HTTP;
-        self::$ASSETS = WASP_ASSETS;
-        self::$JS = WASP_JS;
-        self::$CSS = WASP_CSS;
-        self::$IMG = WASP_IMG;
-        self::$is_setup = true;
+        self::$ASSETS = self::$HTTP . '/assets';
+        self::$JS = self::$ASSETS . '/js';
+        self::$CSS = self::$ASSETS . '/css';
+        self::$IMG = self::$ASSETS . '/img';
     }
 }
-
-Path::setup();

@@ -34,7 +34,7 @@ $root =
 require_once $root . "/core/lib/WASP/Autoload/Autoloader.php";
 WASP\Autoload\Autoloader::registerNS('WASP', $root . '/core/lib/WASP');
 
-// Disable some testing code with a define, because they cannot be overridden.
-define('WASP_TEST', 0);
+// Enable testing code
+define('WASP_TEST', 1);
 
 WASP\Bootstrap::bootstrap($root);
