@@ -33,12 +33,21 @@ use PHPUnit\Framework\TestCase;
 final class BootstrapTest extends TestCase
 {
     /**
+     * @covers WASP\Bootstrap::getBootstrapper
+     */
+    public function testInstance()
+    {
+        $bootstrap = Bootstrap::getBootstrapper("");
+        $this->assertInstanceOf(Bootstrap::class, $bootstrap);
+    }
+
+    /**
      * @covers WASP\Bootstrap::bootstrap
      */
     public function testNotDouble()
     {
         $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage("Cannot bootstrap more than once");
-        Bootstrap::bootstrap("garbage");
+        Bootstrap::getBootstrapper("")->bootstrap();
     }
 }

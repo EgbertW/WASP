@@ -37,4 +37,4 @@ WASP\Autoload\Autoloader::registerNS('WASP', $root . '/core/lib/WASP');
 // Enable testing code
 define('WASP_TEST', 1);
 
-WASP\Bootstrap::bootstrap($root);
+WASP\Bootstrap::getBootstrapper($root)->bootstrap();

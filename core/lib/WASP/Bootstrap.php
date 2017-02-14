@@ -35,39 +35,30 @@ use PSR\Log\LogLevel;
 class Bootstrap
 {
     private static $instance = null;
+    private $root_dir = null;
+    private $bootstrapped = false;
 
-    public static function bootstrap(string $root)
+    public static function getBootstrapper(string $root)
     {
         if (self::$instance === null)
         {
             self::$instance = new Bootstrap();
-            self::$instance->execute($root);
+            self::$instance->root_dir = realpath($root);
         }
-        else
-            throw new \RuntimeException("Cannot bootstrap more than once");
 
         return self::$instance;
     }
 
-    public function execute(string $root)
+    public function bootstrap()
     {
+        if ($this->bootstrapped)
+            throw new \RuntimeException("Cannot bootstrap more than once");
+        // Set character set
         ini_set('default_charset', 'UTF-8');
         mb_internal_encoding('UTF-8');
 
-        // Determine the root directory
-        $root_directory = 
-            dirname( // WASP
-                dirname( // core
-                    dirname( // lib
-                        dirname( // WASP
-                            realpath(__FILE__) // Bootstrap.php
-                        )
-                    )
-                )
-            );
-
         // Set up the path configuration
-        Path::setup($root_directory);
+        Path::setup($this->root_dir);
 
         // Change directory to the WASP root
         chdir(Path::$ROOT);
@@ -81,9 +72,6 @@ class Bootstrap
             ini_set('error_log', Path::$ROOT . '/var/log/error-php-cli' . $test . '.log');
         else
             ini_set('error_log', Path::$ROOT . '/var/log/error-php' . $test . '.log');
-
-        // Some general utility functions. Move to class?
-        require_once Path::$ROOT . "/sys/functions.php";
 
         // Add the Psr namespace to the autoloader
         Autoloader::registerNS('Psr\\Log', Path::$ROOT . '/core/lib/Psr/Log');
@@ -126,5 +114,11 @@ class Bootstrap
 
         // Find installed modules and initialize them
         Module\Manager::setup($config);
+
+        // Load utility functions
+        Functions::load();
+
+        // Do not run again
+        $this->bootstrapped = true;
     }
 }

@@ -68,7 +68,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
         $val = $this->values;
         foreach ($args as $arg)
         {
-            if (!\is_array_like($val) || !isset($val[$arg]))
+            if (!is_array_like($val) || !isset($val[$arg]))
                 return false;
             $val = $val[$arg];
         }
@@ -79,7 +79,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
             case Dictionary::TYPE_NUMERIC:
                 return is_numeric($val);
             case Dictionary::TYPE_INT:
-                return \is_int_val($val);
+                return is_int_val($val);
             case Dictionary::TYPE_FLOAT:
                 return is_float($val);
             case Dictionary::TYPE_STRING:
@@ -167,7 +167,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
         switch ($type)
         {
             case Dictionary::TYPE_INT:
-                if (!\is_int_val($val))
+                if (!is_int_val($val))
                     throw new \DomainException("Key " . implode('.', $args) . " is not an integer");
                 return (int)$val;
             case Dictionary::TYPE_NUMERIC:
@@ -188,7 +188,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
                     throw new \DomainException("Key " . implode('.', $args) . " is not an object");
                 return $val;
             case Dictionary::TYPE_BOOL:
-                return \parse_bool($val);
+                return parse_bool($val);
             default:
         }
         
@@ -248,7 +248,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
         $val = $this->dget(func_get_args());
         if ($val instanceof Dictionary)
             return $val;
-        $val = \cast_array($val);
+        $val = cast_array($val);
         return new Dictionary($val);
     }
 
@@ -337,7 +337,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
 
     public function addAll($values)
     {
-        if (!\is_array_like($values))
+        if (!is_array_like($values))
             throw new \DomainException("Invalid value to merge: " . Debug\Logger::str($values));
         foreach ($values as $key => $val)
             $this->set($key, $val);
@@ -451,7 +451,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
         {
             $contents = file_get_contents($filename);
 
-            $arr = \call_error_exception(function () use ($contents) {
+            $arr = call_error_exception(function () use ($contents) {
                 return unserialize($contents);
             });
 
@@ -464,7 +464,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
             self::checkYAML();
             $contents = file_get_contents($filename);
             
-            $arr = \call_error_exception(function () use ($contents) {
+            $arr = call_error_exception(function () use ($contents) {
                 return yaml_parse($contents);
             });
 

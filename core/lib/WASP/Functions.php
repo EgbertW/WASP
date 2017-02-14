@@ -23,6 +23,32 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+namespace WASP;
+
+use DomainException;
+use td;
+
+/**
+ * This is a class which use is only to allow
+ * this file to be Autoloaded
+ */
+class Functions
+{
+    public static function load()
+    {} // NO-OP
+}
+
+/**
+ * Check if the provided value contains an integer value.
+ * The value may be an int, or anything convertable to an int.
+ * After conversion, the string representation of the value before
+ * and after conversion are compared, and if they are equal, the
+ * value is considered a proper integral value.
+ * 
+ * @param mixed $val The value to test
+ * @return boolean True when $val is considered an integral value, false
+ *                 otherwise
+ */
 function is_int_val($val)
 {
     if (is_int($val)) return true;
@@ -33,7 +59,13 @@ function is_int_val($val)
 }
 
 /** Convert any value to a bool, somewhat more intelligently than PHP does
-  * itself: this function will also take strings
+  * itself: this function will also take strings, and it will convert 
+  * English and localized versions of the words 'off', 'no', 'disable',
+  * 'disabled' to false.
+  * 
+  * @param mixed $val Any scalar or object at all
+  * @param float $float_delta Used for float comparison
+  * @return boolean True when the value can be considered true, false if not
   */
 function parse_bool($val, float $float_delta = 0.0001)
 {
@@ -49,9 +81,9 @@ function parse_bool($val, float $float_delta = 0.0001)
     if (is_float($val))
         return abs($val) > $float_delta;
 
-    // Consider empty arrays false, non-empty arrays true
+    // Non-empty arrays are considered true
     if (is_array($val))
-        return count($val) > 0;
+        return true;
 
     // If it is a numeric string, consider it false if it is close to 0
     if (is_string($val) && is_numeric($val))
@@ -61,18 +93,21 @@ function parse_bool($val, float $float_delta = 0.0001)
     if (is_string($val))
     {
         $lc = strtolower(trim($val));
-        // The empty string and some words are considered false
-        if (
-            $lc == "" || $lc == "false" || $lc == "no" || $lc == "off" || 
-            $lc == "disabled" || $lc == "onwaar" || $lc == "nee" ||
-            $lc == "uit"|| $lc == "uitgeschakeld"
-        )
-        {
-            return false;
+
+        $words = array("disable", "disabled", "false", "no", "negative", "off");
+        if (function_exists('td'))
+        { // Translate if available
+            $words[] = td('disable', 'core');
+            $words[] = td('disabled', 'core');
+            $words[] = td('false', 'core');
+            $words[] = td('no', 'core');
+            $words[] = td('negative', 'core');
+            $words[] = td('off', 'core');
         }
 
+        // The empty string and some words are considered false
         // Any other non-empty string is considered to be true
-        return true;
+        return !in_array($lc, $words);
     }
 
     // Try to call some methods on the object if they are available
@@ -114,7 +149,9 @@ function is_array_like($arg)
 function to_array($arg)
 {
     if (!is_array_like($arg))
-        throw new \DomainException("Cannot convert argument to array");
+    {
+        throw new DomainException("Cannot convert argument to array");
+    }
     if (is_array($arg));
         return $arg;
     $arr = array();
@@ -144,7 +181,7 @@ function cast_array($arg)
  * @param $callable callable The function to call
  * @param $class class The exception to throw when an error occurs
  */
-function call_error_exception($callable, $class = WASP\IOException::class)
+function call_error_exception($callable, $class = IOException::class)
 {
     set_error_handler(function ($errno, $errstr, $errfile, $errline, $errcontenxt) use ($class) {
         restore_error_handler();

@@ -37,4 +37,4 @@ WASP\Autoload\Autoloader::registerNS('WASP', $root . '/core/lib/WASP');
 // Disable some testing code with a define, because they cannot be overridden.
 define('WASP_TEST', 0);
 
-WASP\Bootstrap::bootstrap($root);
+WASP\Bootstrap::getBootstrapper($root)->bootstrap();

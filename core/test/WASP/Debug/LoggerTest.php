@@ -193,7 +193,7 @@ class LoggerTest extends TestCase
         {
             try
             {
-                call_error_exception(function () use ($a, $level, $msg) {
+                \WASP\call_error_exception(function () use ($a, $level, $msg) {
                     $a->$level($msg[1], array('user' => 'Bob'));
                 });
             }

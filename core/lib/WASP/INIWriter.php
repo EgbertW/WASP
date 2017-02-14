@@ -97,7 +97,7 @@ class INIWriter
             else
                 $new_contents .= "\n";
 
-            $parameters = \to_array($parameters);
+            $parameters = to_array($parameters);
 
             $new_contents .= "[" . $section . "]\n";
             $comments = isset($section_comments[$section]) ? $section_comments[$section] : array();
@@ -132,7 +132,7 @@ class INIWriter
             throw new \DomainException("Cannot nest arrays more than once in INI-file");
 
         $str = "";
-        if (\is_array_like($parameter))
+        if (is_array_like($parameter))
         {
             foreach ($parameter as $key => $val)
             {
@@ -146,7 +146,7 @@ class INIWriter
             $str = "$name = " . ($parameter ? "true" : "false") . "\n";
         elseif (is_null($parameter))
             $str = "$name = null\n";
-        elseif (is_float($parameter) && \is_int_val((string)$parameter))
+        elseif (is_float($parameter) && is_int_val((string)$parameter))
             $str = "$name = " . sprintf("%.1f", $parameter) . "\n";
         elseif (is_float($parameter))
             $str = "$name = " . $parameter . "\n";
