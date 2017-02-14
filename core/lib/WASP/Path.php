@@ -29,7 +29,6 @@ class Path
 {
     public static $ROOT;
     public static $CONFIG;
-    public static $SYS;
     public static $VAR;
     public static $CACHE;
 
@@ -53,7 +52,6 @@ class Path
             throw new \RuntimeException("Root does not exist");
 
         self::$CONFIG = self::$ROOT . '/config';
-        self::$SYS = self::$ROOT . '/sys';
         self::$VAR = self::$ROOT . '/var';
         self::$CACHE = self::$VAR . '/cache';
 

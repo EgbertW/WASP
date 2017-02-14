@@ -54,7 +54,6 @@ final class PathTest extends TestCase
         Path::setup($path);
         $this->assertEquals($path, Path::$ROOT);
         $this->assertEquals($path . '/config', Path::$CONFIG);
-        $this->assertEquals($path . '/sys', Path::$SYS);
         $this->assertEquals($path . '/var', Path::$VAR);
         $this->assertEquals($path . '/var/cache', Path::$CACHE);
 
@@ -67,7 +66,6 @@ final class PathTest extends TestCase
         Path::setup($path, $path . '/var');
         $this->assertEquals($path, Path::$ROOT);
         $this->assertEquals($path . '/config', Path::$CONFIG);
-        $this->assertEquals($path . '/sys', Path::$SYS);
         $this->assertEquals($path . '/var', Path::$VAR);
         $this->assertEquals($path . '/var/cache', Path::$CACHE);
 

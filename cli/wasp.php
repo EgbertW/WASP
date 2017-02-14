@@ -5,7 +5,7 @@ use WASP\TaskRunner;
 use WASP\Arguments;
 use WASP\File\Resolve;
 
-require_once "../sys/init.php";
+require_once "../bootstrap/init.php";
 
 $a = new CLI;
 $a->addOption("r", "run", "action", "Run the specified task");
