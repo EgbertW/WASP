@@ -26,7 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP;
 
 use WASP\Autoload\Autoloader;
-use WASP\Debug\{Logger, LoggerFactory};
+use WASP\Debug\{Logger, LoggerFactory, FileWriter};
 use PSR\Log\LogLevel;
 
 /**
@@ -77,19 +77,20 @@ class Bootstrap
         Autoloader::registerNS('Psr\\Log', Path::$ROOT . '/core/lib/Psr/Log');
 
         // Autoloader requires manual logger setup to avoid depending on external files
-        Debug\LoggerFactory::setLoggerFactory(new Debug\LoggerFactory());
-        Autoloader::setLogger(Debug\LoggerFactory::getLogger([Autoloader::class]));
+        LoggerFactory::setLoggerFactory(new LoggerFactory());
+        Autoloader::setLogger(LoggerFactory::getLogger([Autoloader::class]));
 
         // Set up root logger
-        $root_logger = Debug\Logger::getLogger();
+        $root_logger = Logger::getLogger();
         $root_logger->setLevel(LogLevel::DEBUG);
-        $root_logger->addLogHandler(array(Logger::class, 'writeFile'));
+        $logfile = Path::$VAR . '/log/wasp' . $test . '.log';
+        $root_logger->addLogHandler(new FileWriter($logfile, LogLevel::DEBUG));
 
         // Log beginning of request handling
         if (isset($_SERVER['REQUEST_URI']))
         {
             Debug\info(
-                "Sys.init", 
+                "WASP.Bootstrap", 
                 "*** Starting processing for {0} request to {1}", 
                 [$_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']]
             );

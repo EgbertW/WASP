@@ -33,7 +33,6 @@ class Logger extends AbstractLogger
 {
     private static $module_loggers = array();
     private static $filename = '/var/log/wasp.log';
-    private static $file = NULL;
 
     private $module;
     private $level = LogLevel::DEBUG;
@@ -107,12 +106,7 @@ class Logger extends AbstractLogger
 
     public function addLogHandler($handler)
     {
-        if (is_object($handler))
-        {
-            if (!method_exists($handler, 'log'))
-                throw new \RuntimeException("Loghandler objects must have a method 'log'");
-        }
-        elseif (!is_callable($handler))
+        if (!($handler instanceof LogWriterInterface) && !is_callable($handler))
             throw new \RuntimeException("Please provide a valid callback or object as LogHandler");
 
         $this->handlers[] = $handler;
@@ -139,11 +133,14 @@ class Logger extends AbstractLogger
         if (!isset($context['_module']))
             $context['_module'] = $this->module;
 
+        if (!isset($context['_level']))
+            $context['_level'] = $level;
+
         foreach ($this->handlers as $handler)
         {
-            if (is_object($handler))
+            if ($handler instanceof LogWriterInterface)
             {
-                $handler->log($level, $message, $context);
+                $handler->write($level, $message, $context);
             }
             else
             {
@@ -170,27 +167,6 @@ class Logger extends AbstractLogger
             }
         }
         return $message;
-    }
-
-    public static function writeFile($level, $message, $context)
-    {
-        $message = self::fillPlaceholders($message, $context);
-        $module = isset($context['_module']) ? $context['_module'] : "";
-        $fmt = "[" . date('Y-m-d H:i:s') . '][' . $module . ']';
-        
-        if (class_exists("\\WASP\\Request", false))
-        {
-            if (isset(\WASP\Request::$remote_ip))
-                $fmt .= '[' . \WASP\Request::$remote_ip . ']';
-
-            if (!empty(\WASP\Request::$remote_host) && \WASP\Request::$remote_host !== \WASP\Request::$remote_ip)
-                $fmt .= '[' . \WASP\Request::$remote_host . ']';
-        }
-
-        $fmt .= ' ' . self::$LEVEL_NAMES[$level][1] . ': ';
-
-        $fmt .= ' ' . $message;
-        self::write($fmt);
     }
 
     public static function html($obj)
@@ -243,13 +219,9 @@ class Logger extends AbstractLogger
         return $log->log($level, $message, $context);
     }
 
-    private static function write($str)
+    public static function getLevelNumeric($level)
     {
-        if (!self::$file)
-            self::$file = fopen(Path::$ROOT . self::$filename, 'a');
-
-        if (self::$file)
-            fwrite(self::$file, $str . "\n");
+        return isset(self::$LEVEL_NAMES[$level]) ? self::$LEVEL_NAMES[$level][0] : 0;
     }
 }
 

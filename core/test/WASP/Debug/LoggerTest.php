@@ -26,6 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP\Debug;
 
 use PHPUnit\Framework\TestCase;
+use WASP\Debug\LogWriterInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 use Psr\Log\LoggerTrait;
@@ -42,7 +43,7 @@ use Psr\Log\AbstractLogger;
  * @covers Psr\Log\NullLogger
  * @covers Psr\Log\LoggerAwareTrait
  */
-class LoggerTest extends TestCase
+class LoggerTest extends TestCase implements LogWriterInterface
 {
     private $logs = array();
 
@@ -54,7 +55,7 @@ class LoggerTest extends TestCase
         return $logger;
     }
 
-    public function log($level, $message, $context = array())
+    public function write(string $level, $message, array $context)
     {
         $this->logs[] = array($level, $message, $context); 
     }
@@ -172,7 +173,7 @@ class LoggerTest extends TestCase
 
     public function testTrait()
     {
-        $a = new DummyLogger(array($this, 'log'));
+        $a = new DummyLogger(array($this, 'write'));
         
         foreach ($this->provideLevelsAndMessages() as $level => $msg)
         {
