@@ -116,7 +116,7 @@ function parse_bool($val, float $float_delta = 0.0001)
         $opts = array(
             'bool', 'to_bool', 'tobool', 'get_bool', 'getbool', 'boolean',
             'toboolean', 'to_boolean', 'get_boolean', 'getboolean', 'val',
-            'getval', 'get_val', '__to_string'
+            'getval', 'get_val', '__tostring'
         );
         foreach ($opts as $fn)
             if (method_exists($val, $fn))
@@ -143,16 +143,15 @@ function is_array_like($arg)
         return true;
     if (!is_object($arg))
         return false;
-    return $arg instanceof \Countable && $arg instanceof \ArrayAccess && $arg instanceof \Iterator;
+    return $arg instanceof \ArrayAccess && $arg instanceof \Traversable;
 }
 
 function to_array($arg)
 {
     if (!is_array_like($arg))
-    {
         throw new DomainException("Cannot convert argument to array");
-    }
-    if (is_array($arg));
+
+    if (is_array($arg))
         return $arg;
     $arr = array();
     foreach ($arg as $key => $value)
@@ -192,26 +191,11 @@ function call_error_exception($callable, $class = IOException::class)
     return $retval;
 }
 
-function fmtdate(\DateTime $date)
-{
-    $conf = WASP\Config::getConfig();
-    $fmt = $conf->get('date', 'format');
-    if (!$fmt)
-        $fmt = "d-m-Y H:i:s";
-
-    return $date->format($fmt);
-}
-
-function currency_format($amount)
-{
-	return number_format($amount, 2, ',', '.');
-}
-
 function check_extension($extension, $class = null, $function = null)
 {
     if ($class !== null && !class_exists($class, false))
-        throw new WASP\HttpError(500, "A required class does not exist: {$class}. Check if the extension $extension is installed and enabled");
+        throw new HttpError(500, "A required class does not exist: {$class}. Check if the extension $extension is installed and enabled");
 
-    if ($function !== null && !function_exists($function, false))
-        throw new WASP\HttpError(500, "A required function does not exist: {$class}. Check if the extension $extension is installed and enabled");
+    if ($function !== null && !function_exists($function))
+        throw new HttpError(500, "A required function does not exist: {$class}. Check if the extension $extension is installed and enabled");
 }
