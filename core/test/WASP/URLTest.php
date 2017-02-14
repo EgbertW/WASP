@@ -222,6 +222,9 @@ final class URLTest extends TestCase
 
         $this->assertFalse(isset($url['foo']));
         $this->assertTrue(isset($url['host']));
+
+        $url->setHost('example.com:81');
+        $this->assertEquals($url->port, 81);
     }
     
     /**
@@ -264,6 +267,11 @@ final class URLTest extends TestCase
         $url['foo'] = 3;
     }
 
+    /**
+     * @covers WASP\URL::__construct
+     * @covers WASP\URL::__get
+     * @covers WASP\URL::get
+     */
     public function testDefaultScheme()
     {
         $url = new URL('example.com/index', 'http');
@@ -271,6 +279,7 @@ final class URLTest extends TestCase
 
         $url = new URL('example.com/index', 'https');
         $this->assertEquals((string)$url, 'https://example.com/index');
+        $this->assertTrue($url->secure, new URL('example.com/index', 'https'));
 
         $url = new URL('https://example.com/index', 'http');
         $this->assertEquals((string)$url, 'https://example.com/index');

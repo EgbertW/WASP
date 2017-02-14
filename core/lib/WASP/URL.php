@@ -143,7 +143,7 @@ class URL implements \ArrayAccess
     {
         if (($ppos = strrpos($hostname, ":")) !== false)
         {
-            $port = substr($hostname, $ppos + 1);
+            $this->port = substr($hostname, $ppos + 1);
             $hostname = substr($hostname, 0, $ppos);
         }
 
@@ -205,14 +205,15 @@ class URL implements \ArrayAccess
                 return;
             case "host":
                 return $this->setHost($value);
-            case "secure":
-                return $this->scheme === "https";
         }
         throw new \OutOfRangeException($field);
     }
 
     public function get($field)
     {
+        if ($field === "secure")
+            return $this->scheme === "https";
+
         if (property_exists($this, $field))
             return $this->$field;
         throw new \OutOfRangeException($field);
