@@ -130,6 +130,12 @@ class Request
     /** The selected VirtualHost for this request */
     public $vhost = null;
 
+    /** The headers */
+    private $headers = array();
+
+    /** The sent headers, moved from $headers to here after sending */
+    private $sent_headers = array();
+
     /*** 
      * Create the request based on the request data provided by webserver and client
      *
@@ -340,6 +346,57 @@ class Request
         $this->session = new Dictionary($GLOBALS['_SESSION']);
         if ($this->session->has('language'))
             $this->language = $this->session->get('language');
+    }
+
+    /**
+     * Set the header value
+     * @param string $name The name of the header
+     * @param string $value The value for the header
+     * @return Request Provides fluent interface
+     */
+    public function setHeader(string $name, string $value)
+    {
+        $this->headers[$name] = $value;
+        return $this;
+    }
+
+    /**
+     * Get the list of defined headers
+     * @return array List of $name => $header pairs
+     */
+    public function getHeaders()
+    {
+        return $this->headers;
+    }
+
+    /**
+     * Get the list of headers already sent
+     * @return array List of $name => $header pairs
+     */
+    public function getSentHeaders()
+    {
+        return $this->sent_headers;
+    }
+
+    /**
+     * Send the headers to the browser
+     * @return Request Provides fluent interface
+     */
+    public function outputHeaders()
+    {
+        if (!empty($this->headers) && !self::cli() && !headers_sent())
+        {
+            // This will never execute in tests
+            // @codeCoverageIgnoreStart
+            foreach ($this->getHeaders() as $name => $val)
+            {
+                header($name . ': ' .$val);
+                $this->sent_headers[$name] = $val;
+            }
+            $this->headers = array();
+            // @codeCoverageIgnoreEnd
+        }
+        return $this;
     }
 
     /**

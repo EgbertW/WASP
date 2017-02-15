@@ -88,9 +88,11 @@ namespace WASP
             $output = ob_get_contents();
             ob_end_clean();
 
+            $request = Http\Request::current();
             if ($this->mime !== null)
             {
-                header("Content-type: $this->mime");
+                $request->setHeader('Content-Type', $this->mime);
+                $request->sendHeaders();
                 echo $output;
             }
             else

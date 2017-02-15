@@ -52,9 +52,11 @@ class JSON
      * Init changes the accept type of the Request to prefer JSON,
      * so that JSON will be output whenever possible.
      */
-    public static function init()
+    public static function init($request = null)
     {
-        Http\Request::current()->accept = array(
+        if ($request === null)
+            $request = Http\Request::current();
+        $request->accept = array(
             'application/json' => 1.0,
             '*/*' => 0.5
         );
@@ -71,12 +73,15 @@ class JSON
     /** Print JSON headers, including cache control directives
       * @codeCoverageIgnore Not checkable from unit test
       */
-    public static function printHeaders()
+    public static function printHeaders($request = null)
     {
-        header('Content-Type: application/json');
-        header('Cache-Control: ' . self::$cache_control);
+        if ($request === null)
+            $request = Http\Request::current();
+
+        $request->setHeader('Content-Type', 'application/json');
+        $request->setHeader('Cache-Control', self::$cache_control);
         if (self::$cache_control != "max-age=0")
-            header('Pragma: cache');
+            $request->setHeader('Pragma', 'cache');
     }
 
     /**

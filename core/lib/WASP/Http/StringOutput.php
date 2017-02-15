@@ -25,18 +25,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\Http;
 
-class Error extends Response
+class StringOutput extends Response
 {
-    private $user_message;
+    protected $output;
 
-    public function __construct($code, $error, $user_message = null)
+    public function __construct($output)
     {
-        parent::__construct($error, $code);
-        $this->user_message = $user_message;
+        $this->output = $output;
     }
 
-    public function getUserMessage()
+    public function getOutput()
     {
-        return $this->user_message;
+        return $this->output;
     }
 }

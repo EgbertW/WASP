@@ -25,18 +25,46 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\Http;
 
-class Error extends Response
+abstract class Response extends \Exception
 {
-    private $user_message;
+    protected $request = null;
 
-    public function __construct($code, $error, $user_message = null)
+    /** 
+     * Set the request associated to this response 
+     * @return WASP\Http\Response Provides fluent interface
+     */
+    public function setRequest(Request $request)
     {
-        parent::__construct($error, $code);
-        $this->user_message = $user_message;
+        $this->request = $request;
+        return $this;
     }
 
-    public function getUserMessage()
+    /**
+     * Return the associated request. If none was set, the default is returned.
+     * @return WASP\Http\Request The associated request
+     */
+    public function getRequest()
     {
-        return $this->user_message;
+        if ($this->request === null)
+            $this->request = Request::current();
+        return $this->request;
+    }
+
+    /**
+     * @return int The HTTP Status code
+     */
+    public function getStatusCode()
+    {
+        return $this->getCode();
+    }
+
+    /**
+     * Sets the HTTP Response code
+     * @parma int $code The HTTP Response code (100-599)
+     */
+    public function setStatusCode(int $code)
+    {
+        $this->code = $code;
+        return $this;
     }
 }
