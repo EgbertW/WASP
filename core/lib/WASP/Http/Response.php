@@ -27,7 +27,15 @@ namespace WASP\Http;
 
 abstract class Response extends \Exception
 {
+    /** 
+     * A reference to the request obejct
+     */
     protected $request = null;
+
+    /**
+     * A mime type of the response
+     */
+    protected $mime = null;
 
     /** 
      * Set the request associated to this response 
@@ -67,4 +75,29 @@ abstract class Response extends \Exception
         $this->code = $code;
         return $this;
     }
+
+    /**
+     * Return the configured mime type
+     */
+    public function getMime()
+    {
+        return $this->mime;
+    }
+
+    /**
+     * Set the mime type of the response.
+     * @param string $mime The mime type, that will be sent as the content-type
+     */
+    public function setMime(string $mime)
+    {
+        $this->mime = $mime;
+        return $this;
+    }
+
+    /**
+     * Output the data to the client. This will be the very last method called
+     * by the ResponseBuilder, and all output buffering will have been
+     * disabled. Headers will have been sent, just send the output.
+     */
+    abstract public function output();
 }

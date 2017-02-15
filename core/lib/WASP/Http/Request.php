@@ -64,6 +64,9 @@ class Request
     /** The default language used for responses */
     private static $default_language = 'en';
 
+    /** The time at which the request was constructed */
+    private $start_time;
+
     /** The server variables */
     public $server;
 
@@ -145,8 +148,9 @@ class Request
      * @param array $server The SERVER parameters
      * @param Dictionary $config The site configuration
      */
-    public function __construct(array &$get, array &$post, array &$cookie, array &$server, Dictionary $config)
+    public function __construct(array &$get, array &$post, array &$cookie, array &$server, Dictionary $config, DateTime $start = new DateTime())
     {
+        $this->start = $start;
         $this->get = new Dictionary($get);
         $this->post = new Dictionary($post);
         $this->cookie = new Dictionary($cookie);
@@ -215,6 +219,10 @@ class Request
         }
     }
 
+    public function getStart()
+    {
+        return $this->start;
+    }
 
     /**
      * @codeCoverageIgnore Testing apps is out of scope here

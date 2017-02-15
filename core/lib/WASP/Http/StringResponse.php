@@ -25,17 +25,50 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\Http;
 
-class StringOutput extends Response
+/**
+ * A StringResponse is text or other plain text data generated during the
+ * script. This can be text/plain or text/html, for example.
+ */
+class StringResponse extends Response
 {
+    /** The output string */
     protected $output;
 
+    /**
+     * Create using a string
+     * @param string $str The output
+     */
     public function __construct($output)
     {
         $this->output = $output;
     }
 
+    /**
+     * Append a string to the current output
+     * @param string $str The string to add
+     * @return StringResponse Provides fluent interface
+     */
+    public function append(string $str)
+    {
+        $this->output .= $str;
+        return $this;
+    }
+
+    /**
+     * Return the output
+     */
     public function getOutput()
     {
         return $this->output;
+    }
+
+    /**
+     * Write the string to the script output
+     * @return StringResponse Provides fluent interface
+     */
+    public function output()
+    {
+        fprintf(STDOUT, $output);
+        return $this;
     }
 }
