@@ -37,6 +37,7 @@ class VirtualHost
     public function __construct($hostname, $locale)
     {
         $this->url = new URL($hostname);
+        $this->locales = array();
         $this->setLocale($locale);
     }
 

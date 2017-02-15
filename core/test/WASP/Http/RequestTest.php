@@ -76,7 +76,6 @@ final class RequestTest extends TestCase
     /**
      * @covers WASP\Http\Request::__construct
      * @covers WASP\Http\Request::setupSession
-     * @covers WASP\Http\Request::setupSites
      */
     public function testRequestVariables()
     {
@@ -112,7 +111,6 @@ final class RequestTest extends TestCase
     /**
      * @covers WASP\Http\Request::__construct
      * @covers WASP\Http\Request::setupSession
-     * @covers WASP\Http\Request::setupSites
      */
     public function testRouting()
     {
@@ -123,6 +121,67 @@ final class RequestTest extends TestCase
         $this->server['REQUEST_URI'] = 'https://www.example.com/assets';
         $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config);
         $this->assertEquals($req->route, '/assets');
+    }
+
+    /**
+     * @covers WASP\Http\Request::__construct
+     * @covers WASP\Http\Request::findVirtualHost
+     * @covers WASP\Http\Request::handleUnknownHost
+     */
+    public function testRoutingInvalidHostIgnorePolicy()
+    {
+        $this->server['REQUEST_URI'] = 'https://www.example.nl/assets';
+        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config);
+        $this->assertEquals($req->route, '/assets');
+    }
+
+    /**
+     * @covers WASP\Http\Request::__construct
+     * @covers WASP\Http\Request::findVirtualHost
+     * @covers WASP\Http\Request::handleUnknownHost
+     */
+    public function testRoutingInvalidHostErrorPolicy()
+    {
+        $this->server['REQUEST_URI'] = 'https://www.example.nl/assets';
+        $this->config['site']['unknown_host_policy'] = 'ERROR';
+        $this->expectException(Error::class);
+        $this->expectExceptionCode(404);
+        $this->expectExceptionMessage('Not found');
+        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config);
+    }
+
+    /**
+     * @covers WASP\Http\Request::__construct
+     * @covers WASP\Http\Request::findVirtualHost
+     * @covers WASP\Http\Request::handleUnknownHost
+     */
+    public function testRoutingRedirectHost()
+    {
+        $this->server['REQUEST_URI'] = 'https://www.example.nl/assets';
+        $this->config['site'] = 
+            array(
+                'url' => array(
+                    'http://www.example.com',
+                    'http://www.example.nl'
+                ),
+                'language' => array('en'),
+                'redirect' => array(1 => 'http://www.example.com/')
+            );
+
+        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config);
+    }
+
+    /**
+     * @covers WASP\Http\Request::findBestMatching
+     * @covers WASP\Http\Request::handleUnknownHost
+     */
+    public function testNoSiteConfig()
+    {
+        $this->server['REQUEST_URI'] = 'https://www.example.nl/assets';
+        $this->config['site'] = array();
+
+        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config);
+        $this->assertEquals($this->get, $req->get->getAll());
     }
 
     /**

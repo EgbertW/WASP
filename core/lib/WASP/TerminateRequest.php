@@ -23,19 +23,12 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\Util;
+namespace WASP;
 
-use WASP\is_array_like;
-use WASP\Request;
-use WASP\Debug;
-use WASP\Http\RedirectRequest;
-
-class Redirection
-{
-    public static function redirect($url, $status_code = 302, $timeout = false)
-    {
-        throw new RedirectRequest($url, $status_code, $timeout);
-    }
-}
-
-?>
+/**
+ * TerminateRequest is an instruction that the current script wants to
+ * terminate the script. The constructor should provide a reason why
+ * the script should terminate.
+ */
+final class TerminateRequest extends \Exception
+{}

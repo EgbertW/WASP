@@ -31,15 +31,19 @@ class Site
 {
     private $vhosts = array();
     private $locales = array();
+    private $name = "default";
 
-    public function __construct(Dictionary $config = null)
+    public function __construct()
+    {}
+
+    public function setName(string $name)
     {
-        $this->setConfig($config);
+        $this->name = $name;
     }
 
-    public function setConfig(Dictionary $config)
+    public function getName()
     {
-        $hosts = ($config->has('domain', Dictionary::TYPE_ARRAY)) ? $config->get('domain') : array();
+        return $this->name;
     }
 
     public function addVirtualHost(VirtualHost $host)
@@ -107,5 +111,81 @@ class Site
             if ($vhost->matchLocale($locale))
                 return $vhost->URL($path);
         }
+    }
+
+    /**
+     * Set up the Site / VirtualHost structure based on the provided
+     * configuration.
+     *
+     * A Site is a collection of VirtualHosts that each provide a localized version
+     * of the same content. The VirtualHost in use determines the locale set in WASP.
+     * 
+     * WASP can serve multiple sites that contain different content. In absence of
+     * multi-site, multi-vhost information, a single site with a single virtual
+     * host is set up. 
+     *
+     * Vhosts can be set up to redirect to different addresses, or to define
+     * the language in use.
+     *
+     * A very basic structure is defined as follows:
+     *
+     * [site]
+     * url = "https://www.example.com"
+     * 
+     * This will result in one single vhost for one site. A redirect to www can
+     * be accomplished by using:
+     *
+     * [site]
+     * url[0] = "https://www.example.com"
+     * url[1] = "https://example.com"
+     * redirect[1] = "http://www.example.com"
+     *
+     * This will result in a single site with two vhosts, where one redirects to the other.
+     * 
+     * A multi-site system with language information could be:
+     *
+     * [site]
+     * url[0] = "https://www.example.com"
+     * site[0] = "default"
+     * url[1] = "https://example.com"
+     * site[1] = "default"
+     * redirect[1] = "https://www.example.com"
+     *
+     * url[2] = "https:://www.foobar.com"
+     * site[2] = "foobar"
+     * lang[2] = "en"
+     * url[3] = "https://www.foobar.de"
+     * site[3] = "foobar"
+     * lang[3] = "de"
+     * 
+     * This will result in two sites, default and foobar, each with two vhosts.
+     * For the default vhost, these are a www. and a non-www. version. The non-www version
+     * will redirect to the www. version.
+     *
+     * For foobar, there is a English and a German site, identified by
+     * different domains, foobar.com and foobar.de.
+     */
+    public static function setupSites(Dictionary $config)
+    {
+        $urls = $config->getSection('url'); 
+        $languages = $config->getSection('language');
+        $sitenames = $config->getSection('site');
+        $default_language = $config->get('default_language');
+        $sites = array();
+
+        foreach ($urls as $host_idx => $url)
+        {
+            $lang = isset($languages[$host_idx]) ? $languages[$host_idx] : $default_language;
+            $site = isset($sitenames[$host_idx]) ? $sitenames[$host_idx] : "default";
+
+            if (!isset($sites[$site]))
+                $sites[$site] = new Site($config);
+
+            $sites[$site]->addVirtualHost(
+                new VirtualHost($url, $lang)
+            );
+        }
+
+        return $sites;
     }
 }

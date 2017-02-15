@@ -32,6 +32,8 @@ use WASP\DB\DB;
 use WASP\Site;
 use WASP\Cache;
 use WASP\VirtualHost;
+use WASP\TerminateRequest;
+use WASP\RedirectRequest;
 
 /**
  * Request encapsulates a HTTP request, containing all data transferrred to the
@@ -160,7 +162,7 @@ class Request
 
         // Determine the proper VirtualHost
         $cfg = $this->config->getSection('site');
-        $this->sites = self::setupSites($cfg);
+        $this->sites = Site::setupSites($cfg);
         $vhost = self::findVirtualHost($this->url, $this->sites);
         if ($vhost === null)
         {
@@ -168,11 +170,20 @@ class Request
             
             // Handle according to the outcome
             if ($result === null)
-                throw new HttpErrror(404, "Not found: " . $url);
+            {
+                throw new Error(404, "Not found: " . $this->url);
+            }
             elseif ($result instanceof URL)
-                Util\Redirection::redirect($result);
+            {
+                throw new RedirectRequest($result, 301);
+            }
             elseif ($result instanceof VirtualHost)
+            {
                 $vhost = $result;
+                $site = $vhost->getSite();
+                if (isset($this->sites[$site->getName()]))
+                    $this->sites[$site->getName()] = $site;
+            }
             else
                 throw \RuntimeException("Unexpected response from handleUnknownWebsite");
         }
@@ -369,82 +380,6 @@ class Request
     }
 
     /**
-     * Set up the Site / VirtualHost structure based on the provided
-     * configuration.
-     *
-     * A Site is a collection of VirtualHosts that each provide a localized version
-     * of the same content. The VirtualHost in use determines the locale set in WASP.
-     * 
-     * WASP can serve multiple sites that contain different content. In absence of
-     * multi-site, multi-vhost information, a single site with a single virtual
-     * host is set up. 
-     *
-     * Vhosts can be set up to redirect to different addresses, or to define
-     * the language in use.
-     *
-     * A very basic structure is defined as follows:
-     *
-     * [site]
-     * url = "https://www.example.com"
-     * 
-     * This will result in one single vhost for one site. A redirect to www can
-     * be accomplished by using:
-     *
-     * [site]
-     * url[0] = "https://www.example.com"
-     * url[1] = "https://example.com"
-     * redirect[1] = "http://www.example.com"
-     *
-     * This will result in a single site with two vhosts, where one redirects to the other.
-     * 
-     * A multi-site system with language information could be:
-     *
-     * [site]
-     * url[0] = "https://www.example.com"
-     * site[0] = "default"
-     * url[1] = "https://example.com"
-     * site[1] = "default"
-     * redirect[1] = "https://www.example.com"
-     *
-     * url[2] = "https:://www.foobar.com"
-     * site[2] = "foobar"
-     * lang[2] = "en"
-     * url[3] = "https://www.foobar.de"
-     * site[3] = "foobar"
-     * lang[3] = "de"
-     * 
-     * This will result in two sites, default and foobar, each with two vhosts.
-     * For the default vhost, these are a www. and a non-www. version. The non-www version
-     * will redirect to the www. version.
-     *
-     * For foobar, there is a English and a German site, identified by
-     * different domains, foobar.com and foobar.de.
-     */
-    public static function setupSites(Dictionary $config)
-    {
-        $urls = $config->getSection('url'); 
-        $languages = $config->getSection('language');
-        $sitenames = $config->getSection('site');
-        $default_language = $config->get('default_language');
-        $sites = array();
-
-        foreach ($urls as $host_idx => $url)
-        {
-            $lang = isset($languages[$host_idx]) ? $languages[$host_idx] : $default_language;
-            $site = isset($sitenames[$host_idx]) ? $sitenames[$host_idx] : "default";
-
-            if (!isset($sites[$site]))
-                $sites[$site] = new Site($config);
-
-            $sites[$site]->addVirtualHost(
-                new VirtualHost($url, $lang)
-            );
-        }
-
-        return $sites;
-    }
-
-    /**
      * Find the VirtualHost matching the provided URL.
      * @param URL $url The URL to match
      * @param array $sites A list of Site objects from which the correct
@@ -493,7 +428,6 @@ class Request
             $redir = $best_matching->URL($url->getPath);
             return $redir;
         }
-
         // Generate a proper VirtualHost on the fly
         $url = new URL($url);
         $url->setPath('/')->set('query', null)->set('fragment', null);
@@ -503,7 +437,7 @@ class Request
         if ($best_matching === null)
         {
             // If no site has been defined, create a new one
-            $site = new Site("default");
+            $site = new Site();
             $site->addVirtualHost($vhost);
         }
         else
@@ -548,10 +482,19 @@ class Request
         }
         
         // Return the best match, or null if none was found.
-        if ($idx === null)
+        if ($best_idx === null)
             return null;
-        return $vhosts[$idx];
+        return $vhosts[$best_idx];
     }
+
+    /**
+     * @return boolean True when the script is run from CLI, false if run from webserver
+     */
+    public static function cli()
+    {
+        return PHP_SAPI === "cli";
+    }
+
 
     /**
      * @codeCoverageIgnore This will not do anything from CLI except for enabling error reporting
@@ -591,9 +534,41 @@ class Request
      */
     public static function handleException($exception)
     {
-        if (!headers_sent())
-            header("Content-type: text/plain");
+        // First set headers as configured in the request
+        $request = Request::current();
 
+        if (method_exists($exception, "getRequest"))
+        {
+            try
+            {
+                $r = $exception->getRequest();
+                if ($r instanceof Request)
+                    $request = $r;
+            }
+            catch (\Throwable $e)
+            {}
+        }
+
+        // Check if the exception is a RedirectRequest
+        if ($exception instanceof RedirectRequest)
+        {
+            $exception->execute();
+
+            // We'll get back here with a TerminateRequest
+            return;
+        }
+
+        $headers = Request::getHeaders();
+        if (!headers_sent())
+        {
+            foreach ($headers as $k => $v)
+                header($k . ": ". $v);    
+        }
+
+        if ($exception instanceof TerminateRequest)
+            die();
+
+        // Provide some feedback about other types of exceptions
         $tpl = "error/httperror";
         $code = 500;
         if ($exception instanceof \WASP\HttpError)
@@ -671,15 +646,6 @@ class Request
             die();
         }
     }
-
-    /**
-     * @return boolean True when the script is run from CLI, false if run from webserver
-     */
-    public static function cli()
-    {
-        return PHP_SAPI === "cli";
-    }
-
 }
 
 /**
