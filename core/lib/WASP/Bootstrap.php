@@ -88,6 +88,19 @@ class Bootstrap
         $logfile = Path::$VAR . '/log/wasp' . $test . '.log';
         $root_logger->addLogHandler(new FileWriter($logfile, LogLevel::DEBUG));
 
+        // Attach the error handler
+        Request::setErrorHandler();
+
+        // Load the configuration file
+        $config = Config::getConfig();
+
+        // Attach the dev logger when dev-mode is enabled
+        if ($config->get('site', 'dev'))
+        {
+            $devlogger = new Debug\DevLogger();
+            $root_logger->addLogHandler($devlogger);
+        }
+
         // Log beginning of request handling
         if (isset($_SERVER['REQUEST_URI']))
         {
@@ -98,11 +111,6 @@ class Bootstrap
             );
         }
 
-        // Attach the error handler
-        Request::setErrorHandler();
-
-        // Load the configuration file
-        $config = Config::getConfig();
 
         // Change settings for CLI
         if (Request::cli())
