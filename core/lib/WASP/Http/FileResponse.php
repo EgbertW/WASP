@@ -32,7 +32,7 @@ use WASP\Debug\LoggerAwareStaticTrait;
  * file using X-Send-File header, or by opening the file and passing the
  * contents.
  */
-class FileOutput extends Response
+class FileResponse extends Response
 {
     use LoggerAwareStaticTrait;
 
@@ -59,7 +59,9 @@ class FileOutput extends Response
     public function __construct(string $filename, string $output_filename = "", bool $download = false)
     {
         $this->filename = $filename;
-        $stats = fstat($this->filename);
+        $fh = fopen($this->filename, "r");
+        $stats = fstat($fh);
+        fclose($fh);
         $this->length = $stats['size'];
         if ($output_filename === null)
             $output_filename = basename($this->filename);
@@ -95,17 +97,20 @@ class FileOutput extends Response
      */
     public function getHeaders()
     {
-        $disposition = $this->download ? "inline" : "download";
-        $h = array(
-            'Content-Disposition' => . $disposition . '; filename=' . $this->output_filename
-        );
+        $h = array();
+
+        if ($this->download)
+        {
+            $disposition = $this->download ? "inline" : "download";
+            $h['Content-Disposition'] = $disposition . '; filename=' . $this->output_filename;
+        }
 
         if ($this->length)
             $h['Content-Length'] = $this->length;
 
         $request = $this->getRequest();
-        $config = $request->getConfig();
-        if ($this->xsendfile = $config->getBool('io', 'use_send_file'))
+        $config = $request->config;
+        if ($this->xsendfile = \WASP\parse_bool($config->get('io', 'use_send_file')))
             $h['X-Sendfile'] = $this->filename;
 
         return $h;
@@ -114,7 +119,7 @@ class FileOutput extends Response
     /**
      * Serve the file to the user
      */
-    public function output($mime)
+    public function output(string $mime)
     {
         // Nothing to output, the webserver will handle it
         if ($this->xsendfile)

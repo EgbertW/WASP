@@ -179,11 +179,12 @@ class Logger extends AbstractLogger
         $parts = explode("\n", $text);
         $indent = str_repeat(' ', $indent);
         foreach ($parts as $p)
-            fprintf($buf, "%s%s\n", $indent, $text);
+            fprintf($buf, "%s%s\n", $indent, $p);
     }
 
     public static function exceptionToString(Throwable $ex, $buf = null, $depth = 0)
     {
+        $buf_created = false;
         if ($buf === null)
         {
             $buf_created = true;
@@ -191,18 +192,19 @@ class Logger extends AbstractLogger
         }
 
         if ($depth >= 5)
-            sprintf($buf, "    ** Recursion limit reached at Exception of class " . get_class($ex) . " **\n");
+            fprintf($buf, "    ** Recursion limit reached at Exception of class " . get_class($ex) . " **\n");
 
-        sprintf($buf, "Exception: %s [%d] %s", get_class($ex), $ex->getCode, $ex->getMessage());
-        sprintf($buf, "In %s(%d)\n", $ex->getFile(), $ex->getLine());
-        self::printIndent($buf, $obj->getTraceAsString(), 4);
+        fprintf($buf, "Exception: %s [%d] %s\n", get_class($ex), $ex->getCode(), $ex->getMessage());
+        fprintf($buf, "In %s(%d)\n", $ex->getFile(), $ex->getLine());
+        self::printIndent($buf, $ex->getTraceAsString(), 4);
 
         $prev = $ex->getPrevious();
         if ($prev !== null)
         {
-            $str .=  "Caused by: \n";
-            $str .= self::$exceptionToString($ex, $depth + 1;
+            fprintf($buf, "\nCaused by: \n");
+            self::exceptionToString($prev, $buf, $depth + 1);
         }
+
 
         if ($buf_created)
         {
@@ -232,7 +234,7 @@ class Logger extends AbstractLogger
         $str = "";
         if ($obj instanceof Throwable)
         {
-            $str = self::expectionToString($obj);
+            $str = self::exceptionToString($obj);
         }
         else if (is_object($obj) && method_exists($obj, '__toString'))
         {
@@ -247,7 +249,10 @@ class Logger extends AbstractLogger
         }
 
         if ($html)
+        {
             $str = nl2br($str);
+            $str = str_replace('  ', '&nbsp;&nbsp;', $str);
+        }
 
         return $str;
     }

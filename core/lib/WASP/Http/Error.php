@@ -25,10 +25,18 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\Http;
 
-use Template;
+use WASP\is_array_like;
+use WASP\Template;
+use WASP\Dictionary;
+use WASP\Debug\Logger;
+use WASP\Debug\LoggerAwareStaticTrait;
+
+use Throwable;
 
 class Error extends Response
 {
+    use LoggerAwareStaticTrait;
+
     private static $nesting_counter = 0;
     private $user_message;
 
@@ -43,7 +51,7 @@ class Error extends Response
         return $this->user_message;
     }
 
-    public function getMime()
+    public function getMimeTypes()
     {
         return array_keys(DataResponse::$representation_types);
     }
@@ -60,17 +68,17 @@ class Error extends Response
             return $this->outputTemplate();
         
         $status = $this->getStatusCode();
-        $msg = isset(StatusCode::$CODES[$status]) ? StatusCode::$CODES[$status] = "Internal Server Error";
+        $msg = isset(StatusCode::$CODES[$status]) ? StatusCode::$CODES[$status] : "Internal Server Error";
         $data = array(
             'message' => $msg,
             'status_code' => $this->getStatusCode(),
             'exception' => $this,
-            'cause' => $this->getPrevious(),
             'status' => $this->getStatusCode(),
+            'chain' => array()
         );
-        $data = new Dictionary($data);
 
-        $wrapped = new Http\DataResponse($data);
+        $dict = new Dictionary($data);
+        $wrapped = new DataResponse($dict);
         $wrapped->output($mime);
     }
 
@@ -80,16 +88,70 @@ class Error extends Response
         if ($exception === null)
             $exception = $this;
 
-        $template = new Template(Template::findExceptionTemplate($exception));
-        $template->assign('exception', $exception);
-
         try
         {
+            $template = Template::findExceptionTemplate($exception);
+            $template->assign('exception', $exception);
             $template->render();
         }
         catch (Response $e)
         {
-            $e->output();
+            $e->output("text/html");
+        }
+        catch (Throwable $e)
+        {
+            self::$logger->emergency("Could not render error template, using fallback writer!");
+            self::fallbackWriter($exception, "text/html");
+        }
+    }
+
+    public static function fallbackWriter($output, $mime = "text/plain")
+    {
+        $html = $mime === 'text/html';
+        if ($html)
+            echo "<!doctype html><html><head><title>Error</title></head><body>";
+
+        self::outputPlainText($output, 0, $html);
+
+        if ($html)
+            echo "</body></html>\n";
+
+    }
+
+    public static function outputPlainText($data, int $indent, bool $html)
+    {
+        if (!\WASP\is_array_like($data))
+        {
+            printf("%s\n", Logger::str($data, $html));
+            return;
+        }
+
+        if ($html)
+        {
+            $indentstr = str_repeat('&nbsp;', $indent);
+            $nl = "<br>\n";
+        }
+        else 
+        {
+            $indentstr = str_repeat(' ', $indent);
+            $nl = "\n";
+        }
+        foreach ($data as $key => $value)
+        {
+            if (\WASP\is_array_like($value))
+            {
+                printf("%s%s = {%s", $indentstr, $key, $nl);
+                self::outputPlainText($value, $indent + 4, $html);
+                printf("%s}%s", $indentstr, $nl);
+            }
+            else
+            {
+                printf("%s%s = %s%s", str_repeat(' ', $indent), $key, Logger::str($value, $html), $nl);
+            }
         }
     }
 }
+
+// @codeCoverageIgnoreStart
+Error::setLogger();
+// @codeCoverageIgnoreEnd

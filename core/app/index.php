@@ -24,9 +24,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 use WASP\Template;
+use WASP\Http\Error as HttpError;
 
 if ($url_args->count())
-    throw new WASP\HttpError(404, "The page " . WASP\Request::$uri . " could not be found");
+    throw new HttpError(404, "The page " . $request->url . " could not be found");
 
 $tpl = new WASP\Template('index');
 $tpl->render();

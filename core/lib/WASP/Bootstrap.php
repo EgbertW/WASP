@@ -89,7 +89,7 @@ class Bootstrap
         $root_logger->addLogHandler(new FileWriter($logfile, LogLevel::DEBUG));
 
         // Attach the error handler
-        Request::setErrorHandler();
+        OutputHandler::setErrorHandler();
 
         // Load the configuration file
         $config = Config::getConfig();
@@ -97,7 +97,7 @@ class Bootstrap
         // Attach the dev logger when dev-mode is enabled
         if ($config->get('site', 'dev'))
         {
-            $devlogger = new Debug\DevLogger();
+            $devlogger = new Debug\DevLogger(LogLevel::DEBUG);
             $root_logger->addLogHandler($devlogger);
         }
 
@@ -119,6 +119,9 @@ class Bootstrap
             ini_set('memory_limit', $limit . 'M');
             ini_set('max_execution_time', 0);
         }
+
+        // Make sure xdebug does not overload var_dump
+        ini_set('xdebug.overload_var_dump', 'off');
 
         // Save the cache if configured so
         Cache::setHook($config);

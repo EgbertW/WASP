@@ -58,7 +58,7 @@ class DevLogger implements LogWriterInterface
      * @param string $message The message
      * @param array $context The variables to fill in the message
      */
-    public function write(string $level, $message, array $context);
+    public function write(string $level, $message, array $context)
     {
         $level = Logger::getLevelNumeric($level);
         if ($level < $this->min_level)
@@ -86,8 +86,9 @@ class DevLogger implements LogWriterInterface
      */
     public function executeHook(Request $request, Response $response)
     {
-        $now = new \DateTime();
-        $duration = $now->diff($request->getStart());
+        $now = microtime(true);
+        $start = $request->getStart();
+        $duration = round($now - $start, 3);
 
         if ($response instanceof DataResponse)
             $response->getDictionary()->set('devlog', $this->log);
@@ -98,7 +99,7 @@ class DevLogger implements LogWriterInterface
             $buf = fopen('php://memory', 'rw');
             if ($mime === 'text/html')
             {
-                fprintf($buf, "<!-- Executed in: %s -->\n", Log::str($duration));
+                fprintf($buf, "<!-- Executed in: %s s -->\n", $duration);
                 fprintf($buf, "<!-- App executed: %s -->\n", $request->route);
                 foreach ($this->log as $no => $line)
                     fprintf($buf, "<!-- %05d: %s -->\n", $no, htmlentities($line));

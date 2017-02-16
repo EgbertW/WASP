@@ -23,7 +23,12 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-$path = implode("/", WASP\Request::$url_args->getAll());
+use WASP\Http\Request;
+use WASP\Http\Error as HttpError;
+use WASP\Autoload\Resolve;
+use WASP\Http\FileResponse;
+
+$path = implode("/", $request->url_args->getAll());
 
 $qpos = strpos($path, "?");
 $query = null;
@@ -55,7 +60,7 @@ $ext = null;
 if ($extpos !== false)
     $ext = strtolower(substr($path, $extpos + 1));
 
-$full_path = WASP\File\Resolve::asset($path);
+$full_path = Resolve::asset($path);
 
 if ($path)
 {
@@ -66,10 +71,9 @@ if ($path)
     else
         $mime = mime_content_type($full_path);
 
-    header("Content-type: " . $mime);
-    $h = fopen($full_path, "r");
-    fpassthru($h);
-    fclose($h);
-    die();
+    $response = new FileResponse($full_path);
+    $response->addMimeType($mime);
+    throw $response;
 }
-throw new WASP\HttpError(404, "File {$path} could not be found!");
+
+throw new HttpError(404, "File {$path} could not be found!");

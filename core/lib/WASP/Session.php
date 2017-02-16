@@ -28,6 +28,7 @@ namespace WASP;
 use DateTime;
 use DateInterval;
 use WASP\Http\Request;
+use WASP\Http\Cookie;
 use WASP\Http\Error as HttpError;
 
 class Session extends Dictionary
@@ -68,7 +69,7 @@ class Session extends Dictionary
         $lifetime = new DateInterval('P' . $lifetime);
 
         // Determine the correct expiry date
-        $now = new DateInterval();
+        $now = new DateTime();
         $expire = $now->add($lifetime);
 
         // Store the amount of seconds
@@ -228,7 +229,7 @@ class Session extends Dictionary
             $start = new DateTime('@' . $start);
             $now = new DateTime();
             $elapsed = $now->diff($start);
-            $interval = new DateInterval('P5D')
+            $interval = new DateInterval('P5D');
             if (Date::moreThan($elaped, $interval))
                 $this->resetID();
         }
@@ -257,7 +258,7 @@ class Session extends Dictionary
             session_start();
             ini_set('session.use_strict_mode', 1);
             $this->values = &$_SESSION;
-            unset($this['session_mgmt'][['destroyed'])
+            unset($this['session_mgmt']['destroyed']);
             if ($auth)
                 $this['authentication'] = $auth;
 

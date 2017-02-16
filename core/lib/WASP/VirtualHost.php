@@ -103,8 +103,13 @@ class VirtualHost
     public function getPath($url)
     {
         $url = new URL($url);
-        $path = '/' . str_replace($this->url->path, '', $url->path);
+        $to_replace = $this->url->path;
+        $path = $url->path;
 
+        if (strpos($path, $to_replace) === 0)
+            $path = substr($path, strlen($to_replace));
+
+        $path = '/' . $path;
         return $path; 
     }
 

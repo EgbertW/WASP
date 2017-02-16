@@ -188,9 +188,9 @@ class Cache
     public function clear()
     {
         $data = self::$repository[$this->cache_name]->getAll();
-        $keys = array_keys($data)
+        $keys = array_keys($data);
         foreach ($keys as $key)
-            unset($data[$key];
+            unset($data[$key]);
 
         $data['_changed'] = true;
         $data['_timestamp'] = time();

@@ -53,14 +53,16 @@ class StringResponse extends Response
      */
     public function set($output, $mime = "text/html")
     {
-        if (!is_string($output) && !is_callable($output) 
+        if (
+            !is_string($output) && !is_callable($output) 
+            && !(is_object($output) && method_exists($output, '__toString'))
+        )
         {
-            && !(is_object($output) && method_exists($output, '__toString')))
             throw new \InvalidArgumentException(
                 "Output must be text, string-castable object or valid callback"
             );
         }
-        $this->addMime($mime);
+        $this->addMimeType($mime);
         $this->output[$mime] = $output;
         return $this;
     }
@@ -108,7 +110,7 @@ class StringResponse extends Response
         if (empty($output))
             $output = "Unknown mime type requested";
 
-        fprintf(STDOUT, $output);
+        echo $output;
         return $this;
     }
 }

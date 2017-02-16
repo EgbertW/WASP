@@ -250,6 +250,5 @@ final class RequestTest extends TestCase
         $c = ob_get_contents();
         ob_end_clean();
 
-        //var_dump($c);
     }
 }

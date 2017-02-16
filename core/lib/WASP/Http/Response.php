@@ -107,5 +107,5 @@ abstract class Response extends \Exception
      * by the ResponseBuilder, and all output buffering will have been
      * disabled. Headers will have been sent, just send the output.
      */
-    abstract public function output($mime);
+    abstract public function output(string $mime);
 }

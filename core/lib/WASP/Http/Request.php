@@ -33,9 +33,12 @@ use WASP\VirtualHost;
 use WASP\Cache;
 use WASP\TerminateRequest;
 use WASP\RedirectRequest;
+use WASP\Config;
+use WASP\Session;
+use WASP\AppRunner;
 
-use WASP\Http\Cookie;
 use Throwable;
+use DateTime;
 
 /**
  * Request encapsulates a HTTP request, containing all data transferrred to the
@@ -135,6 +138,13 @@ class Request
     /** The response builder */
     private $response_builder = null;
 
+    private static function autoConstruct()
+    {
+        if (self::$current_request)
+            return self::$current_request;
+        $cfg = Config::getConfig();
+        new Request($_GET, $_POST, $_COOKIE, $_SERVER, $cfg, new DateTime());
+    }
 
     /*** 
      * Create the request based on the request data provided by webserver and client
@@ -145,9 +155,8 @@ class Request
      * @param array $server The SERVER parameters
      * @param Dictionary $config The site configuration
      */
-    public function __construct(array &$get, array &$post, array &$cookie, array &$server, Dictionary $config, DateTime $start = new DateTime())
+    public function __construct(array &$get, array &$post, array &$cookie, array &$server, Dictionary $config)
     {
-        $this->start = $start;
         $this->get = new Dictionary($get);
         $this->post = new Dictionary($post);
         $this->cookie = new Dictionary($cookie);
@@ -156,9 +165,14 @@ class Request
 
         self::$current_request = $this;
         $this->response_builder = new ResponseBuilder($this);
-
         $this->method = $this->server->get('REQUEST_METHOD');
-        $this->url = new URL($this->server->get('REQUEST_URI'));
+        $this->start = $this->server->dget('REQUEST_TIME_FLOAT', time());
+
+        $url = $this->server->get('REQUEST_SCHEME') . '://'
+            . $this->server->get('SERVER_NAME')
+            . $this->server->get('REQUEST_URI');
+
+        $this->url = new URL($url);
         $this->ajax = 
             $this->server->get('HTTP_X_REQUESTED_WITH') === 'xmlhttprequest' ||
             $this->get->has('ajax') || 
@@ -202,6 +216,7 @@ class Request
 
         // Resolve the application to start
         $path = $this->vhost->getPath($this->url);
+        self::$logger->info("URL: {0}", [$path]);
         $resolved = Resolve::app($path);
         if ($resolved !== null)
         {
@@ -319,10 +334,11 @@ class Request
         $type = $this->getBestResponseType($types);
         
         if (!headers_sent())
+        {
             // @codeCoverageIgnoreStart
             header("Content-type: " . $type);
             // @codeCoverageIgnoreEnd
-        echo $available[$type];
+        }
     }
 
     /**
@@ -378,6 +394,9 @@ class Request
      */
     public static function current()
     {
+        if (self::$current_request === null)
+            return self::autoConstruct();
+
         return self::$current_request;
     }
 

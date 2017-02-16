@@ -56,13 +56,14 @@ class DataResponse extends Response
         return $this->dictionary;
     }
 
-    public function getMime()
+    public function getMimeTypes()
     {
         return array_keys(self::$representation_types);
     }
 
-    public function output($mime)
+    public function output(string $mime)
     {
+        $type = isset($representation_types[$mime]) ? $representation_types[$mime] : "HTML";
         $classname = "WASP\\DataWriter\\" . $type . "Writer";
 
         $config = $this->getRequest()->config;
@@ -76,33 +77,14 @@ class DataResponse extends Response
                 $writer = new $classname($pprint);
                 $output = $writer->write($data);
             }
+            else
+                Error::fallbackWriter($this->dictionary);
         }
-        catch (Throwable $e);
+        catch (Throwable $e)
         {
             // Bad. Attempt to override response type if still possible
             self::$logger->critical('Could not output data, exception occured while writing: {0}', [$e]);
-            if (!headers_sent())
-                header('Content-Type', 'text/plain');
-            // Output as plain text
-            self::outputDictionary($this->dictionary);
-        }
-    }
-
-    public static function outputDictonary(Dictionary $dict, $indent = 0)
-    {
-        $indentstr = str_repeat(' ', $indent);
-        foreach ($this->dictionary as $key => $value)
-        {
-            if ($value instanceof Dictionary)
-            {
-                fprintf(STDOUT, "%s%s = {\n", $indentstr, $key);
-                self::outputDictionary($value, $indent + 4);
-                fprintf(STDOUT, "}\n", $indentstr, $key);
-            }
-            else
-            {
-                fprintf(STDOUT, "%s%s = %s\n", str_repeat(' ', $indent), $key, Logger::str($value));
-            }
+            Error::fallbackWriter($this->dictionary);
         }
     }
 }

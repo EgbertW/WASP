@@ -374,7 +374,9 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
 
     public function rewind()
     {
-        $this->keys = array_keys($this->values);    
+        if (!is_array($this->values))
+            var_dump($this->values);
+        $this->keys = array_keys($this->values);
         $this->iterator = 0;
     }
 
@@ -589,5 +591,6 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
 }
 
 // @codeCoverageIgnoreStart
+Functions::load();
 Dictionary::setLogger();
 // @codeCoverageIgnoreEnd

@@ -28,7 +28,7 @@ require "../bootstrap/init.php";
 
 // Dispatch the request
 $config = WASP\Config::getConfig();
-$request = new WASP\Request($_SERVER, $_GET, $_POST, $_COOKIE, $_SERVER, $config);
+$request = new WASP\Http\Request($_GET, $_POST, $_COOKIE, $_SERVER, $config);
 $request->dispatch();
 
 die();

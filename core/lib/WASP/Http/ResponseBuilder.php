@@ -57,17 +57,18 @@ class ResponseBuilder
      */
     public function __construct(Request $request)
     {
-        $this->request = null;
+        $this->request = $request;
     }
 
     /**
      * Set the response object
      *
-     * @param Response $output The final response
+     * @param Response $response The final response
      */
-    public function setResponse(Response $output)
+    public function setResponse(Response $response)
     {
-        $this->output = $output;
+        $this->response = $response;
+        $response->setRequest($this->request);
         return $this;
     }
 
@@ -131,14 +132,19 @@ class ResponseBuilder
      */
     public function endAllOutputBuffers()
     {
+        $ob_cnt = 0;
         while (ob_get_level())
         {
+            ++$ob_cnt;
             $contents = ob_get_contents();
             ob_end_clean();
         
             $lines = explode("\n", $contents);
-            foreach ($lines as $line)
-                $this->logger->debug("Script output: {0}", $line);
+            foreach ($lines as $n => $line)
+            {
+                if (!empty($line))
+                    self::$logger->debug("Script output: {0}/{1}: {2}", [$ob_cnt, $n + 1, $line]);
+            }
         }
     }
     
@@ -177,9 +183,12 @@ class ResponseBuilder
             $this->setHeader($key, $value);
 
         // Add Content-Type mime header
-        $mime = $response->getMime();
+        $mime = $this->response->getMimeTypes();
         if (empty($mime))
             $mime = Request::cli() ? "text/plain" : "text/html";
+        elseif (is_array($mime))
+            $mime = $this->request->getBestResponseType($mime);
+
         $this->setHeader('Content-Type', $mime);
 
         // Set headers
@@ -201,14 +210,14 @@ class ResponseBuilder
         }
 
         // Perform output
-        $this->response->output();
+        $this->response->output($mime);
 
         // We're done
-        $this->logger->info("** Finished processing request to {0}", $this->request->url);
+        self::$logger->info("** Finished processing request to {0}", [$this->request->url]);
         die();
     }
 }
 
 // @codeCoverageIgnoreStart
-Request::setLogger();
+ResponseBuilder::setLogger();
 // @codeCoverageIgnoreEnd

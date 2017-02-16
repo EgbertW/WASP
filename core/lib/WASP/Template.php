@@ -37,8 +37,6 @@ namespace WASP
     {
         use LoggerAwareStaticTrait;
 
-        protected static $log = null;
-
         private $arguments = array();
         public $dir;
         public $path;
@@ -51,10 +49,10 @@ namespace WASP
 
         public function __construct($name)
         {
-            if (self::$log === null)
-                self::$log = Debug\Logger::getLogger("WASP.Template");
-
-            $tpl = Resolve::template($name);
+            if (file_exists($name))
+                $tpl = $name;
+            else
+                $tpl = Resolve::template($name);
             
             $this->path = $tpl;
             $this->dir = dirname($tpl);
@@ -86,7 +84,7 @@ namespace WASP
                 if ($result instanceof Throwable)
                     throw new HttpError(500, "Did not get a proper response", $result);
                 else
-                    throw new HttpError(500, "Did not get any proper response"))));
+                    throw new HttpError(500, "Did not get any proper response");
 
             throw $result;
         }
@@ -112,18 +110,18 @@ namespace WASP
             catch (Response $e)
             {
                 $response->setMime($this->mime);
-                self::$log->debug("*** Finished processing {0} request to {1} with {2}", [Request::$method, Request::$uri, get_class($e)]);
+                self::$logger->debug("*** Finished processing {0} request to {1} with {2}", [Request::$method, Request::$uri, get_class($e)]);
                 return $e; 
             }
             catch (TerminateRequest $e)
             {
-                self::$log->debug("*** Finished processing {0} request to {1} with terminate request", [Request::$method, Request::$uri]);
+                self::$logger->debug("*** Finished processing {0} request to {1} with terminate request", [Request::$method, Request::$uri]);
                 return $e;
             }
             catch (Throwable $e)
             {
-                self::$log->debug("*** Finished processing {0} request to {1}", [Request::$method, Request::$uri]);
-                return new HttpError(500, "Template threw exception", $e);
+                self::$logger->debug("*** Finished processing {0} request to {1}", [$request->method, $request->url]);
+                return new HttpError(500, "Template threw exception", "", $e);
             }
         }
 
@@ -211,8 +209,8 @@ namespace WASP
                 self::$logger->info("Production js path: {0}", [$prodpath]);
                 $dev_file = Resolve::asset($devpath);
                 $prod_file = Resolve::asset($prodpath);
-                self::$log->info("Development js file: {0}", [$dev_file]);
-                self::$log->info("Production js file: {0}", [$prod_file]);
+                self::$logger->info("Development js file: {0}", [$dev_file]);
+                self::$logger->info("Production js file: {0}", [$prod_file]);
 
                 if ($dev && $dev_file)
                     $list[] = "/assets/" .$devpath;
@@ -221,7 +219,7 @@ namespace WASP
                 elseif ($dev_file)
                     $list[] = "/assets/" . $devpath;
                 else
-                    self::$log->error("Requested javascript {} could not be resolved", $l);
+                    self::$logger->error("Requested javascript {} could not be resolved", $l);
             }
             return $list;
         }
@@ -247,34 +245,40 @@ namespace WASP
                 elseif ($dev_file)
                     $list[] = "/assets/" . $devpath;
                 else
-                    self::$log->error("Requested stylesheet {} could not be resolved", $l);
+                    self::$logger->error("Requested stylesheet {} could not be resolved", $l);
             }
             return $list;
         }
-    }
 
-    public function findExceptionTemplate(Throwable $exception)
-    {
-        $class = get_class($exception);
-        $code = $exception->getCode();
-
-        $resolved = null;
-        while ($class)
+        public static function findExceptionTemplate(Throwable $exception)
         {
-            $path = 'error/' . str_replace('\\', '/', $class);
+            $class = get_class($exception);
+            $code = $exception->getCode();
 
-            $resolved = Resolve::template($path . $code);
-            if ($resolved)
-                break;
+            $resolved = null;
+            while ($class)
+            {
+                $path = 'error/' . str_replace('\\', '/', $class);
 
-            $resolved = Resolve::template($path);
-            if ($resolved)
-                break;
+                if (!empty($code))
+                {
+                    $resolved = Resolve::template($path . $code);
+                    if ($resolved)
+                        break;
+                }
 
-            $class = get_parent_class($class);
+                $resolved = Resolve::template($path);
+                if ($resolved)
+                    break;
+
+                $class = get_parent_class($class);
+            }
+
+            if (!$resolved)
+                throw new \RuntimeException("Could not find any matching template for " . get_class($exception));
+            
+            return $resolved ? new Template($resolved) : null;
         }
-        
-        return $resolved
     }
 
 

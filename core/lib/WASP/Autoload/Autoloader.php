@@ -187,7 +187,11 @@ final class Autoloader
         // Perform some logging when the logger is available
         if (self::$logger)
         {
-            if (class_exists($class_name))
+            if (trait_exists($class_name))
+                self::$logger->info("Loaded trait {0} from path {1}", [$class_name, $path]);
+            elseif (interface_exists($class_name))
+                self::$logger->info("Loaded interface {0} from path {1}", [$class_name, $path]);
+            elseif (class_exists($class_name))
                 self::$logger->info("Loaded class {0} from path {1}", [$class_name, $path]);
             else
                 self::$logger->error("File {0} does not contain class {1}", [$path, $class_name]);

@@ -29,7 +29,8 @@ use Throwable;
 use WASP\Http\Request;
 use WASP\Http\Response;
 use WASP\Http\StringResponse;
-use WASP\Debug\Logger
+use WASP\Http\Error as HttpError;
+use WASP\Debug\Logger;
 use WASP\Debug\LoggerAwareStaticTrait;
 
 class OutputHandler
@@ -60,8 +61,8 @@ class OutputHandler
         // We're processing a HTTP request, so we want to catch all errors and exceptions.
         // The applications and templates will send their output by throwing a WASP/Http/Response
         // object, so we need to catch that.
-        set_exception_handler(array("WASP\\Request", "handleException"));
-        set_error_handler(array("WASP\\Request", "handleError"), E_ALL | E_STRICT);
+        set_exception_handler(array("WASP\\OutputHandler", "handleException"));
+        set_error_handler(array("WASP\\OutputHandler", "handleError"), E_ALL | E_STRICT);
     }
 
     /**
@@ -100,7 +101,14 @@ class OutputHandler
             {}
         }
 
-        if ($exception instanceof Http\Response)
+        if ($request === null)
+        {
+            header('Content-Type: text/plain');
+            echo Logger::str($exception);
+            die();
+        }
+
+        if ($exception instanceof Response)
         {
             self::handleResponse($request, $exception);
         }
@@ -110,22 +118,33 @@ class OutputHandler
             die();
         }
         else
-            $this->handleOtherException($request, $exception);
+        {
+            self::handleOtherException($request, $exception);
+        }
     }
 
-    private function handleOtherException(Request $request, Throwable $exception)
+    private static function handleOtherException(Request $request, Throwable $exception)
     {
-        self::$logger->error("Exception: {0}", Logger::Str($exception));
-        self::$logger->error("*** [{0}] Failed processing {1} request to {2}", [$code, self::$method, self::$url]);
+        $request = Request::current();
+        self::$logger->error("Exception: {exception}", ["exception" => $exception]);
+        self::$logger->error(
+            "*** [{0}] Failed processing {1} request to {2}",
+            [$exception->getCode(), $request->method, $request->url]
+        );
 
         // Wrap the error in a HTTP Error 500
-        $exception = new HttpError(500, "An error occured", $user_message = "", $exception);
-        $this->handleResponse($request, $exception);
+        $wrapped = new HttpError(500, "An error occured", $user_message = "", $exception);
+        self::handleResponse($request, $wrapped);
     }
 
-    private function handleResponse(Request $request, Response $response)
+    private static function handleResponse(Request $request, Response $response)
     {
         $responseBuilder = $request->getResponseBuilder();
         $responseBuilder->setResponse($response);
+        $responseBuilder->respond();
     }
 }
+
+// @codeCoverageIgnoreStart
+OutputHandler::setLogger();
+// @codeCoverageIgnoreEnd

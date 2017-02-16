@@ -25,6 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP;
 
+use WASP\DB\DB;
 use WASP\Debug\LoggerAwareStaticTrait;
 use WASP\Http\Request;
 use WASP\Http\Response;
@@ -40,6 +41,9 @@ class AppRunner
 {
     use LoggerAwareStaticTrait;
 
+    /** The request being handled */
+    private $request;
+
     /** The application to execute */
     private $app;
 
@@ -51,6 +55,7 @@ class AppRunner
     public function __construct(Request $request, string $app)
     {
         $this->app = $app;
+        $this->request = $request;
     }
 
     /**
@@ -72,30 +77,30 @@ class AppRunner
         }
         catch (HttpError $response)
         {
-            self::logger->info("While executing controller: {0}", [$this->app]);
-            self::logger->notice(
+            self::$logger->info("While executing controller: {0}", [$this->app]);
+            self::$logger->notice(
                 "Failed request ended in {0} - URL: {1}", 
-                [$response->getCode(), $this->url]
+                [$response->getCode(), $this->request->url]
             );
             throw $response;
         }
         catch (Response $response)
         {
-            self::logger->info("While executing controller: {0}", [$this->app]);
-            self::logger->info(
+            self::$logger->info("While executing controller: {0}", [$this->app]);
+            self::$logger->info(
                 "Request handled succesfully, status code {0} - URL: {1}",
-                [$response->getCode(), $this->url]
+                [$response->getCode(), $this->request->url]
             );
             throw $response;
         }
         catch (Throwable $e)
         {
-            self::logger->info("While executing controller: {0}", [$this->app]);
-            self::logger->notice(
+            self::$logger->info("While executing controller: {0}", [$this->app]);
+            self::$logger->notice(
                 "Unexpected exception of type {0} thrown while processing request to URL: {1}", 
-                [get_class($e), $this->url]
+                [get_class($e), $this->request->url]
             );
-            throw $response;
+            throw $e;
         }
     }
 
