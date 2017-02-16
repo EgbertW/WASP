@@ -25,9 +25,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP
 {
+    use Throwable;
     use WASP\Autoload\Resolve;
     use WASP\Debug\LoggerAwareStaticTrait;
+    use WASP\Http\Request;
     use WASP\Http\Error as HttpError;
+    use WASP\Http\Response;
+    use WASP\Http\StringResponse;
 
     class Template
     {
@@ -77,31 +81,50 @@ namespace WASP
 
         public function render()
         {
+            $result = $this->renderInternal();
+            if (!$result instanceof Response)
+                if ($result instanceof Throwable)
+                    throw new HttpError(500, "Did not get a proper response", $result);
+                else
+                    throw new HttpError(500, "Did not get any proper response"))));
+
+            throw $result;
+        }
+
+        private function renderInternal()
+        {
             extract($this->arguments);
-            $language = Request::current()->language;
+            $request = Request::current();
+            $language = $request->language;
             $config = Config::getConfig('main', true);
-            $dev = $config === null ? true : $config->get('site', 'dev');
-            $cli = array_key_exists('argv', $_SERVER);
+            $dev = $config === null ? false : $config->get('site', 'dev');
+            $cli = Request::CLI();
 
-            ob_start();
-            include $this->path;
-            $output = ob_get_contents();
-            ob_end_clean();
-
-            $request = Http\Request::current();
-            if ($this->mime !== null)
+            try
             {
-                $request->setHeader('Content-Type', $this->mime);
-                $request->sendHeaders();
-                echo $output;
+                ob_start();
+                include $this->path;
+                $output = ob_get_contents();
+                ob_end_clean();
+                $response = new StringResponse($output);
+                return $response;
             }
-            else
+            catch (Response $e)
             {
-                throw new HttpError(400, "No supported response type requested");
+                $response->setMime($this->mime);
+                self::$log->debug("*** Finished processing {0} request to {1} with {2}", [Request::$method, Request::$uri, get_class($e)]);
+                return $e; 
             }
-
-            self::$log->debug("WASP.Template", "*** Finished processing {} request to {}", Request::$method, Request::$uri);
-            exit();
+            catch (TerminateRequest $e)
+            {
+                self::$log->debug("*** Finished processing {0} request to {1} with terminate request", [Request::$method, Request::$uri]);
+                return $e;
+            }
+            catch (Throwable $e)
+            {
+                self::$log->debug("*** Finished processing {0} request to {1}", [Request::$method, Request::$uri]);
+                return new HttpError(500, "Template threw exception", $e);
+            }
         }
 
         public function wantJSON()
@@ -145,46 +168,6 @@ namespace WASP
             $this->want($best, $charset);
 
             return $best;
-        }
-
-        public function writeJSON(array $data)
-        {
-            WASP\JSON::init();
-            WASP\JSON::add($data);
-            WASP\JSON::output();
-        }
-
-        public function writeXML(array $data, $root = "Response")
-        {
-            $writer = \XMLWriter::openMemory();
-            $writer->startDocument();
-
-            $this->startElement($root);
-            $this->writeXMLRecursive($writer, $data);
-            $this->endElement();
-            
-            $writer->endDocument();
-            $writer->outputMemory();
-        }
-
-        public function writeXMLRecursive(\XMLWriter $writer, $data)
-        {
-            foreach ($data as $key => $value)
-            {
-                if (substr($key, 0, 1) == "_")
-                {
-                    $writer->writeAttribute(substr($key, 1), (string)$value); 
-                }
-                else
-                {
-                    $writer->startElement($key);
-                    if (is_array($value))
-                        $this->writeXMLRecursive($writer, $value);
-                    else
-                        $this->text(Debug\Logger::str($value));
-                    $writer->endElement();
-                }
-            }
         }
 
         public function setLanguageOrder()
@@ -269,6 +252,31 @@ namespace WASP
             return $list;
         }
     }
+
+    public function findExceptionTemplate(Throwable $exception)
+    {
+        $class = get_class($exception);
+        $code = $exception->getCode();
+
+        $resolved = null;
+        while ($class)
+        {
+            $path = 'error/' . str_replace('\\', '/', $class);
+
+            $resolved = Resolve::template($path . $code);
+            if ($resolved)
+                break;
+
+            $resolved = Resolve::template($path);
+            if ($resolved)
+                break;
+
+            $class = get_parent_class($class);
+        }
+        
+        return $resolved
+    }
+
 
     // @codeCoverageIgnoreStart
     Template::setLogger();

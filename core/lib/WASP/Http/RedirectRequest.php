@@ -31,11 +31,10 @@ use WASP\TerminateRequest;
 /**
  * Provides a way to generate interceptable and testable redirects
  */
-final class RedirectRequest extends \Exception
+class RedirectRequest extends Response
 {
     private $url = $url;
     private $timeout;
-    private $request = null;
 
     /**
      * Create a new Redirect request.
@@ -43,14 +42,15 @@ final class RedirectRequest extends \Exception
      * @param int $status_code A suggestion for the HTTP status code. By
      *                         default 307: temporary redirect.
      * @param int $timeout The amount of seconds to wait before performing the redirect
+     * @param Throwable $previous A chained exception. Can be null
      */
-    public function __construct(URL $url, int $status_code = 302, int $timeout = 0)
+    public function __construct(URL $url, int $status_code = 302, int $timeout = 0, $previous = null)
     {
         // 3XX are only valid redirect status codes
         if ($status_code < 300 || $status_code > 399)
             throw new \RuntimeException("A redirect should have a 3XX status code, not: " . $status_code);
 
-        parent::__construct("Redirect request to: " . $url, $status_code);
+        parent::__construct("Redirect request to: " . $url, $status_code, $previous);
         $this->timeout = $timeout;
     }
 
@@ -66,6 +66,17 @@ final class RedirectRequest extends \Exception
     }
 
     /**
+     * Set the URL to redirect to
+     * @param URL $url The target URL
+     * @return WASP\Http\RedirectRequest Provides fluent interface
+     */
+    public function setURL(URL $url)
+    {
+        $this->url = $url;
+        return $this;
+    }
+
+    /**
      * Return the URL to where the redirect points
      * @return URL The URL
      */
@@ -75,27 +86,26 @@ final class RedirectRequest extends \Exception
     }
 
     /**
-     * Return the status code suggested for the redirect
-     * @return int The status code
+     * Return the redirection headers
      */
-    public function getStatusCode()
+    public function getHeaders()
     {
-        return $this->getCode();
+        $h = array();
+        if (!empty(this->timeout))
+            $h['Refresh'] = $timeout . '; url=' . $this->url;
+        else
+            $h['Location'] = (string)$this->url;
+        return $h;
     }
 
     /**
-     * Perform the redirect by setting the header
+     * The redirect itself produces no output, but if a previous / chained
+     * Response is available, output may be generated.
      */
-    public function execute($terminate = true)
+    public function output()
     {
-        $req = $this->request === null ? Request::current() : $this->request;
-        $req->setHttpResponseCode($this->status_code);
-        if ($this->timeout)
-            $req->setHeader('Refresh', $timeout . '; url=' . $this->url);
-        else
-            $req->setHeader('Location', $this->url);
-
-        if ($terminate)
-            throw new TerminateRequest('Terminating after redirect');
+        $prev = $this->getPrevious();
+        if ($prev instanceof Response)
+            $prev->output();
     }
 }

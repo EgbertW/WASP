@@ -28,71 +28,154 @@ namespace WASP\Http;
 use DateTime;
 use DateInterval;
 
+/**
+ * A representation of a HTTP cookie, to be set in the response
+ */
 class Cookie
 {
+    /** The name of the cookie */
     private $name;
+
+    /** The value of the cookie */
     private $value;
-    private $expiry;
+
+    /** When the cookie expires */
+    private $expires;
+
+    /** The domain to which the cookie is sent. It will also be sent to
+     * subdomains of this domain */
     private $domain;
-    private $secure;
-    private $httponly;
+
+    /** The cookie path, where the browser should sent the cookie. Paths with a
+     * different prefix will not receive the cookie. */
     private $path;
 
-    public function __construct(string $name, string $value, $request = null)
+    /** Secure cookies are transferred using HTTPS only */
+    private $secure;
+
+    /** The HttpOnly flag determines if the cookie is sent using Http only or
+     * is also available to javascript */
+    private $httponly;
+
+    /**
+     * Construct the object given the name and value
+     * @param string $name The name of the cookie
+     * @param string $value The value of the cookie
+     */
+    public function __construct(string $name, string $value)
     {
         $this->name = $name;
         $this->value = $value;
         $this->httponly = true;
     }
 
+    /**
+     * Set the name of the cookie
+     * @param string $name The name of the cookie
+     * @return WASP\Http\Cookie Provides fluent interface
+     */
     public function setName(string $name)
     {
         $this->name = $name;
         return $this;
     }
 
+    /**
+     * @return string The name of the cookie
+     */
     public function getName()
     {
         return $this->name;
     }
 
+    /**
+     * Set the value for the cookie
+     * @param string $value The value
+     * @return WASP\Http\Cookie Provides fluent interface
+     */
     public function setValue(string $value)
     {
         $this->value = $value;
         return $this;
     }
 
+    /**
+     * @return string The value for the cookie
+     */
     public function getValue()
     {
         return $this->value;
     }
 
+    /**
+     * Set the HttpOnly flag: whether to sent this cookie only on HTTP requests
+     * or also expose it to scripts.
+     * @param bool $httponly Value for HttpOnly
+     * @return WASP\Http\Cookie Provides fluent interface
+     */
     public function setHttpOnly(bool $httponly)
     {
         $this->httponly = $httponly;
         return $this;
     }
 
+    /**
+     * @return bool The HttpOnly flag: whether to sent this cookie only on HTTP
+     * requests or also expose it to scripts.
+     */
     public function getHttpOnly()
     {
         return $this->httponly;
     }
 
+    /**
+     * Set the secure flag: whether to transfer the cookie over HTTPS only
+     * @param bool $secure The secure flag
+     * @return WASP\Http\Cookie Provides fluent interface
+     */
+    public function setSecure(bool $secure)
+    {
+        $this->secure = $secure;
+    }
+
+    /**
+     * @return bool If secure flag is enabled or not
+     */
+    public function getSecure()
+    {
+        return $this->secure;
+    }
+
+    /**
+     * Set the cookie domain: hostnames where the cookie should be sent by the
+     * client. It will also be sent to subdomains.
+     * @param string $domain The cookie domain
+     * @return WASP\Http\Cookie Provides fluent interface
+     */ 
     public function setDomain(string $domain)
     {
         $this->domain = $domain;
         return $this;
     }
 
+    /**
+     *  @return string The cookie domain: hostnames where the cookie should be
+     *  sent by the client.
+     */
     public function getDomain()
     {
         return $this->domain;
     }
 
+    /**
+     * Set the domain and path using a URL
+     * @param WASP\Http\URL The URI to use as the cookie domain
+     */
     public function setURL(URL $url)
     {
-        $this->domain = $url->getHost();
-        $this->path = $url->getPath();
+        $this->domain = $url->host;
+        $this->path = $url->path;
+        $this->secure = $url->secure;
         return $this;
     }
 
@@ -101,36 +184,63 @@ class Cookie
         return new URL($this->domain . '/' . $this->path);
     }
 
+    /**
+     * Set the Cookie path: the path at or under which the client should sent
+     * this cookie. Paths with a different prefix will not receive the cookie. 
+     * @param string $path The cookie path
+     * @return WASP\Http\Cookie Provides fluent interface
+     */
     public function setPath(string $path)
     {
         $this->path = $path;
         return $this;
     }
 
+    /**
+     * @return string The Cookie path: the path at or under which the client
+     *                should sent this cookie. Paths with a different prefix
+     *                will not receive the cookie. 
+     */
     public function getPath()
     {
         return $this->path;
     }
 
+    /**
+     * Set expiry date by a DateInterval, relative to the current time
+     * @param DateInterval $interval After how much time the cookie should expire
+     * @return WASP\Http\Cookie Provides fluent interface
+     */
     public function setExpiresIn(DateInterval $interval)
     {
-
+        $this->expires = new DateTime();
+        $this->expires->add($interval);
+        return $this;
     }
 
+    /**
+     * Set the expiry date by a DateTime, the moment when the cookie will expire
+     * @param DateTime The date to use as expiry date
+     * @return WASP\Http\Cookie Provides fluent interface
+     */
     public function setExpires(DateTime $date)
     {
-
+        $this->expires = $date;
+        return $this;
     }
 
+    /**
+     * Set the expiry date so that the cookie will expire immediately
+     */
     public function setExpiresNow()
     {
-        $this->expiry = 0;
+        $this->expires = new DateTime('@0');
         return $this;
     }
 
     public function getExpires()
     {
-        return $this->expiry;
+        return $this->expires->getTimestamp();
     }
     
 }

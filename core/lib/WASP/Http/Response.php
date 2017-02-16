@@ -95,6 +95,14 @@ abstract class Response extends \Exception
     }
 
     /**
+     * Provide additional headers to be set on the request
+     */
+    public function getHeaders()
+    {
+        return array();
+    }
+
+    /**
      * Output the data to the client. This will be the very last method called
      * by the ResponseBuilder, and all output buffering will have been
      * disabled. Headers will have been sent, just send the output.

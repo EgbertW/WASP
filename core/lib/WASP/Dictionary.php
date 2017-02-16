@@ -335,12 +335,29 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
         return $this;
     }
 
+    /**
+     * Add all elements in the provided array-like object to the dictionary.
+     * @param Traversable $values The values to add
+     * @return WASP\Dictionary Provides fluent interface
+     */
     public function addAll($values)
     {
         if (!is_array_like($values))
             throw new \DomainException("Invalid value to merge: " . Debug\Logger::str($values));
         foreach ($values as $key => $val)
             $this->set($key, $val);
+        return $this;
+    }
+
+    /**
+     * Remove all elements from the dictionary
+     * @return WASP\Dictionary Provides fluent interface
+     */
+    public function clear()
+    {
+        $keys = array_keys($this->values);
+        foreach ($keys as $key)
+            unset($this->values[$key]);
         return $this;
     }
     

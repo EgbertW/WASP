@@ -200,3 +200,16 @@ function check_extension($extension, $class = null, $function = null)
     if ($function !== null && !function_exists($function))
         throw new HttpError(500, "A required function does not exist: {$class}. Check if the extension $extension is installed and enabled");
 }
+
+function compareDateInterval(\DateInterval $l, \DateInterval $r)
+{
+    $now = new \DateTimeImmutable();
+    $a = $now->add($l);
+    $b = $now->add($r);
+
+    if ($a < $b)
+        return -1;
+    if ($a > $b)
+        return 1;
+    return 0;
+}

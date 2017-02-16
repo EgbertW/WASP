@@ -203,13 +203,30 @@ class JSON
         exit();
     }
 
+    public static function getJSON($data, bool $pretty_print = true)
+    {
+        return $pretty_print ?
+            self::pprint($data)
+        :
+            self::UTF8SafeEncode($data);
+    }
+
+    public static function writeJSON($buf, $data, bool $pretty_print = true)
+    {
+        return $pretty_print ?
+            self::pprint($data, 0, null, $buf);
+        :
+            self::UTF8SafeEncode($data, $buf);
+    }
+
     /**
      * Encode the specified object, catching UTF8 errors.
      *
-     * @param $obj mixed The data to output
-     * @return string The JSON encoded data
+     * @param JSONSerializable $obj The data to output
+     * @param resource $buf The buffer to write to. If this is specified, nothing is returned.
+     * @return string The JSON encoded data if no buffer was specified.
      */
-    public static function UTF8SafeEncode($obj)
+    public static function UTF8SafeEncode($obj, $buf = null)
     {
         $output = json_encode($obj);
 
@@ -228,26 +245,43 @@ class JSON
             }
         }
 
+        if (is_resource($buf))
+        {
+            fwrite($buf, $output);
+            return "";
+        }
+
         return $output;
     }
 
     /**
      * PrettyPrint the specified output.
      * 
-     * @param $obj array The data to output
-     * @return string the JSON encoded, formatted data
+     * @param JSONSerializable $obj The data to output
+     * @param bool $json_array When set to true, output will be formatted as a
+     *                         JSON array, rather than an object. If this is set to null
+     *                         the keys will be examined to auto-detect the proper value.
+     * @param resource $buf The buffer to write to. If this is specified,
+     *                      nothing is returned.
+     * @return string the JSON encoded, formatted data, if no buffer is
+     *                specified.
      */
-    public static function pprint($obj, $indent = 0)
+    public static function pprint($obj, $indent = 0, $json_array = null, $buf = null)
     {
         if (is_object($obj) && method_exists($obj, "jsonSerialize"))
             $obj = $obj->jsonSerialize();
         elseif (!is_array($obj))
             throw new \RuntimeException("Invalid arguments for JSON::pprint");
 
-        $array = true;
-        foreach ($obj as $key => $sub)
-            if (!is_int($key))
-                $array = false;
+        if ($json_array === null)
+        {
+            $array = true;
+            foreach ($obj as $key => $sub)
+                if (!is_int($key))
+                    $array = false;
+        }
+        else
+            $array = (bool)$json_array;
 
         $v = $array ? "[\n" : "{\n";
         $indent += 4;
@@ -262,9 +296,9 @@ class JSON
             $ending = (++$cur < $tot ? ",\n" : "\n");
             $v .= str_repeat(' ', $indent);
             if (!$array)
-                $v .= self::UTF8SafeEncode($key) . ': ';
-            if (is_array($sub))
-                $v .= self::pprint($sub, $indent) . $ending;
+                $v .= self::UTF8SafeEncode($key, $buf) . ': ';
+            if (\is_array_like($sub))
+                $v .= self::pprint($sub, $indent, null, $buf) . $ending;
             elseif (null === $sub)
                 $v .= 'null' . $ending;
             elseif (is_numeric($sub))
@@ -272,9 +306,15 @@ class JSON
             elseif (is_bool($sub))
                 $v .= ($sub ? "true" : "false") . $ending;
             else
-                $v .= self::UTF8SafeEncode($sub) . $ending;
+                $v .= self::UTF8SafeEncode($sub, $buf) . $ending;
         }
         $v .= str_repeat(' ', $indent - 4) . ($array ? ']' : '}');
+
+        if (is_resource($buf))
+        {
+            fwrite($buf, $v);
+            return "";
+        }
         return $v;
     }
 }

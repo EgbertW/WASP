@@ -23,48 +23,56 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\Http;
+namespace WASP;
 
-use Template;
+use WASP\Debug\Logger;
 
-class Error extends Response
+class XMLWriter extends DataWriter
 {
-    private static $nesting_counter = 0;
-    private $user_message;
+    private $root_node = "Response";
 
-    public function __construct($code, $error, $user_message = null, $previous = null)
+    public function setRootNode(string $node_name)
     {
-        parent::__construct($error, $code, $previous);
-        $this->user_message = $user_message;
+        $this->root_node = $node_name;
+        return $this;
     }
 
-    public function getUserMessage()
+    public function getRootNode()
     {
-        return $this->user_message;
+        return $this->root_node;
     }
 
-    public function output()
+    protected function format($data, $file_handle)
     {
-        // @codeCoverageIgnoreStart
-        // If this executes, there's debugging to do
-        if (self::$nesting_counter++ > 5)
-            die("Too much nesting in error output - probably a bug");
-        // @codeCoverageIgnoreEnd
+        $writer = \XMLWriter::openMemory();
+        $writer->startDocument();
 
-        $exception = $this->getPrevious();
-        if ($exception === null)
-            $exception = $this;
+        $this->startElement($this->root_node);
+        $this->writeXMLRecursive($writer, $data);
+        $this->endElement();
+        
+        $writer->endDocument();
+        fwrite($file_handle, $writer->outputMemory());
+    }
 
-        $template = new Template(Template::findExceptionTemplate($exception));
-        $template->assign('exception', $exception);
-
-        try
+    protected function formatRecursive(\XMLWriter $writer, $data)
+    {
+        foreach ($data as $key => $value)
         {
-            $template->render();
-        }
-        catch (Response $e)
-        {
-            $e->output();
+            if (substr($key, 0, 1) == "_")
+            {
+                $writer->writeAttribute(substr($key, 1), (string)$value); 
+            }
+            else
+            {
+                $writer->startElement($key);
+                if (is_array($value))
+                    $this->formatRecursive($writer, $value);
+                else
+                    $this->text(Logger::str($value));
+                $writer->endElement();
+            }
         }
     }
+
 }

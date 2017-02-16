@@ -181,6 +181,20 @@ class Cache
         self::$repository[$this->cache_name]['_changed'] = true;
         self::$repository[$this->cache_name]['_timestamp'] = time();
     }
+
+    /**
+     * Remove all contents from the cache
+     */
+    public function clear()
+    {
+        $data = self::$repository[$this->cache_name]->getAll();
+        $keys = array_keys($data)
+        foreach ($keys as $key)
+            unset($data[$key];
+
+        $data['_changed'] = true;
+        $data['_timestamp'] = time();
+    }
 }
 
 // @codeCoverageIgnoreStart

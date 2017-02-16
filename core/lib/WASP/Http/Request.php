@@ -28,12 +28,14 @@ namespace WASP\Http;
 use WASP\Debug\LoggerAwareStaticTrait;
 use WASP\Autoload\Resolve;
 use WASP\Dictionary;
-use WASP\DB\DB;
 use WASP\Site;
-use WASP\Cache;
 use WASP\VirtualHost;
+use WASP\Cache;
 use WASP\TerminateRequest;
 use WASP\RedirectRequest;
+
+use WASP\Http\Cookie;
+use Throwable;
 
 /**
  * Request encapsulates a HTTP request, containing all data transferrred to the
@@ -112,9 +114,6 @@ class Request
     /** Accepted response types indicated by client */
 	public $accept = array();
 
-    /** Session cache object used to persist sessions in CLI sessions */
-    private $session_cache = null;
-
     /** Session storage */
     public $session;
 
@@ -133,11 +132,9 @@ class Request
     /** The selected VirtualHost for this request */
     public $vhost = null;
 
-    /** The headers */
-    private $headers = array();
+    /** The response builder */
+    private $response_builder = null;
 
-    /** The sent headers, moved from $headers to here after sending */
-    private $sent_headers = array();
 
     /*** 
      * Create the request based on the request data provided by webserver and client
@@ -158,6 +155,7 @@ class Request
         $this->config = $config;
 
         self::$current_request = $this;
+        $this->response_builder = new ResponseBuilder($this);
 
         $this->method = $this->server->get('REQUEST_METHOD');
         $this->url = new URL($this->server->get('REQUEST_URI'));
@@ -200,11 +198,11 @@ class Request
         $this->vhost = $vhost;
 
         // Start the session
-        $this->setupSession();
+        $this->session = new Session($this->vhost, $this->config);
 
+        // Resolve the application to start
         $path = $this->vhost->getPath($this->url);
         $resolved = Resolve::app($path);
-
         if ($resolved !== null)
         {
             $this->route = $resolved['route'];
@@ -219,20 +217,34 @@ class Request
         }
     }
 
-    public function getStart()
+    /**
+     * @return DateTime The start of the script
+     */
+    public function getStartTime()
     {
         return $this->start;
     }
 
     /**
-     * @codeCoverageIgnore Testing apps is out of scope here
+     * @return WASP\Http\ResponseBuilder The response builder that will produce
+     *                                   the final response to the client
+     */
+    public function getResponseBuilder()
+    {
+        return $this->response_builder;
+    }
+
+    /**
+     * Run the selected application
+     * @throws WASP\Http\Response Contains the output for the request
      */
     public function dispatch()
     {
         if ($this->route === null)
             throw new HttpError(404, 'Could not resolve ' . $this->url);
 
-        execute($resolved['path'], $this);
+        $app = new AppRunner($this, $this->app);
+        $app->execute();
     }
 
     /**
@@ -329,7 +341,10 @@ class Request
             if (session_status() === PHP_SESSION_ACTIVE)
                 throw new Error(500, "Repeated session initialization");
 
-            $lifetime = $this->config->dget('cookie', 'lifetime', 30 * 24 * 3600);
+            $lifetime = $this->config->dget('cookie', 'lifetime', '30D');
+            if (WASP\is_int_val($lifetime))
+                $lifetime = $lifetime . 'S';
+
             $path = '/';
             $domain = (!empty($sub) && $sub !== "www") ? $sub . "." . $domain : $domain;
             $secure = $this->secure;
@@ -341,6 +356,8 @@ class Request
             session_start();
 
             // Make sure the cookie expiry is updated every time.
+            $cookie = new Cookie(session_name(), session_id());
+            $cookie->setExpiresIn('P' . $lifetime);
             setcookie(session_name(), session_id(), time() + $lifetime);
             // @codeCoverageIgnoreEnd
         }
@@ -354,57 +371,6 @@ class Request
         $this->session = new Dictionary($GLOBALS['_SESSION']);
         if ($this->session->has('language'))
             $this->language = $this->session->get('language');
-    }
-
-    /**
-     * Set the header value
-     * @param string $name The name of the header
-     * @param string $value The value for the header
-     * @return Request Provides fluent interface
-     */
-    public function setHeader(string $name, string $value)
-    {
-        $this->headers[$name] = $value;
-        return $this;
-    }
-
-    /**
-     * Get the list of defined headers
-     * @return array List of $name => $header pairs
-     */
-    public function getHeaders()
-    {
-        return $this->headers;
-    }
-
-    /**
-     * Get the list of headers already sent
-     * @return array List of $name => $header pairs
-     */
-    public function getSentHeaders()
-    {
-        return $this->sent_headers;
-    }
-
-    /**
-     * Send the headers to the browser
-     * @return Request Provides fluent interface
-     */
-    public function outputHeaders()
-    {
-        if (!empty($this->headers) && !self::cli() && !headers_sent())
-        {
-            // This will never execute in tests
-            // @codeCoverageIgnoreStart
-            foreach ($this->getHeaders() as $name => $val)
-            {
-                header($name . ': ' .$val);
-                $this->sent_headers[$name] = $val;
-            }
-            $this->headers = array();
-            // @codeCoverageIgnoreEnd
-        }
-        return $this;
     }
 
     /**
@@ -559,191 +525,7 @@ class Request
     {
         return PHP_SAPI === "cli";
     }
-
-
-    /**
-     * @codeCoverageIgnore This will not do anything from CLI except for enabling error reporting
-     */
-    public static function setErrorHandler()
-    {
-        if (self::$error_handler_set)
-            return;
-
-        // Don't repeat this function
-        self::$error_handler_set = true;
-
-        // Don't attach error handlers when running from CLI
-        if (self::cli())
-        {
-            ini_set('error_reporting', E_ALL);
-            ini_set('display_errors', 'On');
-            return;
-        }
-
-        // We're processing a HTTP request, so set up Exception handling for better output
-        set_exception_handler(array("WASP\\Request", "handleException"));
-        set_error_handler(array("WASP\\Request", "handleError"), E_ALL | E_STRICT);
-    }
-
-    /**
-     * @codeCoverageIgnore As this will stop the script, it's not good for unit testing
-     */
-    public static function handleError($errno, $errstr, $errfile, $errline, $errcontext)
-    {
-        self::$logger->error("PHP Error {0}: {1} on {2}({3})", [$errno, $errstr, $errfile, $errline]);
-        throw new \ErrorException($errstr, 0, $errno, $errfile, $errline);
-    }
-
-    /**
-     * @codeCoverageIgnore As this will stop the script, it's not good for unit testing
-     */
-    public static function handleException($exception)
-    {
-        // First set headers as configured in the request
-        $request = Request::current();
-
-        if (method_exists($exception, "getRequest"))
-        {
-            try
-            {
-                $r = $exception->getRequest();
-                if ($r instanceof Request)
-                    $request = $r;
-            }
-            catch (\Throwable $e)
-            {}
-        }
-
-        // Check if the exception is a RedirectRequest
-        if ($exception instanceof RedirectRequest)
-        {
-            $exception->execute();
-
-            // We'll get back here with a TerminateRequest
-            return;
-        }
-
-        $headers = Request::getHeaders();
-        if (!headers_sent())
-        {
-            foreach ($headers as $k => $v)
-                header($k . ": ". $v);    
-        }
-
-        if ($exception instanceof TerminateRequest)
-            die();
-
-        // Provide some feedback about other types of exceptions
-        $tpl = "error/httperror";
-        $code = 500;
-        if ($exception instanceof \WASP\HttpError)
-        {
-            $code = $exception->getCode();
-
-            try
-            {
-                $tpln = "error/http" . $exception->getCode();
-                $path = Resolve::template($tpln);
-                if ($path !== null)
-                    $tpl = $tpln;
-            }
-            catch (Exception $e2)
-            {
-                Debug\error("WASP.Request", "Exception while resolving error template: {0}: {1}", [get_class($exception), $exception->getMessage()]);
-            }
-        }
-        else
-        {
-            $class = get_class($exception);
-            $parts = explode("\\", $class);
-            $class = end($parts);
-            $tpln = "error/" . $class;
-            $fn = $tpln . ".php";
-
-            $path = Resolve::template($tpln);
-            if ($path !== null)
-                $tpl = $tpln;
-        }
-
-        if (!headers_sent())
-            http_response_code($code);
-
-        self::$logger->error("Exception: {0}: {1}", [get_class($exception), $exception->getMessage()]);
-        self::$logger->error("In: {0}({1})", [$exception->getFile(), $exception->getLine()]);
-        self::$logger->error($exception->getTraceAsString());
-        self::$logger->info("*** [{0}] Failed processing {1} request to {2}", [$code, self::$method, self::$url]);
-
-        try
-        {
-            $tpln = $tpl;
-            $tpl = new Template($tpl);
-            $tpl->assign('exception', $exception);
-            $tpl->render();
-        }
-        catch (HttpError $ex)
-        {
-            self::$logger->critical("An exception of type {0} (code: {1}, message: {2}) occurred. Additionally, the error template ({3}) cannot be loaded", [get_class($exception), $exception->getCode(), $exception->getMessage(), $tpln]);
-            self::$logger->critical("The full stacktrace follows: {0}", [$exception]);
-            self::$logger->critical("The full stacktrace of the failed template is: {0}", [$ex]);
-            if (!headers_sent())
-                header("Content-type: text/html");
-
-            echo "<!doctype html><html><head><title>Internal Server Error</title></head>";
-            echo "<body><h1>Internal Server Error</h1>";
-
-            $dev = false;
-            try
-            {
-                $conf = Config::getConfig();
-                $dev = $conf->dget('site', 'dev', false);
-            }
-            catch (\Exception $e)
-            {}
-
-            if ($dev)
-                echo "<pre>" . Debug\Log::str($exception) . "</pre>";
-            else
-                echo "<p>Something is going wrong on the server. Please check back later - an administrator will have been notified</p>";
-            if (method_exists($exception, 'getUserMessage'))
-                echo "<p>Explanation: " . htmlentities($exception->getUserMessage()) . "</p>";
-            echo "</body></html>";
-
-            die();
-        }
-    }
 }
-
-/**
- * A wrapper to execute / include the selected route. This puts the app in a
- * private scope, with access to the most commonly used variables:
- * $request The request object
-  
- * $db A database connection
- * $url The URL that was requested
- * $get The GET parameters sent to the script
- * $post The POST parameters sent to the script
- * $url_args The URL arguments sent to the script (remained of the URL after the selected route)
- *
- * @param string $path The file to execute
- * @throws WASP\HttpError When the route did not end and also did to execute a Template.
- */
-function execute($path, Request $request)
-{
-    // Prepare some variables that come in handy in apps
-    $config = $request->config;
-    $url = $request->url;
-    $db = DB::get();
-    $get = $request->get;
-    $post = $request->post;
-    $url_args = $request->url_args;
-
-    Debug\debug("WASP.Request", "Including {0}", [$path]);
-    include $path;
-
-    if (Template::$last_template === null)
-        throw new HttpError(400, $request->url);
-}
-
 
 // @codeCoverageIgnoreStart
 Request::setLogger();

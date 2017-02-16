@@ -23,48 +23,14 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\Http;
+namespace WASP;
 
-use Template;
+use WASP\JSON;
 
-class Error extends Response
+class JSONWriter extends DataWriter
 {
-    private static $nesting_counter = 0;
-    private $user_message;
-
-    public function __construct($code, $error, $user_message = null, $previous = null)
+    public function format($data, $file_handle)
     {
-        parent::__construct($error, $code, $previous);
-        $this->user_message = $user_message;
-    }
-
-    public function getUserMessage()
-    {
-        return $this->user_message;
-    }
-
-    public function output()
-    {
-        // @codeCoverageIgnoreStart
-        // If this executes, there's debugging to do
-        if (self::$nesting_counter++ > 5)
-            die("Too much nesting in error output - probably a bug");
-        // @codeCoverageIgnoreEnd
-
-        $exception = $this->getPrevious();
-        if ($exception === null)
-            $exception = $this;
-
-        $template = new Template(Template::findExceptionTemplate($exception));
-        $template->assign('exception', $exception);
-
-        try
-        {
-            $template->render();
-        }
-        catch (Response $e)
-        {
-            $e->output();
-        }
+        JSON::writeJSON($file_handle, $data, $this->pretty_print);
     }
 }

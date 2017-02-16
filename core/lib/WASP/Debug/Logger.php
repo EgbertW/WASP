@@ -25,7 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\Debug;
 
-use WASP\Path;
+use Throwable;
 use Psr\Log\LogLevel;
 use Psr\Log\AbstractLogger;
 
@@ -174,6 +174,47 @@ class Logger extends AbstractLogger
         return self::str($obj, true);
     }
 
+    public static function printIndent($buf, string $text, int $indent = 4)
+    {
+        $parts = explode("\n", $text);
+        $indent = str_repeat(' ', $indent);
+        foreach ($parts as $p)
+            fprintf($buf, "%s%s\n", $indent, $text);
+    }
+
+    public static function exceptionToString(Throwable $ex, $buf = null, $depth = 0)
+    {
+        if ($buf === null)
+        {
+            $buf_created = true;
+            $buf = fopen("php://memory", "rw");
+        }
+
+        if ($depth >= 5)
+            sprintf($buf, "    ** Recursion limit reached at Exception of class " . get_class($ex) . " **\n");
+
+        sprintf($buf, "Exception: %s [%d] %s", get_class($ex), $ex->getCode, $ex->getMessage());
+        sprintf($buf, "In %s(%d)\n", $ex->getFile(), $ex->getLine());
+        self::printIndent($buf, $obj->getTraceAsString(), 4);
+
+        $prev = $ex->getPrevious();
+        if ($prev !== null)
+        {
+            $str .=  "Caused by: \n";
+            $str .= self::$exceptionToString($ex, $depth + 1;
+        }
+
+        if ($buf_created)
+        {
+            $length = ftell($buf);
+            fseek($buf, 0);
+            $contents = fread($buf, $length);
+            return $contents;
+        }
+
+        return $buf;
+    }
+
     public static function str($obj, $html = false)
     {
         if (is_null($obj))
@@ -189,11 +230,9 @@ class Logger extends AbstractLogger
             return (string)$obj;
 
         $str = "";
-        if ($obj instanceof \Throwable)
+        if ($obj instanceof Throwable)
         {
-            $str = "\nException: " . get_class($obj) . " - [" . $obj->getCode() . "] " . $obj->getMessage()
-                . "\nIn " . $obj->getFile() . "(" . $obj->getLine() . ")\n";
-            $str .= $obj->getTraceAsString();
+            $str = self::expectionToString($obj);
         }
         else if (is_object($obj) && method_exists($obj, '__toString'))
         {

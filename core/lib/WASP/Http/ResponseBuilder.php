@@ -94,7 +94,7 @@ class ResponseBuilder
      * @param string $name The name of the header
      * @param string $value The value
      */
-    public function addHeader(string $name, string $value)
+    public function setHeader(string $name, string $value)
     {
         // Make sure the word has no spaces but dashes instead, and is
         // Camel-Cased. The dashes are first replaced with spaces to let
@@ -171,6 +171,10 @@ class ResponseBuilder
         // Set HTTP response code
         $code = $this->response->getStatusCode();
         http_response_code($code);
+
+        // Add headers from response to the final response
+        foreach ($this->response->getHeaders() as $key => $value)
+            $this->setHeader($key, $value);
 
         // Add Content-Type mime header
         $mime = $response->getMime();
