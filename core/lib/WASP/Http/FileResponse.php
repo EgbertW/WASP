@@ -25,6 +25,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\Http;
 
+use WASP\Debug\LoggerAwareStaticTrait;
+
 /**
  * Output a file, given its filename. The handler may decide to output the
  * file using X-Send-File header, or by opening the file and passing the
@@ -32,6 +34,8 @@ namespace WASP\Http;
  */
 class FileOutput extends Response
 {
+    use LoggerAwareStaticTrait;
+
     /** The filename of the file to send */
     protected $filename;
 
@@ -41,6 +45,12 @@ class FileOutput extends Response
     /** Whether to sent as download or embedded */
     protected $download;
 
+    /** The size of the file in bytes */
+    protected $length;
+
+    /** Using X-Sendfile or not? Determined in getHeaders() */
+    protected $xsendfile;
+
     /**
      * Create the response using the file name
      * @param string $filename The file to load / send
@@ -49,6 +59,8 @@ class FileOutput extends Response
     public function __construct(string $filename, string $output_filename = "", bool $download = false)
     {
         $this->filename = $filename;
+        $stats = fstat($this->filename);
+        $this->length = $stats['size'];
         if ($output_filename === null)
             $output_filename = basename($this->filename);
     }
@@ -70,26 +82,6 @@ class FileOutput extends Response
     }
 
     /**
-     * @return string The mime-type. Automatically determined by checking the file
-     */
-    public function getMime()
-    {
-        $extpos = strrpos($this->filename, ".");
-        $ext = null;
-        if ($extpos !== false)
-            $ext = strtolower(substr($this->filename, $extpos + 1));
-
-        if ($ext === "css")
-            $mime = "text/css";
-        elseif ($ext === "js")
-            $mime = "text/javascript";
-        else
-            $mime = mime_content_type($this->filename);
-
-        return $mime;
-    }
-
-    /**
      * @return bool True if the file should be presented as download, false if
      *              the browser may render it directly
      */
@@ -97,4 +89,49 @@ class FileOutput extends Response
     {
         return $this->download;
     }
+
+    /**
+     * @return array The relevant headers
+     */
+    public function getHeaders()
+    {
+        $disposition = $this->download ? "inline" : "download";
+        $h = array(
+            'Content-Disposition' => . $disposition . '; filename=' . $this->output_filename
+        );
+
+        if ($this->length)
+            $h['Content-Length'] = $this->length;
+
+        $request = $this->getRequest();
+        $config = $request->getConfig();
+        if ($this->xsendfile = $config->getBool('io', 'use_send_file'))
+            $h['X-Sendfile'] = $this->filename;
+
+        return $h;
+    }
+
+    /**
+     * Serve the file to the user
+     */
+    public function output($mime)
+    {
+        // Nothing to output, the webserver will handle it
+        if ($this->xsendfile)
+            return;
+
+        $fh = fopen($this->filename, "r");
+        $bytes = fpassthru($fh);
+        if (!empty($this->length) && $bytes != $this->length)
+        {
+            self::$logger->warning(
+                "FileResponse promised to send {0} bytes but {1} were actually transfered of file {2}", 
+                [$this->length, $bytes, $this->output_filename]
+            );
+        }
+    }
 }
+
+// @codeCoverageIgnoreStart
+FileResponse::setLogger();
+// @codeCoverageIgnoreEnd

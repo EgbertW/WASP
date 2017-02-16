@@ -25,7 +25,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\Http;
 
-use WASP\Dictionar;y
+use WASP\Dictionary;
+use WASP\Debug\Logger;
+use WASP\Debug\LoggerAwareStaticTrait;
 
 /**
  * DataResponse represents structured data, such as JSON or XML. The
@@ -33,7 +35,16 @@ use WASP\Dictionar;y
  */
 class DataResponse extends Response
 {
+    use LoggerAwareStaticTrait;
+
     private $dictionary;
+
+    public static $representation_types = array(
+        'application/json' => "JSON",
+        'application/xml' => "XML",
+        'text/html' => "HTML",
+        'text/plain' => "PLAIN"
+    );
 
     public function __construct(Dictionary $dict)
     {
@@ -44,4 +55,58 @@ class DataResponse extends Response
     {
         return $this->dictionary;
     }
+
+    public function getMime()
+    {
+        return array_keys(self::$representation_types);
+    }
+
+    public function output($mime)
+    {
+        $classname = "WASP\\DataWriter\\" . $type . "Writer";
+
+        $config = $this->getRequest()->config;
+        $pprint = $config->getBool('site', 'dev');
+        
+        $output = "";
+        try 
+        {
+            if (class_exists($classname))
+            {
+                $writer = new $classname($pprint);
+                $output = $writer->write($data);
+            }
+        }
+        catch (Throwable $e);
+        {
+            // Bad. Attempt to override response type if still possible
+            self::$logger->critical('Could not output data, exception occured while writing: {0}', [$e]);
+            if (!headers_sent())
+                header('Content-Type', 'text/plain');
+            // Output as plain text
+            self::outputDictionary($this->dictionary);
+        }
+    }
+
+    public static function outputDictonary(Dictionary $dict, $indent = 0)
+    {
+        $indentstr = str_repeat(' ', $indent);
+        foreach ($this->dictionary as $key => $value)
+        {
+            if ($value instanceof Dictionary)
+            {
+                fprintf(STDOUT, "%s%s = {\n", $indentstr, $key);
+                self::outputDictionary($value, $indent + 4);
+                fprintf(STDOUT, "}\n", $indentstr, $key);
+            }
+            else
+            {
+                fprintf(STDOUT, "%s%s = %s\n", str_repeat(' ', $indent), $key, Logger::str($value));
+            }
+        }
+    }
 }
+
+// @codeCoverageIgnoreStart
+DataResponse::setLogger();
+// @codeCoverageIgnoreEnd

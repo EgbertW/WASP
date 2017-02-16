@@ -25,22 +25,27 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\Http;
 
+use WASP\Debug\LoggerAwareStaticTrait;
+
 /**
  * Output a file, given an opened file handle. 
  */
 class FileHandleOutput extends Response
 {
+    use LoggerAwareStaticTrait;
+
     /** The file handle from which to read the data */
     protected $filehandle;
-
-    /** The mime type of the data that is being sent */
-    protected $mime;
 
     /** The filename for the file that is sent to the client */
     protected $output_filename;
 
     /** Whether to sent as download or embedded */
     protected $download;
+
+    /** The length in bytes of the content being served */
+    protected $length = null;
+
 
     /**
      * Create the response using the file name
@@ -52,8 +57,18 @@ class FileHandleOutput extends Response
     {
         $this->filehandle = $filehandle;
         $this->output_filename = $filename;
-        $this->mime = $mime;
+        $this->mime[$mime] = true;
         $this->download = $download;
+    }
+
+    /**
+     * Set the length in bytes of the response
+     * @param int $bytes The number of bytes of the download
+     * @return FileHandleResponse Provides fluent interface
+     */
+    public function setLength(int $bytes)
+    {
+        $this->length = $bytes;
     }
 
     /**
@@ -73,11 +88,18 @@ class FileHandleOutput extends Response
     }
 
     /**
-     * @return string The mime-type for the file.
+     * @return array The relevant headers
      */
-    public function getMime()
+    public function getHeaders()
     {
-        return $this->mime;
+        $disposition = $this->download ? "inline" : "download";
+        $h = array(
+            'Content-Disposition' => . $disposition . '; filename=' . $this->output_filename
+        );
+
+        if ($this->length)
+            $h['Content-Length'] = $this->length;
+        return $h;
     }
 
     /**
@@ -88,4 +110,20 @@ class FileHandleOutput extends Response
     {
         return $this->download;
     }
+
+    public function output(string $mime)
+    {
+        $bytes = fpassthru(STDOUT, $this->filehandle);
+        if (!empty($this->length) && $bytes != $this->length)
+        {
+            self::$logger->warning(
+                "FileHandleResponse was specified to send {0} bytes but {1} were actually transfered of file {2}", 
+                [$this->length, $bytes, $this->output_filename]
+            );
+        }
+    }
 }
+
+// @codeCoverageIgnoreStart
+FileHandleResponse::setLogger();
+// @codeCoverageIgnoreEnd

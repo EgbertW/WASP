@@ -33,9 +33,9 @@ abstract class Response extends \Exception
     protected $request = null;
 
     /**
-     * A mime type of the response
+     * Available response mime types
      */
-    protected $mime = null;
+    protected $mime = array();
 
     /** 
      * Set the request associated to this response 
@@ -77,20 +77,20 @@ abstract class Response extends \Exception
     }
 
     /**
-     * Return the configured mime type
+     * Return the available mime types
      */
-    public function getMime()
+    public function getMimeTypes()
     {
-        return $this->mime;
+        return array_keys($this->mime);
     }
 
     /**
      * Set the mime type of the response.
      * @param string $mime The mime type, that will be sent as the content-type
      */
-    public function setMime(string $mime)
+    public function addMimeType(string $mime)
     {
-        $this->mime = $mime;
+        $this->mime[$mime] = true;
         return $this;
     }
 
@@ -107,5 +107,5 @@ abstract class Response extends \Exception
      * by the ResponseBuilder, and all output buffering will have been
      * disabled. Headers will have been sent, just send the output.
      */
-    abstract public function output();
+    abstract public function output($mime);
 }

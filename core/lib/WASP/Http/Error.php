@@ -43,7 +43,12 @@ class Error extends Response
         return $this->user_message;
     }
 
-    public function output()
+    public function getMime()
+    {
+        return array_keys(DataResponse::$representation_types);
+    }
+
+    public function output(string $mime)
     {
         // @codeCoverageIgnoreStart
         // If this executes, there's debugging to do
@@ -51,6 +56,26 @@ class Error extends Response
             die("Too much nesting in error output - probably a bug");
         // @codeCoverageIgnoreEnd
 
+        if ($mime === "text/html")
+            return $this->outputTemplate();
+        
+        $status = $this->getStatusCode();
+        $msg = isset(StatusCode::$CODES[$status]) ? StatusCode::$CODES[$status] = "Internal Server Error";
+        $data = array(
+            'message' => $msg,
+            'status_code' => $this->getStatusCode(),
+            'exception' => $this,
+            'cause' => $this->getPrevious(),
+            'status' => $this->getStatusCode(),
+        );
+        $data = new Dictionary($data);
+
+        $wrapped = new Http\DataResponse($data);
+        $wrapped->output($mime);
+    }
+
+    protected function outputTemplate()
+    {
         $exception = $this->getPrevious();
         if ($exception === null)
             $exception = $this;

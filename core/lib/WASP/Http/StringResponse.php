@@ -32,15 +32,37 @@ namespace WASP\Http;
 class StringResponse extends Response
 {
     /** The output string */
-    protected $output;
+    protected $output = array();
 
     /**
      * Create using a string
      * @param string $str The output
      */
-    public function __construct($output)
+    public function __construct($output, $mime = "text/html")
     {
-        $this->output = $output;
+        $this->set($output, $mime);
+    }
+
+    /** 
+     * Set or replace the output for a content type
+     * @param mixed $str The text to add. This can be a string, a callback
+     *                   function returning a string or an object with a
+     *                   __toString method.
+     * @param string $mime The mime-type for the content
+     * @return StringResponse Provides fluent interface
+     */
+    public function set($output, $mime = "text/html")
+    {
+        if (!is_string($output) && !is_callable($output) 
+        {
+            && !(is_object($output) && method_exists($output, '__toString')))
+            throw new \InvalidArgumentException(
+                "Output must be text, string-castable object or valid callback"
+            );
+        }
+        $this->addMime($mime);
+        $this->output[$mime] = $output;
+        return $this;
     }
 
     /**
@@ -48,26 +70,44 @@ class StringResponse extends Response
      * @param string $str The string to add
      * @return StringResponse Provides fluent interface
      */
-    public function append(string $str)
+    public function append(string $str, $mime = "text/html")
     {
-        $this->output .= $str;
+        // To append, we need to make sure we have a string first
+        if (empty($this->output[$mime]) || !is_string($this->output[$mime]))
+            $this->output[$mime] = $this->getOutput($mime);
+
+        $this->output[$mime] .= $str;
         return $this;
     }
 
     /**
-     * Return the output
+     * @return string The output
      */
-    public function getOutput()
+    public function getOutput($mime = 'text/html')
     {
-        return $this->output;
+        // Unknown mime type
+        if (empty($this->output[$mime]))
+            return null;
+
+        if (is_callable($this->output[$mime]))
+            return (string)($this->output[$mime]());
+
+        if (is_object($this->output[$mime]))
+            return $this->output[$mime]->__toString();
+
+        return $this->output[$mime];
     }
 
     /**
      * Write the string to the script output
      * @return StringResponse Provides fluent interface
      */
-    public function output()
+    public function output(string $mime)
     {
+        $output = $this->getOutput($mime);
+        if (empty($output))
+            $output = "Unknown mime type requested";
+
         fprintf(STDOUT, $output);
         return $this;
     }
