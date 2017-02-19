@@ -65,6 +65,7 @@ class FileResponse extends Response
         $this->length = $stats['size'];
         if ($output_filename === null)
             $output_filename = basename($this->filename);
+        $this->code = 200;
     }
 
     /**

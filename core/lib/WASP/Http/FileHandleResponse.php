@@ -59,6 +59,7 @@ class FileHandleOutput extends Response
         $this->output_filename = $filename;
         $this->mime[$mime] = true;
         $this->download = $download;
+        $this->code = 200;
     }
 
     /**

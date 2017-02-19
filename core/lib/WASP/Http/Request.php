@@ -216,7 +216,6 @@ class Request
 
         // Resolve the application to start
         $path = $this->vhost->getPath($this->url);
-        self::$logger->info("URL: {0}", [$path]);
         $resolved = Resolve::app($path);
         if ($resolved !== null)
         {

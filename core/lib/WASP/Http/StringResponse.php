@@ -41,6 +41,7 @@ class StringResponse extends Response
     public function __construct($output, $mime = "text/html")
     {
         $this->set($output, $mime);
+        $this->code = 200;
     }
 
     /** 

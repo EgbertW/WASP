@@ -150,7 +150,7 @@ class Resolve
         $r = '/' . implode('/', $used_parts);
         $remain = array_slice($parts, count($used_parts));
         
-        self::$logger->info("Resolved route for {0} to {1} (module: {2})", [$r, $route['path'], $route['module']]);
+        self::$logger->debug("Resolved route for {0} to {1} (module: {2})", [$r, $route['path'], $route['module']]);
         return array("route" => $r, "path" => $route['path'], 'module' => $route['module'], 'remainder' => $remain);
     }
     
@@ -196,7 +196,7 @@ class Resolve
                 return $a_idx ? -1 : 1;
 
             // Finally, sort alphabetically
-            return strncmp($a, $b);
+            return strcasecmp($a, $b);
         });
 
         // Add the contents of subdirectories to the direct contents

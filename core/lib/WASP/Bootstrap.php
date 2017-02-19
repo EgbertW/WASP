@@ -84,7 +84,7 @@ class Bootstrap
 
         // Set up root logger
         $root_logger = Logger::getLogger();
-        $root_logger->setLevel(LogLevel::DEBUG);
+        $root_logger->setLevel(LogLevel::INFO);
         $logfile = Path::$VAR . '/log/wasp' . $test . '.log';
         $root_logger->addLogHandler(new FileWriter($logfile, LogLevel::DEBUG));
 

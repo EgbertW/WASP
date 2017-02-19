@@ -57,7 +57,7 @@ class Manager
 
         foreach ($modules as $mod_name => $path)
         {
-            self::$logger->info("Found module {0} in path {1}", [$mod_name, $path]);
+            self::$logger->debug("Found module {0} in path {1}", [$mod_name, $path]);
             Resolve::registerModule($mod_name, $path);
             self::$modules[$mod_name] = $path;
 

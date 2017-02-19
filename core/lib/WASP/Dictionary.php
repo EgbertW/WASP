@@ -360,6 +360,46 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
             unset($this->values[$key]);
         return $this;
     }
+
+    /**
+     * Remove and return the last element of the dictionary
+     * @return mixed The last element
+     */
+    public function pop()
+    {
+        return array_pop($this->values);
+    }
+
+    /**
+     * Add an element to the end of the dictionary
+     * @param mixed $element The element to add to the end
+     * @return Dictionary provides fluent interface
+     */
+    public function push($element)
+    {
+        array_push($this->values, $element);
+        return $this;
+    }
+
+    /** 
+     * Remove and return the first element of the dictionary
+     * @return mixed The first element
+     */
+    public function shift()
+    {
+        return array_shift($this->values);
+    }
+
+    /**
+     * Add an element to the beginning of the dictionary
+     * @param mixed $element The element to add to the begin
+     * @return Dictionary provides fluent interface
+     */
+    public function unshift($element)
+    {
+        array_unshift($this->values, $element);
+        return $this;
+    }
     
     // Iterator implementation
     public function current()
@@ -374,8 +414,6 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
 
     public function rewind()
     {
-        if (!is_array($this->values))
-            var_dump($this->values);
         $this->keys = array_keys($this->values);
         $this->iterator = 0;
     }
@@ -474,7 +512,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
                 return unserialize($contents);
             });
 
-            self::info("Loaded {0} bytes serialized data from: {1}", [strlen($contents), $filename]);
+            self::debug("Loaded {0} bytes serialized data from: {1}", [strlen($contents), $filename]);
             return new Dictionary($arr);
         }
 
@@ -487,7 +525,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
                 return yaml_parse($contents);
             });
 
-            self::info("Loaded {0} bytes serialized YAML-data from: {1}", [strlen($contents), $filename]);
+            self::debug("Loaded {0} bytes serialized YAML-data from: {1}", [strlen($contents), $filename]);
             return new Dictionary($arr);
         }
 
@@ -522,7 +560,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
         {
             $data = serialize($this->values);
             $bytes = self::writeData($filename, $data);
-            self::info("Saved {0} bytes serialized data to: {1}", [$bytes, $filename]);
+            self::debug("Saved {0} bytes serialized data to: {1}", [$bytes, $filename]);
             return true;
         }
 
@@ -530,7 +568,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
         {
             $json = JSON::pprint($this->values);
             $bytes = self::writeData($filename, $json);
-            self::info("Saved {0} bytes JSON-serialized data to: {1}", [$bytes, $filename]);
+            self::debug("Saved {0} bytes JSON-serialized data to: {1}", [$bytes, $filename]);
             return true;
         }
 
@@ -539,7 +577,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
             self::checkYAML();
             $yaml = yaml_emit($this->values);
             $bytes = self::writeData($filename, $yaml);
-            self::info("Saved {0} bytes YAML-serialized data to: {1}", [$bytes, $filename]);
+            self::debug("Saved {0} bytes YAML-serialized data to: {1}", [$bytes, $filename]);
             return true;
         }
         throw new \DomainException("Invalid data type: " . $ext);
@@ -548,7 +586,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
     /**
      * @codeCoverageIgnore Logging need not be tested, and cannot be called externally
      */
-    private static function info()
+    private static function debug()
     {
         if (self::$logger === null && class_exists("WASP\\Debug\\Logger", false))
             self::$logger = \WASP\Debug\Logger::getLogger("WASP.Dictionary");
@@ -556,7 +594,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
         if (self::$logger === null)
             return;
 
-        call_user_func_array(array(self::$logger, "info"), func_get_args());
+        call_user_func_array(array(self::$logger, "debug"), func_get_args());
     }
 
     /**

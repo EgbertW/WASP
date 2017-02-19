@@ -44,7 +44,9 @@ class Cache
     use LoggerAwareStaticTrait;
 
     private static $repository = array();
-    private $cache_name;
+    private static $expiry = null;
+    private static $group_name = null;
+    private $cache_name = 3600;
 
     /**
      * Create a cache
@@ -67,16 +69,22 @@ class Cache
     {
         register_shutdown_function(array('WASP\\Cache', 'saveCache'));
 
-        $timeout = $config->dget('cache', 'expire', 60); // Clear out cache every minute by default
+        self::$expiry = $config->dget('cache', 'expire', 60); // Clear out cache every minute by default
+        self::$group_name = $config->dget('cache', 'group_name', null); // Group name to change ownership to
         foreach (self::$repository as $name => $cache)
-        {
-            $st = isset($cache['_timestamp']) ? $cache['_timestamp'] : 0;
+            self::checkExpiry($name);
+    }
 
-            if (time() - $st > $timeout || $timeout === 0)
-            {
-                self::$repository[$name] = new Dictionary();
-                self::$repository[$name]['_timestamp'] = time();
-            }
+    private static function checkExpiry($name)
+    {
+        $timeout = self::$expiry;
+        $st = isset(self::$repository[$name]['_timestamp']) ? self::$repository[$name]['_timestamp'] : 0;
+
+        if (time() - $st > $timeout || $timeout === 0)
+        {
+            self::$logger->info("Cache for {0} expired - clearing", [$name]);
+            self::$repository[$name] = new Dictionary();
+            self::$repository[$name]['_timestamp'] = time();
         }
     }
 
@@ -101,11 +109,12 @@ class Cache
             {
                 self::$repository[$name] = Dictionary::loadFile($cache_file, "phps");
                 self::$repository[$name]['_changed'] = false;
+                self::checkExpiry($name);
             }
             catch (\Throwable $t)
             {
                 self::$logger->error("Failure loading cache {0} - removing", [$name]);
-                self::$logger->error("Error", [$t]);
+                self::$logger->error("Error: {0}", [$t]);
                 if (is_writable($cache_file))
                     unlink($cache_file);
                 return;
@@ -133,6 +142,11 @@ class Cache
             unset($cache['_changed']);
             $cache_file = $cache_dir . '/' . $name . '.cache';
             $cache->saveFile($cache_file, 'phps');
+            if (self::$group_name !== null)
+            {
+                chgrp($cache_file, self::$group_name);
+                chmod($cache_file, 0660);
+            }
         }
     }
 
