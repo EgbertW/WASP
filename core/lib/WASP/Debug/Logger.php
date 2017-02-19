@@ -113,6 +113,11 @@ class Logger extends AbstractLogger
         return $this;
     }
 
+    public function getLogHandlers()
+    {
+        return $this->handlers;
+    }
+
     public function removeLogHandlers()
     {
         $this->handlers = array();

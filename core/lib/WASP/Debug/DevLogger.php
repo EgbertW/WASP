@@ -28,6 +28,7 @@ namespace WASP\Debug;
 use WASP\Http\Request;
 use WASP\Http\ResponseHookInterface;
 use WASP\Http\Response;
+use WASP\Http\Error;
 use WASP\Http\DataResponse;
 use WASP\Http\StringResponse;
 
@@ -35,7 +36,7 @@ use WASP\Http\StringResponse;
  * Log all output of the current script to memory, and attach a log to the end
  * of the response
  */
-class DevLogger implements LogWriterInterface 
+class DevLogger implements LogWriterInterface, ResponseHookInterface
 {
     /** Minimum logger level */
     private $min_level;
@@ -60,12 +61,12 @@ class DevLogger implements LogWriterInterface
      */
     public function write(string $level, $message, array $context)
     {
-        $level = Logger::getLevelNumeric($level);
-        if ($level < $this->min_level)
+        $levnum = Logger::getLevelNumeric($level);
+        if ($levnum < $this->min_level)
             return;
 
         $message = Logger::fillPlaceholders($message, $context);
-        $this->log[] = $message;
+        $this->log[] = sprintf("%10s: %s", strtoupper($level), $message);
     }
 
     /**
@@ -87,38 +88,47 @@ class DevLogger implements LogWriterInterface
     public function executeHook(Request $request, Response $response)
     {
         $now = microtime(true);
-        $start = $request->getStart();
+        $start = $request->getStartTime();
         $duration = round($now - $start, 3);
 
         if ($response instanceof DataResponse)
-            $response->getDictionary()->set('devlog', $this->log);
-
-        if ($response instanceof StringResponse)
         {
-            $mime = $response->getMime();
+            $response->getDictionary()->set('devlog', $this->log);
+        }
+        elseif ($response instanceof Error)
+        {
+            $response->setDebugLog($this->log);
+        }
+        elseif ($response instanceof StringResponse)
+        {
+            $mime = $response->getMimeTypes();
             $buf = fopen('php://memory', 'rw');
-            if ($mime === 'text/html')
+
+            if (in_array('text/html', $mime))
             {
+                fprintf($buf, "\n<!-- DEVELOPMENT LOG-->\n");
                 fprintf($buf, "<!-- Executed in: %s s -->\n", $duration);
-                fprintf($buf, "<!-- App executed: %s -->\n", $request->route);
+                fprintf($buf, "<!-- Route resolved: %s -->\n", $request->route);
+                fprintf($buf, "<!-- App executed: %s -->\n", $request->app);
                 foreach ($this->log as $no => $line)
                     fprintf($buf, "<!-- %05d: %s -->\n", $no, htmlentities($line));
-            }
-            elseif ($mime === 'text/plain')
-            {
-                fprintf($buf, "<!-- Executed in: %s -->\n", Log::str($duration));
-                fprintf($buf, "<!-- App executed: %s -->\n", $request->route);
-                foreach ($this->log as $no => $line)
-                    fprintf($buf, "// %05d: %s\n", $no, $line);
+
+                fseek($buf, 0);
+                $output = fread($buf, 100 * 1024);
+                $response->append($output, 'text/html');
             }
 
-            fseek($buf, 0);
-            $output = fread($buf, 100 * 1024);
-            if (!feof($buf))
-                $output .= " <!-- TRUNCATED LOG -->\n";
-            fclose($buf);
-            
-            $response->append($output);
+            if (in_array('text/plain', $mime))
+            {
+                fprintf($buf, "\n// DEVELOPMENT LOG\n");
+                fprintf($buf, "// Executed in: %s\n", Log::str($duration));
+                fprintf($buf, "// Route resolved: %s\n", $request->route);
+                fprintf($buf, "// App executed: %s>\n", $request->app);
+                foreach ($this->log as $no => $line)
+                    fprintf($buf, "// %05d: %s\n", $no, $line);
+
+                $response->append($output, 'text/plain');
+            }
         }
     }
 }

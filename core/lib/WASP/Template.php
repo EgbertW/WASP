@@ -159,7 +159,7 @@ namespace WASP
 
         public function chooseResponse(array $types)
         {
-            $best = Request::getBestResponseType($types);
+            $best = Request::current()->getBestResponseType($types);
 
             // Set the mime-type to the best selected output
             $charset = (substr($best, 0, 5) == "text/") ? "utf-8" : null;
@@ -259,6 +259,8 @@ namespace WASP
             while ($class)
             {
                 $path = 'error/' . str_replace('\\', '/', $class);
+                if ($class === "WASP\\Http\\Error")
+                    $path = 'error/HttpError'; 
 
                 if (!empty($code))
                 {

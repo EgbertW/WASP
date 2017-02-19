@@ -25,6 +25,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\Http;
 
+use WASP\Debug\Logger;
+use WASP\Debug\DevLogger;
 use WASP\Debug\LoggerAwareStaticTrait;
 use DateTime;
 use DateInterval;
@@ -58,6 +60,13 @@ class ResponseBuilder
     public function __construct(Request $request)
     {
         $this->request = $request;
+
+        // Check for a Dev-logger
+        $rootlogger = Logger::getLogger();
+        $handlers = $rootlogger->getLogHandlers();
+        foreach ($handlers as $h)
+            if ($h instanceof DevLogger)
+                $this->addHook($h);
     }
 
     /**
@@ -170,6 +179,7 @@ class ResponseBuilder
             }
             catch (\Throwable $e)
             {
+                self::$logger->alert('Error while running hooks: {0}', [$e]);
                 $this->response = new Error(500, "Error while running hooks", $e);
             }
         }

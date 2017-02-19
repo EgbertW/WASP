@@ -39,6 +39,7 @@ class Error extends Response
 
     private static $nesting_counter = 0;
     private $user_message;
+    private $devlog = null;
 
     public function __construct($code, $error, $user_message = null, $previous = null)
     {
@@ -54,6 +55,11 @@ class Error extends Response
     public function getMimeTypes()
     {
         return array_keys(DataResponse::$representation_types);
+    }
+
+    public function setDebugLog(array $log)
+    {
+        $this->devlog = $log;
     }
 
     public function output(string $mime)
@@ -77,6 +83,9 @@ class Error extends Response
             'chain' => array()
         );
 
+        if (!empty($this->devlog))
+            $data['log'] = $this->devlog;
+
         $dict = new Dictionary($data);
         $wrapped = new DataResponse($dict);
         $wrapped->output($mime);
@@ -92,6 +101,7 @@ class Error extends Response
         {
             $template = Template::findExceptionTemplate($exception);
             $template->assign('exception', $exception);
+            $template->assign('log', $this->devlog);
             $template->render();
         }
         catch (Response $e)
@@ -101,7 +111,10 @@ class Error extends Response
         catch (Throwable $e)
         {
             self::$logger->emergency("Could not render error template, using fallback writer!");
-            self::fallbackWriter($exception, "text/html");
+            $op = array('exception' => $exception);
+            if ($this->devlog)
+                $op['log'] = $this->devlog;
+            self::fallbackWriter($op, "text/html");
         }
     }
 
