@@ -23,19 +23,17 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-js('vendor/jquery');
-js('vendor/what-input');
-css('foundation');
-css('foundation-icons');
+$this->addJS('vendor/jquery');
+$this->addJS('vendor/what-input');
+$this->addCSS('foundation');
+$this->addCSS('foundation-icons');
 
 ?><!doctype html>
 <html>
     <head lang="nl">
         <meta charset="utf-8" />
         <title>Titel</title>
-        <?php foreach ($this->getCSS() as $style): ?>
-        <link rel="stylesheet" href="<?=$style;?>" type="text/css" />
-        <?php endforeach; ?>
+        <?=$this->insertCSS();?>
     </head>
     <body>
         <div class="top-bar">

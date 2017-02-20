@@ -25,6 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\Http;
 
+use WASP\AssetManager;
 use WASP\Debug\Logger;
 use WASP\Debug\DevLogger;
 use WASP\Debug\LoggerAwareStaticTrait;
@@ -53,6 +54,9 @@ class ResponseBuilder
     /** The hooks to execute before outputting the response */
     private $hooks = array();
 
+    /** The asset manager manages injection of CSS and JS script inclusion */
+    private $asset_manager = null;
+
     /**
      * Create the response to a Request
      * @param Request $request The request this is the response to
@@ -67,6 +71,11 @@ class ResponseBuilder
         foreach ($handlers as $h)
             if ($h instanceof DevLogger)
                 $this->addHook($h);
+
+        $this->asset_manager = new AssetManager($request);
+        $this->asset_manager->setMinified(!$request->config->dget('site', 'dev', false));
+        $this->asset_manager->setTidy($request->config->dget('site', 'tidy-output', false));
+        $this->addHook($this->asset_manager);
     }
 
     /**
@@ -79,6 +88,11 @@ class ResponseBuilder
         $this->response = $response;
         $response->setRequest($this->request);
         return $this;
+    }
+
+    public function getAssetManager()
+    {
+        return $this->asset_manager;
     }
 
     /**
@@ -170,12 +184,21 @@ class ResponseBuilder
         // Close and log all script output that hasn't been cleaned yet
         $this->endAllOutputBuffers();
 
+        // Add Content-Type mime header
+        $mime = $this->response->getMimeTypes();
+        if (empty($mime))
+            $mime = Request::cli() ? "text/plain" : "text/html";
+        elseif (is_array($mime))
+            $mime = $this->request->getBestResponseType($mime);
+
+        $this->setHeader('Content-Type', $mime);
+
         // Execute hooks
         foreach ($this->hooks as $hook)
         {
             try
             {
-                $hook->executeHook($this->request, $this->response);
+                $hook->executeHook($this->request, $this->response, $mime);
             }
             catch (\Throwable $e)
             {
@@ -191,15 +214,6 @@ class ResponseBuilder
         // Add headers from response to the final response
         foreach ($this->response->getHeaders() as $key => $value)
             $this->setHeader($key, $value);
-
-        // Add Content-Type mime header
-        $mime = $this->response->getMimeTypes();
-        if (empty($mime))
-            $mime = Request::cli() ? "text/plain" : "text/html";
-        elseif (is_array($mime))
-            $mime = $this->request->getBestResponseType($mime);
-
-        $this->setHeader('Content-Type', $mime);
 
         // Set headers
         foreach ($this->headers as $name => $value)

@@ -40,7 +40,7 @@ class StringResponse extends Response
      */
     public function __construct($output, $mime = "text/html")
     {
-        $this->set($output, $mime);
+        $this->setOutput($output, $mime);
         $this->code = 200;
     }
 
@@ -52,7 +52,7 @@ class StringResponse extends Response
      * @param string $mime The mime-type for the content
      * @return StringResponse Provides fluent interface
      */
-    public function set($output, $mime = "text/html")
+    public function setOutput($output, $mime = "text/html")
     {
         if (
             !is_string($output) && !is_callable($output) 

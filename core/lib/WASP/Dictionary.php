@@ -620,6 +620,8 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
     private static function writeData(string $filename, string $data)
     {
         $ret = file_put_contents($filename, $data);
+        $file = new Util\File($filename);
+        $file->setPermissions();
 
         if ($ret === false)
             throw new IOException("Failed to write JSON data to " . $filename);

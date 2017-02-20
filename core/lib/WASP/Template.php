@@ -44,8 +44,7 @@ namespace WASP
         public static $last_template = null;
         public $mime = null;
 
-        public static $js = array();
-        public static $css = array();
+        private $request;
 
         public function __construct($name)
         {
@@ -61,6 +60,7 @@ namespace WASP
                 throw new HttpError(500, "Template does not exist: " . $name);
 
             self::$last_template = $this;
+            $this->request = Request::current();
         }
 
         public function assign($name, $value)
@@ -79,7 +79,7 @@ namespace WASP
 
         public function render()
         {
-            $result = $this->renderInternal();
+            $result = $this->renderReturn();
             if (!$result instanceof Response)
                 if ($result instanceof Throwable)
                     throw new HttpError(500, "Did not get a proper response", $result);
@@ -89,10 +89,10 @@ namespace WASP
             throw $result;
         }
 
-        private function renderInternal()
+        public function renderReturn()
         {
             extract($this->arguments);
-            $request = Request::current();
+            $request = $this->request;
             $language = $request->language;
             $config = Config::getConfig('main', true);
             $dev = $config === null ? false : $config->get('site', 'dev');
@@ -173,26 +173,30 @@ namespace WASP
             $this->translations = func_get_args();
         }
 
-        public static function registerJS($script)
+        public function addJS($script)
         {
-            if (substr($script, -3) === ".js")
-                $script = substr($script, 0, -3);
-            if (substr($script, -4) === ".min")
-                $script = substr($script, 0, -4);
-
-            if (!in_array($script, self::$js))
-                self::$js[] = $script;
+            $mgr = $this->request->getResponseBuilder()->getAssetManager();
+            $mgr->addScript($script);
+            return $this;
         }
 
-        public static function registerCSS($stylesheet)
+        public function addCSS($stylesheet)
         {
-            if (substr($stylesheet, -4) === ".css")
-                $stylesheet = substr($stylesheet, 0, -4);
-            if (substr($stylesheet, -4) === ".min")
-                $stylesheet = substr($stylesheet, 0, -4);
+            $mgr = $this->request->getResponseBuilder()->getAssetManager();
+            $mgr->addCSS($stylesheet);
+            return $this;
+        }
 
-            if (!in_array($stylesheet, self::$css))
-                self::$css[] = $stylesheet;
+        public function insertJS()
+        {
+            $mgr = $this->request->getResponseBuilder()->getAssetManager();
+            return $mgr->injectScript();
+        }
+
+        public function insertCSS()
+        {
+            $mgr = $this->request->getResponseBuilder()->getAssetManager();
+            return $mgr->injectCSS();
         }
 
         public function getJS()
@@ -295,16 +299,6 @@ namespace
     {
         $tpl = WASP\Template::$last_template->resolve($name);
         return $tpl;
-    }
-
-    function js($script)
-    {
-        WASP\Template::registerJS($script);
-    }
-
-    function css($stylesheet)
-    {
-        WASP\Template::registerCSS($stylesheet);
     }
 
     function txt($str)

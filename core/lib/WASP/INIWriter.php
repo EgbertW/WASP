@@ -117,6 +117,8 @@ class INIWriter
 
         // Write the config file
         file_put_contents($filename, $new_contents);
+        $file = new Util\File($filename);
+        $file->setPermissions();
     }
 
     /**

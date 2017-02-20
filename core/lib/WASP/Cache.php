@@ -45,7 +45,6 @@ class Cache
 
     private static $repository = array();
     private static $expiry = null;
-    private static $group_name = null;
     private $cache_name = 3600;
 
     /**
@@ -70,7 +69,6 @@ class Cache
         register_shutdown_function(array('WASP\\Cache', 'saveCache'));
 
         self::$expiry = $config->dget('cache', 'expire', 60); // Clear out cache every minute by default
-        self::$group_name = $config->dget('cache', 'group_name', null); // Group name to change ownership to
         foreach (self::$repository as $name => $cache)
             self::checkExpiry($name);
     }
@@ -142,11 +140,6 @@ class Cache
             unset($cache['_changed']);
             $cache_file = $cache_dir . '/' . $name . '.cache';
             $cache->saveFile($cache_file, 'phps');
-            if (self::$group_name !== null)
-            {
-                chgrp($cache_file, self::$group_name);
-                chmod($cache_file, 0660);
-            }
         }
     }
 

@@ -91,7 +91,13 @@ class VirtualHost
     {
         $url = new URL($this->url);
         $path = ltrim($path, '/');
-        $url->set('path', $url->path . '/' . $path);
+        $url->set('path', $url->path . $path);
+
+        if ($url->host === $this->url->host && $url->scheme === $this->url->scheme && $url->port === $this->url->port)
+        {
+            $url->host = null;
+            $url->scheme = null;
+        }
         return $url;
     }
 

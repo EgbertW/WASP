@@ -30,5 +30,5 @@ namespace WASP\Http;
  */
 interface ResponseHookInterface
 {
-    public function executeHook(Request $request, Response $response);
+    public function executeHook(Request $request, Response $response, string $mime);
 }

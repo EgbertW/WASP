@@ -34,6 +34,8 @@ use Iterator;
 class Dir implements Iterator
 {
     private static $required_prefix = "";
+    private static $dir_group = null;
+    private static $dir_mode = 0770;
 
     /** 
      * Security measure that prevents attempts of removing files outside of WASP
@@ -43,6 +45,18 @@ class Dir implements Iterator
     public static function setRequiredPrefix($prefix)
     {
         self::$required_prefix = $prefix;
+    }
+
+    public static function setDirGroup(string $group)
+    {
+        $this->dir_group = $group;
+        return $this;
+    }
+
+    public static function setDirMode(int $mode)
+    {
+        $this->dir_mode = $mode;
+        return $this;
     }
 
     /**
@@ -62,7 +76,9 @@ class Dir implements Iterator
             if (!is_dir($path))
             {
                 mkdir($path);
-                chmod($path, 0770);
+                chmod($path, self::$dir_mode);
+                if ($this->dir_group !== null)
+                    chgrp($path, self::$dir_group);
             }
         }
     }

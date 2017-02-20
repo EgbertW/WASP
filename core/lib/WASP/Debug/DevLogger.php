@@ -85,7 +85,7 @@ class DevLogger implements LogWriterInterface, ResponseHookInterface
      * @param Request $request The request being answerd
      * @param Response $response The response so far
      */
-    public function executeHook(Request $request, Response $response)
+    public function executeHook(Request $request, Response $response, string $mime)
     {
         $now = microtime(true);
         $start = $request->getStartTime();

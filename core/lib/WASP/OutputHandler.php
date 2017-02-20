@@ -139,6 +139,7 @@ class OutputHandler
 
     private static function handleResponse(Request $request, Response $response)
     {
+        echo \WASP\Debug\Logger::str($response, true);
         $responseBuilder = $request->getResponseBuilder();
         $responseBuilder->setResponse($response);
         $responseBuilder->respond();

@@ -97,6 +97,8 @@ class URL implements \ArrayAccess
             $this->fragment = !empty($matches[5]) ? $matches[5] : null;
         }
 
+        if ($path === '')
+            $path = '/';
         $this->path = $path;
         return $this;
     }

@@ -84,9 +84,9 @@ class Bootstrap
 
         // Set up root logger
         $root_logger = Logger::getLogger();
-        $root_logger->setLevel(LogLevel::DEBUG);
+        $root_logger->setLevel(LogLevel::INFO);
         $logfile = Path::$VAR . '/log/wasp' . $test . '.log';
-        $root_logger->addLogHandler(new FileWriter($logfile, LogLevel::INFO));
+        $root_logger->addLogHandler(new FileWriter($logfile, LogLevel::DEBUG));
 
         // Attach the error handler
         OutputHandler::setErrorHandler();
@@ -100,6 +100,17 @@ class Bootstrap
             $devlogger = new Debug\DevLogger(LogLevel::DEBUG);
             $root_logger->addLogHandler($devlogger);
         }
+
+        // Set default permissions for files and directories
+        if ($config->has('io', 'group'))
+        {
+            Util\File::setFileGroup($config->get('io', 'group'));
+            Dir::setDirGroup($config->get('io', 'group'));
+        }
+        if ($config->has('io', 'file_mode'))
+            Util\File::setFileMode($config->get('io', 'file_mode'));
+        if ($config->has('io', 'dir_mode'))
+            Dir::setDirMode($config->get('io', 'file_mode'));
 
         // Log beginning of request handling
         if (isset($_SERVER['REQUEST_URI']))
