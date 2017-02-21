@@ -25,47 +25,84 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP;
 
-class Path
+final class Path
 {
-    public static $ROOT;
-    public static $CONFIG;
-    public static $VAR;
-    public static $CACHE;
+    private $root;
+    private $var;
+    private $cache;
+    private $log;
 
-    public static $HTTP;
-    public static $ASSETS;
-    public static $JS;
-    public static $CSS;
-    public static $IMG;
+    private $http;
+    private $assets;
+    private $js;
+    private $css;
+    private $img;
 
-    /**
-     * Fill the variables with proper (default) values, called by Bootstrap
-     * 
-     * @param string $root The WASP root directory
-     * @param string $webroot The webroot, where the index.php resides. If omitted,
-     *                        it defaults to WASP/http
-     */
-    public static function setup(string $root, string $webroot = null)
+    private static $instance = null;
+
+    public function __construct(array $paths)
     {
-        self::$ROOT = realpath($root);
-        if (self::$ROOT === false)
-            throw new \RuntimeException("Root does not exist");
+        self::$instance = $this;
 
-        self::$CONFIG = self::$ROOT . '/config';
-        self::$VAR = self::$ROOT . '/var';
-        self::$CACHE = self::$VAR . '/cache';
+        $keys = array_keys($paths);
+        foreach ($keys as $key)
+        {
+            $p = $paths[$key];
+            $rp = realpath($p);
+            if ($rp === false)
+                throw new IOException("Path $key ($p) does not exist");
+            $paths[$key] = $rp;
+        }
 
-        if (empty($webroot))
-            self::$HTTP = self::$ROOT . '/http';
-        else
-            self::$HTTP = realpath($webroot);
+        // Starting point is a root path
+        $this->root = isset($paths['root']) ? $paths['root'] : realpath(dirname(dirname(dirname(__FILE__))));
+
+        // Determine other locations based on root if not specified
+        $this->core = isset($paths['core']) ? $paths['core'] : $this->root . '/core';
+        $this->var = isset($paths['var']) ? $paths['var'] : $this->root . '/var';
+        $this->modules = isset($paths['modules']) ? $paths['modules'] : $this->root . '/modules';
+        $this->http = isset($paths['http']) ? $paths['http'] : $this->root . '/http';
+        $this->log = isset($paths['log']) ? $paths['log'] : $this->var . '/log';
+
+        $this->cache = $this->var . '/cache';
+        $this->assets = $this->http . '/assets';
+        $this->js = $this->assets . '/js';
+        $this->css = $this->assets . '/css';
+        $this->img = $this->assets . '/img';
+
+        foreach (array('root', 'core', 'var', 'modules', 'http') as $type)
+        {
+            $path = $this->$type;
+            if (!file_exists($path) || !is_dir($path))
+                throw new IOException("Path $type (" . $path . ") does not exist");
+        }
         
-        if (self::$HTTP === false || !is_dir(self::$HTTP))
-            throw new \RuntimeException("Webroot does not exist");
+        foreach (array('var', 'cache', 'log', 'assets', 'js', 'css') as $write_dir)
+        {
+            $path = $this->$write_dir;
+            if (!file_exists($path))
+                mkdir($path);
 
-        self::$ASSETS = self::$HTTP . '/assets';
-        self::$JS = self::$ASSETS . '/js';
-        self::$CSS = self::$ASSETS . '/css';
-        self::$IMG = self::$ASSETS . '/img';
+            if (!is_dir($path))
+                throw new IOException("Path " . $path . " is not a directory");
+
+            if (!is_writable($path))
+                Util\File::makeWritable($path);
+        }
+    }
+
+    public static function current()
+    {
+        if (self::$instance === null)
+            throw new \RuntimeException("No path config available");
+
+        return self::$instance;
+    }
+
+    public function __get($field)
+    {
+        if (property_exists($this, $field))
+            return $this->$field;
+        throw new \RuntimeException("Invalid path: $field");
     }
 }

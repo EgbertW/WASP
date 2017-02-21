@@ -40,38 +40,41 @@ class Resolve
 {
     use LoggerAwareStaticTrait;
 
+    /** Path configuration */
+    private $path;
+
     /** A list of installed modules */
-    private static $modules;
+    private $modules;
+
+    /** The path of the core module */
+    private $core_path;
 
     /** The cache of templates, assets, routes */
-    private static $cache = null;
+    private $cache = null;
 
     /** Set to true after a call to findModules */
-    private static $module_init = false;
+    private $module_init = false;
 
     /**
      * Set up the resolve cache. Should be called just once, at the bottom of
      * this script, but repeated calling won't break anything.
      */
-    public static function init()
+    public function __construct(Path $path)
     {
-        if (self::$cache !== null)
-            return;
-
-        self::setLogger();
-        self::$modules = array('core' => Path::$ROOT . '/core');
-        self::$cache = new Cache('resolve');
+        $this->modules = array('core' => $path->core);
+        $this->cache = new Cache('resolve');
+        $this->path = $path;
     }
 
     /** 
      * Find installed modules in the module path
      * @param $module_path string Where to look for the modules
      */
-    public static function listModules($module_path)
+    public function listModules($module_path)
     {
         $dirs = glob($module_path . '/*');
 
-        $modules = array('core' => Path::$ROOT . '/core');
+        $modules = array('core' => $this->path->core);
         foreach ($dirs as $dir)
         {
             if (!is_dir($dir))
@@ -100,17 +103,17 @@ class Resolve
      * @param $name string The name of the module. Just for logging purposes.
      * @param $path string The path of the module.
      */
-    public static function registerModule($name, $path)
+    public function registerModule($name, $path)
     {
-        self::$modules[$name] = $path;
+        $this->modules[$name] = $path;
     }
 
     /**
      * Return the list of found modules
      */
-    public static function getModules()
+    public function getModules()
     {
-        return array_keys(self::$modules);
+        return array_keys($this->modules);
     }
 
     /**
@@ -122,11 +125,11 @@ class Resolve
      *               'module' => The source module for the controller
      *               'remainder' => Arguments object with the unmatched part of the request
      */
-    public static function app($request)
+    public function app($request)
     {
         $parts = array_filter(explode("/", $request));
 
-        $routes = self::getRoutes();
+        $routes = $this->getRoutes();
         $ptr = $routes;
 
         $route = $routes['_'];
@@ -207,14 +210,14 @@ class Resolve
      * Get all routes available from all modules
      * @return array The available routes and the associated controller
      */
-    public static function getRoutes()
+    public function getRoutes()
     {
-        $routes = self::$cache->get('routes');
+        $routes = $this->cache->get('routes');
         if (!empty($routes))
             return $routes;
         
         $routes = array();
-        foreach (self::$modules as $module => $location)
+        foreach ($this->modules as $module => $location)
         {
             $app_path = $location . '/app';
             
@@ -260,7 +263,7 @@ class Resolve
         }
 
         // Update the cache
-        self::$cache->put('routes', $routes);
+        $this->cache->put('routes', $routes);
         return $routes;
     }
 
@@ -270,23 +273,23 @@ class Resolve
      * and appending .class.php or .php.
      * 
      */
-    public static function class($class_name)
+    public function class($class_name)
     {
         self::$logger->debug("Lookup up class {0}", [$class_name]);
-        $resolved = self::$cache->get('class', $class_name);
+        $resolved = $this->cache->get('class', $class_name);
         if ($resolved === null)
         {
             $path1 = str_replace('\\', '/',  $class_name) . ".class.php";
             $path2 = str_replace('\\', '/',  $class_name) . ".php";
 
-            $resolved = self::resolve('lib', $path1, false, true);
+            $resolved = $this->resolve('lib', $path1, false, true);
             if (!$resolved)
-                $resolved = self::resolve('lib', $path2, false, true);
+                $resolved = $this->resolve('lib', $path2, false, true);
 
             if ($resolved === null) // Store failure as false in the cache
                 $resolved = false;
 
-            self::$cache->put('class', $class_name, $resolved);
+            $this->cache->put('class', $class_name, $resolved);
         }
 
         return $resolved ? $resolved : null;
@@ -301,12 +304,12 @@ class Resolve
      * @param $template string The template identifier. 
      * @return string The location of a matching template.
      */
-    public static function template($template)
+    public function template($template)
     {
         if (substr($template, -4) != ".php")
             $template .= ".php";
 
-        return self::resolve('template', $template, true);
+        return $this->resolve('template', $template, true);
     }
 
     /**
@@ -318,9 +321,9 @@ class Resolve
      * @param $asset string The name of the asset file
      * @return string The location of a matching asset
      */
-    public static function asset($asset)
+    public function asset($asset)
     {
-        return self::resolve('assets', $asset, true);
+        return $this->resolve('assets', $asset, true);
     }
 
     /**
@@ -333,12 +336,12 @@ class Resolve
      * @param $case_insensitive boolean When this is true, all files will be compared lowercased
      * @return string A matching file. Null is returned if nothing was found.
      */
-    private static function resolve($type, $file, $reverse = false, $case_insensitive = false)
+    private function resolve($type, $file, $reverse = false, $case_insensitive = false)
     {
         if ($case_insensitive)
             $file = strtolower($file);
 
-        $cached = self::$cache->get($type, $file);
+        $cached = $this->cache->get($type, $file);
         if ($cached === false)
             return null;
 
@@ -355,7 +358,7 @@ class Resolve
 
         $path = null;
         $found_module = null;
-        $mods = $reverse ? array_reverse(self::$modules) : self::$modules;
+        $mods = $reverse ? array_reverse($this->modules) : $this->modules;
 
         // A glob pattern is composed to implement a case insensitive file search
         if ($case_insensitive)
@@ -396,15 +399,16 @@ class Resolve
         if ($found_module !== null)
         {
             self::$logger->debug("Resolved {0} {1} to path {2} (module: {3})", [$type, $file, $path, $found_module]);
-            self::$cache->put($type, $file, array("module" => $found_module, "path" => $path));
+            $this->cache->put($type, $file, array("module" => $found_module, "path" => $path));
             return $path;
         }
         else
-            self::$cache->put($type, $file, false);
+            $this->cache->put($type, $file, false);
     
         return null;
     }
 }
 
-// Set up the cache
-Resolve::init();
+// @codeCoverageIgnoreStart
+Resolve::setLogger();
+// @codeCoverageIgnoreEnd

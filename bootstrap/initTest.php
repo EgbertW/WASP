@@ -23,6 +23,8 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+use WASP\Autoload\Autoloader;
+
 // Set up the autoloader
 $root = 
     dirname( // WASP
@@ -32,9 +34,13 @@ $root =
     );
 
 require_once $root . "/core/lib/WASP/Autoload/Autoloader.php";
-WASP\Autoload\Autoloader::registerNS('WASP', $root . '/core/lib/WASP');
+Autoloader::registerNS('WASP', $root . '/core/lib/WASP');
+Autoloader::registerNS('Psr\\Log', $root . '/core/lib/Psr/Log');
+
+$path = new WASP\Path(array('root' => $root));
+$config = WASP\Dictionary::loadFile($root . '/config/main.ini');
 
 // Enable testing code
 define('WASP_TEST', 1);
 
-WASP\Bootstrap::getBootstrapper($root)->bootstrap();
+WASP\System::setup($path, $config);

@@ -214,5 +214,5 @@ class Dir implements Iterator
 // Limit dir by default to the WASP var directory
 // @codeCoverageIgnoreStart
 // No need to test this, see pathTest
-Dir::setRequiredPrefix(Path::$VAR);
+Dir::setRequiredPrefix(Path::current()->var);
 // @codeCoverageIgnoreEnd

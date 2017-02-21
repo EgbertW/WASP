@@ -94,7 +94,8 @@ class Cache
      */
     private static function loadCache($name)
     {
-        $cache_file = Path::$CACHE . '/' . $name  . '.cache';
+        $path = Path::current();
+        $cache_file = $path->cache . '/' . $name  . '.cache';
 
         if (file_exists($cache_file))
         {
@@ -132,7 +133,8 @@ class Cache
      */
     public static function saveCache()
     {
-        $cache_dir = Path::$CACHE;
+        $path = System::getInstance()->path();
+        $cache_dir = $path->cache;
         foreach (self::$repository as $name => $cache)
         {
             if (empty($cache['_changed']))

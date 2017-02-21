@@ -26,6 +26,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP\Http;
 
 use PHPUnit\Framework\TestCase;
+use WASP\Autoload\Resolve;
+use WASP\System;
+use WASP\Path;
 use WASP\Dictionary;
 
 /**
@@ -38,6 +41,9 @@ final class RequestTest extends TestCase
     private $server;
     private $cookie;
     private $config;
+
+    private $path;
+    private $resolve;
 
     public function setUp()
     {
@@ -73,6 +79,9 @@ final class RequestTest extends TestCase
             )
         );
         $this->config = new Dictionary($config);
+
+        $this->path = System::getInstance()->path();
+        $this->resolve = new Resolve($this->path);
     }
 
     /**
@@ -81,7 +90,7 @@ final class RequestTest extends TestCase
      */
     public function testRequestVariables()
     {
-        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config);
+        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
 
         $this->assertEquals($req->get->getAll(), $this->get);
         $this->assertEquals($req->post->getAll(), $this->post);
@@ -118,11 +127,11 @@ final class RequestTest extends TestCase
     {
         $this->server['SERVER_NAME'] = 'www.example.com';
         $this->server['REQUEST_URI'] = '/foo';
-        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config);
+        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
         $this->assertEquals($req->route, '/');
 
         $this->server['REQUEST_URI'] = '/assets';
-        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config);
+        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
         $this->assertEquals($req->route, '/assets');
     }
 
@@ -136,7 +145,7 @@ final class RequestTest extends TestCase
         $this->server['REQUEST_SCHEME'] = 'https';
         $this->server['SERVER_NAME'] = 'www.example.nl';
         $this->server['REQUEST_URI'] = '/assets';
-        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config);
+        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
         $this->assertEquals($req->route, '/assets');
     }
 
@@ -154,7 +163,7 @@ final class RequestTest extends TestCase
         $this->expectException(Error::class);
         $this->expectExceptionCode(404);
         $this->expectExceptionMessage('Not found');
-        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config);
+        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
     }
 
     /**
@@ -177,7 +186,7 @@ final class RequestTest extends TestCase
                 'redirect' => array(1 => 'http://www.example.com/')
             );
 
-        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config);
+        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
     }
 
     /**
@@ -191,7 +200,7 @@ final class RequestTest extends TestCase
         $this->server['REQUEST_URI'] = '/assets';
         $this->config['site'] = array();
 
-        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config);
+        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
         $this->assertEquals($this->get, $req->get->getAll());
     }
 
@@ -201,7 +210,7 @@ final class RequestTest extends TestCase
     public function testAcceptParser()
     {
         unset($this->server['HTTP_ACCEPT']);
-        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config);
+        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
         $this->assertEquals($req->accept, array('text/html' => 1.0));
 
         $accept = Request::parseAccept("garbage");
@@ -222,7 +231,7 @@ final class RequestTest extends TestCase
      */
     public function testAccept()
     {
-        $request = Request::current();
+        $request = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
         $request->accept = array(); 
         $this->assertTrue($request->isAccepted("text/html") == true);
         $this->assertTrue($request->isAccepted("foo/bar") == true);

@@ -28,6 +28,7 @@ namespace WASP\Http;
 use WASP\Debug\LoggerAwareStaticTrait;
 use WASP\Autoload\Resolve;
 use WASP\Dictionary;
+use WASP\Path;
 use WASP\Site;
 use WASP\VirtualHost;
 use WASP\Cache;
@@ -71,6 +72,12 @@ class Request
 
     /** The time at which the request was constructed */
     private $start_time;
+
+    /** The site configuration */
+    public $config;
+
+    /** The path configuration */
+    public $path;
 
     /** The server variables */
     public $server;
@@ -138,13 +145,8 @@ class Request
     /** The response builder */
     private $response_builder = null;
 
-    private static function autoConstruct()
-    {
-        if (self::$current_request)
-            return self::$current_request;
-        $cfg = Config::getConfig();
-        new Request($_GET, $_POST, $_COOKIE, $_SERVER, $cfg, new DateTime());
-    }
+    /** The file / asset resolver */
+    public $resolver = null;
 
     /*** 
      * Create the request based on the request data provided by webserver and client
@@ -153,20 +155,32 @@ class Request
      * @param array $post The POST parameters
      * @param array $cookie The COOKIE parameters
      * @param array $server The SERVER parameters
+     * @param Path $path The path configuration
      * @param Dictionary $config The site configuration
+     * @param Resolve $resolver The app, asset and template resolver
      */
-    public function __construct(array &$get, array &$post, array &$cookie, array &$server, Dictionary $config)
+    public function __construct(
+        array &$get,
+        array &$post,
+        array &$cookie,
+        array &$server,
+        Dictionary $config,
+        Path $path,
+        Resolve $resolver
+    )
     {
         $this->get = Dictionary::wrap($get);
         $this->post = Dictionary::wrap($post);
         $this->cookie = Dictionary::wrap($cookie);
         $this->server = Dictionary::wrap($server);
         $this->config = $config;
+        $this->path = $path;
+        $this->resolver = $resolver;
 
         self::$current_request = $this;
         $this->response_builder = new ResponseBuilder($this);
         $this->method = $this->server->get('REQUEST_METHOD');
-        $this->start = $this->server->dget('REQUEST_TIME_FLOAT', time());
+        $this->start_time = $this->server->dget('REQUEST_TIME_FLOAT', time());
 
         if ($this->server->get('REQUEST_SCHEME'))
         {
@@ -224,7 +238,7 @@ class Request
 
         // Resolve the application to start
         $path = $this->vhost->getPath($this->url);
-        $resolved = Resolve::app($path);
+        $resolved = $this->resolver->app($path);
         if ($resolved !== null)
         {
             $this->route = $resolved['route'];
@@ -244,7 +258,7 @@ class Request
      */
     public function getStartTime()
     {
-        return $this->start;
+        return $this->start_time;
     }
 
     /**
@@ -254,6 +268,14 @@ class Request
     public function getResponseBuilder()
     {
         return $this->response_builder;
+    }
+
+    /**
+     * @return WASP\Autoload\Resolve The app, template and asset resolver
+     */
+    public function getResolver()
+    {
+        return $this->resolver;
     }
 
     /**
@@ -394,17 +416,6 @@ class Request
         $this->session = Dictionary::wrap($GLOBALS['_SESSION']);
         if ($this->session->has('language'))
             $this->language = $this->session->get('language');
-    }
-
-    /**
-     * Return the current Request object
-     */
-    public static function current()
-    {
-        if (self::$current_request === null)
-            return self::autoConstruct();
-
-        return self::$current_request;
     }
 
     /**

@@ -26,9 +26,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 // Initialize WASP
 require "../bootstrap/init.php";
 
+$root = dirname(dirname(__FILE__));
+$path = new WASP\Path(array('root' => $root));
+
 // Dispatch the request
-$config = WASP\Config::getConfig();
-$request = new WASP\Http\Request($_GET, $_POST, $_COOKIE, $_SERVER, $config);
+$config = WASP\Dictionary::loadFile($root . '/config/main.ini')
+
+WASP\Bootstrap::getBootstrapper($path)->bootstrap();
+$request = new WASP\Http\Request($_GET, $_POST, $_COOKIE, $_SERVER, $path, $config);
 $request->dispatch();
 
 die();

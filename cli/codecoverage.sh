@@ -13,7 +13,7 @@ pushd $LOC
 
 echo "**** Running core tests..."
 mkdir -p var/codecoverage/core
-$PHPUNIT --bootstrap bootstrap/init.php core/test --whitelist core/lib --coverage-html var/codecoverage/core $@
+$PHPUNIT --bootstrap bootstrap/initTest.php core/test --whitelist core/lib --coverage-html var/codecoverage/core $@
 if [ "$?" -ne 0 ]
 then
     echo "**** Core tests failed!"

@@ -32,12 +32,14 @@ use PHPUnit\Framework\TestCase;
  */
 final class DictionaryTest extends TestCase
 {
+    private $pathconfig;
     private $path = null;
 
     public function setUp()
     {
-        Dir::setRequiredPrefix(Path::$VAR);
-        $this->path = Path::$VAR . '/test';
+        $this->pathconfig = System::getInstance()->path();
+        Dir::setRequiredPrefix($this->pathconfig->var);
+        $this->path = $this->pathconfig->var . '/test';
         if (file_exists($this->path))
             Dir::rmtree($this->path);
         Dir::mkdir($this->path);

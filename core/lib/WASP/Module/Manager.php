@@ -25,7 +25,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 namespace WASP\Module;
 
-use WASP\Path;
 use WASP\Autoload\Resolve;
 use WASP\Debug\LoggerAwareStaticTrait;
 
@@ -44,21 +43,21 @@ class Manager
     /** 
      * Find and initialize installed modules in the module path
      *
-     * @param $config WASP\Dictionary The configuration from which to obtain the module path
+     * @param $module_path string Where to find the modules
+     * @param Resolve $resolver The resolver that find modules
      */
-    public static function setup($config)
+    public static function setup(string $module_path, Resolve $resolver)
     {
         if (self::$initialized)
             return;
 
         self::setLogger();
-        $module_path = realpath($config->dget('site', 'module_path', Path::$ROOT . '/modules'));
-        $modules = Resolve::listModules($module_path);
+        $modules = $resolver->listModules($module_path);
 
         foreach ($modules as $mod_name => $path)
         {
             self::$logger->debug("Found module {0} in path {1}", [$mod_name, $path]);
-            Resolve::registerModule($mod_name, $path);
+            $resolver->registerModule($mod_name, $path);
             self::$modules[$mod_name] = $path;
 
             // Create the module object, using the module implementation if available

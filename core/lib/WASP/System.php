@@ -26,44 +26,56 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP;
 
 use WASP\Autoload\Autoloader;
+use WASP\Autoload\Resolve;
 use WASP\Http\Request;
 use WASP\Http\Error as HttpError;
 use WASP\Debug\{Logger, LoggerFactory, FileWriter};
 use PSR\Log\LogLevel;
 
 /**
- * @codeCoverageIgnore Bootstrap is already executed before tests run
+ * @codeCoverageIgnore System is already executed before tests run
  */
-class Bootstrap
+class System
 {
     private static $instance = null;
-    private $root_dir = null;
-    private $bootstrapped = false;
 
-    public static function getBootstrapper(string $root)
+    private $bootstrapped = false;
+    private $path;
+    private $config;
+    private $request;
+    private $resolver;
+
+    public static function setup(Path $path, Dictionary $config)
+    {
+        if (self::$instance !== null)
+            throw new \RuntimeException("Cannot initialize more than once");
+
+        self::$instance = new System($path, $config);
+    }
+
+    public static function getInstance()
     {
         if (self::$instance === null)
-        {
-            self::$instance = new Bootstrap();
-            self::$instance->root_dir = realpath($root);
-        }
+            throw new \RuntimeException("WASP has not been initialized yet");
 
         return self::$instance;
+    }
+
+    private function __construct(Path $path, Dictionary $config)
+    {
+        $this->path = $path;
+        $this->config = $config;
+        $this->bootstrap();
     }
 
     public function bootstrap()
     {
         if ($this->bootstrapped)
             throw new \RuntimeException("Cannot bootstrap more than once");
+
         // Set character set
         ini_set('default_charset', 'UTF-8');
         mb_internal_encoding('UTF-8');
-
-        // Set up the path configuration
-        Path::setup($this->root_dir);
-
-        // Change directory to the WASP root
-        chdir(Path::$ROOT);
 
         // Set up logging
         ini_set('log_errors', '1');
@@ -71,12 +83,9 @@ class Bootstrap
         $test = WASP_TEST === 1 ? "-test" : "";
 
         if (PHP_SAPI === 'cli')
-            ini_set('error_log', Path::$ROOT . '/var/log/error-php-cli' . $test . '.log');
+            ini_set('error_log', $this->path->log . '/error-php-cli' . $test . '.log');
         else
-            ini_set('error_log', Path::$ROOT . '/var/log/error-php' . $test . '.log');
-
-        // Add the Psr namespace to the autoloader
-        Autoloader::registerNS('Psr\\Log', Path::$ROOT . '/core/lib/Psr/Log');
+            ini_set('error_log', $this->path->log . '/error-php' . $test . '.log');
 
         // Autoloader requires manual logger setup to avoid depending on external files
         LoggerFactory::setLoggerFactory(new LoggerFactory());
@@ -85,29 +94,27 @@ class Bootstrap
         // Set up root logger
         $root_logger = Logger::getLogger();
         $root_logger->setLevel(LogLevel::DEBUG);
-        $logfile = Path::$VAR . '/log/wasp' . $test . '.log';
+        $logfile = $this->path->log . '/wasp' . $test . '.log';
         $root_logger->addLogHandler(new FileWriter($logfile, LogLevel::INFO));
 
         // Attach the error handler
         OutputHandler::setErrorHandler();
 
         // Load the configuration file
-        $config = Config::getConfig();
-
         // Attach the dev logger when dev-mode is enabled
-        if ($config->get('site', 'dev'))
+        if ($this->config->get('site', 'dev'))
         {
             $devlogger = new Debug\DevLogger(LogLevel::DEBUG);
             $root_logger->addLogHandler($devlogger);
         }
 
         // Set default permissions for files and directories
-        if ($config->has('io', 'group'))
+        if ($this->config->has('io', 'group'))
         {
-            Util\File::setFileGroup($config->get('io', 'group'));
-            Dir::setDirGroup($config->get('io', 'group'));
+            Util\File::setFileGroup($this->config->get('io', 'group'));
+            Dir::setDirGroup($this->config->get('io', 'group'));
         }
-        $file_mode = (int)$config->get('io', 'file_mode');
+        $file_mode = (int)$this->config->get('io', 'file_mode');
         if ($file_mode)
         {
             $of = $file_mode;
@@ -115,7 +122,7 @@ class Bootstrap
             Util\File::setFileMode($file_mode);
         }
 
-        $dir_mode = (int)$config->get('io', 'dir_mode');
+        $dir_mode = (int)$this->config->get('io', 'dir_mode');
         if ($dir_mode)
         {
             $of = $dir_mode;
@@ -127,7 +134,7 @@ class Bootstrap
         if (isset($_SERVER['REQUEST_URI']))
         {
             Debug\debug(
-                "WASP.Bootstrap", 
+                "WASP.System", 
                 "*** Starting processing for {0} request to {1}", 
                 [$_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']]
             );
@@ -136,7 +143,7 @@ class Bootstrap
         // Change settings for CLI
         if (Request::cli())
         {
-            $limit = (int)$config->dget('cli', 'memory_limit', 1024);
+            $limit = (int)$this->config->dget('cli', 'memory_limit', 1024);
             ini_set('memory_limit', $limit . 'M');
             ini_set('max_execution_time', 0);
         }
@@ -145,15 +152,39 @@ class Bootstrap
         ini_set('xdebug.overload_var_dump', 'off');
 
         // Save the cache if configured so
-        Cache::setHook($config);
+        Cache::setHook($this->config);
 
         // Find installed modules and initialize them
-        Module\Manager::setup($config);
+        Module\Manager::setup($this->path->modules, $this->resolver());
 
         // Load utility functions
         Functions::load();
 
         // Do not run again
         $this->bootstrapped = true;
+    }
+
+    public function config()
+    {
+        return $this->config;
+    }
+
+    public function path()
+    {
+        return $this->path;
+    }
+
+    public function request()
+    {
+        if ($this->request === null)
+            $this->request = new Request($_GET, $_POST, $_COOKIE, $_SERVER, $this->config, $this->path, $this->resolver);
+        return $this->request;
+    }
+
+    public function resolver()
+    {
+        if ($this->resolver === null)
+            $this->resolver = new Resolve($this->path);
+        return $this->resolver;
     }
 }

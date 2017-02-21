@@ -12,7 +12,7 @@ fi
 pushd $LOC
 
 echo "**** Running core tests..."
-$PHPUNIT --bootstrap bootstrap/init.php core/test $@
+$PHPUNIT --bootstrap bootstrap/initTest.php core/test $@
 if [ "$?" -ne 0 ]
 then
     echo "**** Core tests failed!"

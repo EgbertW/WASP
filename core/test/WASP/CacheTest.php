@@ -41,8 +41,9 @@ final class CacheTest extends TestCase
      */
     public function testConstruct()
     {
+        $path = System::getInstance()->path();
         $data = array('test' => array('a' => true, 'b' => false, 'c' => true), 'test2' => array(1, 2, 3));
-        $file = Path::$CACHE . '/testcache.cache';
+        $file = $path->cache . '/testcache.cache';
 
         if (file_exists($file))
             Dir::rmtree($file);
@@ -108,7 +109,8 @@ final class CacheTest extends TestCase
         $testdata = array('var1' => 'val1', 'var2' => 'var2');
         $data = serialize($testdata);
 
-        $file = Path::$CACHE . '/testcache.cache';
+        $path = System::getInstance()->path();
+        $file = $path->cache . '/testcache.cache';
         $fh = fopen($file, 'w');
         fputs($fh, $data);
         fclose($fh);
@@ -134,7 +136,8 @@ final class CacheTest extends TestCase
         $config = new Dictionary();
         $config->set('cache', 'expire', 0);
 
-        $file = Path::$CACHE . '/testcache.cache';
+        $path = System::getInstance()->path();
+        $file = $path->cache . '/testcache.cache';
         $fh = fopen($file, 'w');
         fputs($fh, 'garbage-data');
         fclose($fh);
@@ -158,8 +161,9 @@ final class CacheTest extends TestCase
         $config = new Dictionary();
         $config->set('cache', 'expire', 0);
 
-        if (file_exists(Path::$CACHE . '/testcache2.cache'))
-            unlink(Path::$CACHE . '/testcache2.cache');
+        $path = System::getInstance()->path();
+        if (file_exists($path->cache . '/testcache2.cache'))
+            unlink($path->cache . '/testcache2.cache');
         $cc = new Cache('testcache2');
 
         $contents = $cc->get();
@@ -170,8 +174,8 @@ final class CacheTest extends TestCase
         $this->assertTrue($cc->has('test', 'bar'));
         $this->assertFalse($cc->has('test', 'foo'));
 
-        if (file_exists(Path::$CACHE . '/testcache2.cache'))
-            unlink(Path::$CACHE . '/testcache2.cache');
+        if (file_exists($path->cache . '/testcache2.cache'))
+            unlink($path->cache . '/testcache2.cache');
     }
 }
 

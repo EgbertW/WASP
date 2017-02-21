@@ -28,26 +28,29 @@ namespace WASP;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers WASP\Bootstrap
+ * @covers WASP\System
  */
-final class BootstrapTest extends TestCase
+final class SystemTest extends TestCase
 {
     /**
-     * @covers WASP\Bootstrap::getBootstrapper
+     * @covers WASP\System::getInstance
      */
     public function testInstance()
     {
-        $bootstrap = Bootstrap::getBootstrapper("");
-        $this->assertInstanceOf(Bootstrap::class, $bootstrap);
+        $system = System::getInstance();
+        $this->assertInstanceOf(System::class, $system);
     }
 
     /**
-     * @covers WASP\Bootstrap::bootstrap
+     * @covers WASP\System::bootstrap
      */
     public function testNotDouble()
     {
+        $config = new Dictionary();
+        $path = Path::current();
+
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage("Cannot bootstrap more than once");
-        Bootstrap::getBootstrapper("")->bootstrap();
+        $this->expectExceptionMessage("Cannot initialize more than once");
+        System::setup($path, $config);
     }
 }

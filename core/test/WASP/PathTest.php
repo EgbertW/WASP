@@ -42,7 +42,7 @@ final class PathTest extends TestCase
     public function tearDown()
     {
         $this->wasproot = dirname(dirname(dirname(dirname(realpath(__FILE__)))));
-        Path::setup($this->wasproot);
+        new Path(array('root' => $this->wasproot));
     }
 
     /**
@@ -50,30 +50,29 @@ final class PathTest extends TestCase
      */
     public function testPath()
     {
-        $path = $this->wasproot;
-        Path::setup($path);
-        $this->assertEquals($path, Path::$ROOT);
-        $this->assertEquals($path . '/config', Path::$CONFIG);
-        $this->assertEquals($path . '/var', Path::$VAR);
-        $this->assertEquals($path . '/var/cache', Path::$CACHE);
+        $root = $this->wasproot;
 
-        $this->assertEquals($path . '/http', Path::$HTTP);
-        $this->assertEquals($path . '/http/assets', Path::$ASSETS);
-        $this->assertEquals($path . '/http/assets/js', Path::$JS);
-        $this->assertEquals($path . '/http/assets/css', Path::$CSS);
-        $this->assertEquals($path . '/http/assets/img', Path::$IMG);
+        $path = new Path(array('root' => $root));
+        $this->assertEquals($root, $path->root);
+        $this->assertEquals($root . '/var', $path->var);
+        $this->assertEquals($root . '/var/cache', $path->cache);
 
-        Path::setup($path, $path . '/var');
-        $this->assertEquals($path, Path::$ROOT);
-        $this->assertEquals($path . '/config', Path::$CONFIG);
-        $this->assertEquals($path . '/var', Path::$VAR);
-        $this->assertEquals($path . '/var/cache', Path::$CACHE);
+        $this->assertEquals($root . '/http', $path->http);
+        $this->assertEquals($root . '/http/assets', $path->assets);
+        $this->assertEquals($root . '/http/assets/js', $path->js);
+        $this->assertEquals($root . '/http/assets/css', $path->css);
+        $this->assertEquals($root . '/http/assets/img', $path->img);
 
-        $this->assertEquals($path . '/var', Path::$HTTP);
-        $this->assertEquals($path . '/var/assets', Path::$ASSETS);
-        $this->assertEquals($path . '/var/assets/js', Path::$JS);
-        $this->assertEquals($path . '/var/assets/css', Path::$CSS);
-        $this->assertEquals($path . '/var/assets/img', Path::$IMG);
+        $path = new Path(array('root' => $root, 'http' => $root . '/var'));
+        $this->assertEquals($root, $path->root);
+        $this->assertEquals($root . '/var', $path->var);
+        $this->assertEquals($root . '/var/cache', $path->cache);
+
+        $this->assertEquals($root . '/var', $path->http);
+        $this->assertEquals($root . '/var/assets', $path->assets);
+        $this->assertEquals($root . '/var/assets/js', $path->js);
+        $this->assertEquals($root . '/var/assets/css', $path->css);
+        $this->assertEquals($root . '/var/assets/img', $path->img);
     }
 
     /**
@@ -82,8 +81,8 @@ final class PathTest extends TestCase
     public function testExceptionRootInvalid()
     {
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage("Root does not exist");
-        Path::setup('/tmp/non/existing/dir', '/tmp/another/non/existing/dir');
+        $this->expectExceptionMessage("Path root (/tmp/non/existing/dir) does not exist");
+        new Path(array('root' => '/tmp/non/existing/dir'));
     }
 
     /**
@@ -93,7 +92,7 @@ final class PathTest extends TestCase
     {
         $path = $this->wasproot;
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage("Webroot does not exist");
-        Path::setup($path, '/tmp/non/existing/dir');
+        $this->expectExceptionMessage("Path http (/tmp/non/existing/dir) does not exist");
+        new Path(array('root' => $path, 'http' => '/tmp/non/existing/dir'));
     }
 }

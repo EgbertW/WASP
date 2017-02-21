@@ -37,30 +37,32 @@ namespace WASP
     {
         use LoggerAwareStaticTrait;
 
-        private $arguments = array();
-        public $dir;
-        public $path;
-        public $translations = array();
         public static $last_template = null;
-        public $mime = null;
 
         private $request;
+        private $path;
+        private $arguments = array();
+        private $template_path;
+        private $resolve;
+        public $translations = array();
+        public $mime = null;
+
 
         public function __construct($name)
         {
             if (file_exists($name))
                 $tpl = $name;
             else
-                $tpl = Resolve::template($name);
+                $tpl = $this->resolve->template($name);
             
-            $this->path = $tpl;
-            $this->dir = dirname($tpl);
-
-            if (!file_exists($this->path))
+            $this->template_path = $tpl;
+            if (!file_exists($this->template_path))
                 throw new HttpError(500, "Template does not exist: " . $name);
 
             self::$last_template = $this;
             $this->request = Request::current();
+            $this->path = $this->request->path;
+            $this->resolve = $this->request->resolver;
         }
 
         public function assign($name, $value)
@@ -101,7 +103,7 @@ namespace WASP
             try
             {
                 ob_start();
-                include $this->path;
+                include $this->template_path;
                 $output = ob_get_contents();
                 ob_end_clean();
                 $response = new StringResponse($output);

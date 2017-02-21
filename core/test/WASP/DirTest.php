@@ -32,13 +32,17 @@ use PHPUnit\Framework\TestCase;
  */
 final class DirTest extends TestCase
 {
+    private $path;
+
     public function setUp()
     {
-        if (empty(Path::$ROOT))
+        $this->path = System::getInstance()->path();
+        $root = $this->path->root;
+        if (empty($root))
             throw new \RuntimeException("Need a proper WASP Root");
 
-        Dir::setRequiredPrefix(Path::$ROOT);
-        $dir0 = Path::$VAR;
+        Dir::setRequiredPrefix($root);
+        $dir0 = $this->path->var;
         $dir1 = $dir0 . '/testdir';
         if (file_exists($dir1))
         {
@@ -49,7 +53,7 @@ final class DirTest extends TestCase
 
     public function tearDown()
     {
-        $dir0 = Path::$VAR;
+        $dir0 = $this->path->var;
         $dir1 = $dir0 . '/testdir';
         if (!file_exists($dir1))
             return;
@@ -73,7 +77,7 @@ final class DirTest extends TestCase
      */
     public function testDir()
     {
-        $dir0 = Path::$VAR;
+        $dir0 = $this->path->var;
         $dir1 = $dir0 . '/testdir';
 
         $dir2 = $dir1 . '/test2';
@@ -128,7 +132,7 @@ final class DirTest extends TestCase
      */
     public function testRMDirPermission()
     {
-        $dir0 = Path::$VAR;
+        $dir0 = $this->path->var;
         $dir1 = $dir0 . '/testdir';
 
         Dir::mkdir($dir1);
@@ -144,7 +148,7 @@ final class DirTest extends TestCase
      */
     public function testRMFile()
     {
-        $dir0 = Path::$VAR;
+        $dir0 = $this->path->var;
         $dir1 = $dir0 . '/testdir';
         Dir::mkdir($dir1);
 
@@ -166,7 +170,7 @@ final class DirTest extends TestCase
      */
     public function testRMFilePermission()
     {
-        $dir0 = Path::$VAR;
+        $dir0 = $this->path->var;
         $dir1 = $dir0 . '/testdir';
         Dir::mkdir($dir1);
 
@@ -186,7 +190,7 @@ final class DirTest extends TestCase
      */
     public function testRMDirDeepPermission()
     {
-        $dir0 = Path::$VAR;
+        $dir0 = $this->path->var;
         $dir1 = $dir0 . '/testdir';
         $dir2 = $dir1 . '/test2';
         Dir::mkdir($dir2);

@@ -42,7 +42,8 @@ class Config
             if ($fail_safe)
                 return null;
 
-            $filename = Path::$CONFIG . '/' . $scope . '.ini';
+            $path = Path::current();
+            $filename = $path->config . '/' . $scope . '.ini';
             Debug\debug("WASP.Config", "Loading config from {0}", [$filename]);
             if (!file_exists($filename))
             {
@@ -61,7 +62,8 @@ class Config
         if (!isset(self::$repository[$scope]))
             throw new \RuntimeException('Cannot write uninitialized config');
 
-        $filename = Path::$CONFIG . '/' . $scope . '.ini';
+        $path = Path::current(); 
+        $filename = $path->config . '/' . $scope . '.ini';
         $config = self::$repository[$scope];
         return $config->saveFile($filename);
     }
