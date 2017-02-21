@@ -121,7 +121,7 @@ class Cache
         }
         else
         {
-            self::$logger->info("Cache {0} does not exist - creating", [$cache_file]);
+            self::$logger->debug("Cache {0} does not exist - creating", [$cache_file]);
             self::$repository[$name] = new Dictionary();
         }
     }

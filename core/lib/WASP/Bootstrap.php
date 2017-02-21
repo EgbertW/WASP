@@ -84,9 +84,9 @@ class Bootstrap
 
         // Set up root logger
         $root_logger = Logger::getLogger();
-        $root_logger->setLevel(LogLevel::INFO);
+        $root_logger->setLevel(LogLevel::DEBUG);
         $logfile = Path::$VAR . '/log/wasp' . $test . '.log';
-        $root_logger->addLogHandler(new FileWriter($logfile, LogLevel::DEBUG));
+        $root_logger->addLogHandler(new FileWriter($logfile, LogLevel::INFO));
 
         // Attach the error handler
         OutputHandler::setErrorHandler();
@@ -126,7 +126,7 @@ class Bootstrap
         // Log beginning of request handling
         if (isset($_SERVER['REQUEST_URI']))
         {
-            Debug\info(
+            Debug\debug(
                 "WASP.Bootstrap", 
                 "*** Starting processing for {0} request to {1}", 
                 [$_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']]

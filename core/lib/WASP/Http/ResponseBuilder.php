@@ -237,7 +237,7 @@ class ResponseBuilder
         $this->response->output($mime);
 
         // We're done
-        self::$logger->info("** Finished processing request to {0}", [$this->request->url]);
+        self::$logger->debug("** Finished processing request to {0}", [$this->request->url]);
         die();
     }
 }

@@ -84,7 +84,7 @@ class AppRunner
         }
         catch (HttpError $response)
         {
-            self::$logger->info("While executing controller: {0}", [$this->app]);
+            self::$logger->debug("While executing controller: {0}", [$this->app]);
             self::$logger->notice(
                 "Failed request ended in {0} - URL: {1}", 
                 [$response->getCode(), $this->request->url]
@@ -93,7 +93,7 @@ class AppRunner
         }
         catch (Response $response)
         {
-            self::$logger->info("While executing controller: {0}", [$this->app]);
+            self::$logger->debug("While executing controller: {0}", [$this->app]);
             self::$logger->info(
                 "Request handled succesfully, status code {0} - URL: {1}",
                 [$response->getCode(), $this->request->url]
@@ -102,7 +102,7 @@ class AppRunner
         }
         catch (Throwable $e)
         {
-            self::$logger->info("While executing controller: {0}", [$this->app]);
+            self::$logger->debug("While executing controller: {0}", [$this->app]);
             self::$logger->notice(
                 "Unexpected exception of type {0} thrown while processing request to URL: {1}", 
                 [get_class($e), $this->request->url]
