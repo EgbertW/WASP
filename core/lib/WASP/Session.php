@@ -27,7 +27,6 @@ namespace WASP;
 
 use DateTime;
 use DateInterval;
-use WASP\Http\Request;
 use WASP\Http\Cookie;
 use WASP\Http\Error as HttpError;
 
@@ -38,6 +37,9 @@ class Session extends Dictionary
     
     /** The configuration */
     private $config;
+
+    /** Server variables */
+    private $server_vars;
 
     /** The base URL of the session */
     private $url;
@@ -54,8 +56,9 @@ class Session extends Dictionary
      *                                and path for the cookie
      * @param WASP\Dictionary $config The configuration for cookie parameters
      */
-    public function __construct(VirtualHost $vhost, Dictionary $config)
+    public function __construct(VirtualHost $vhost, Dictionary $config, Dictionary $server_vars)
     {
+        $this->server_vars = $server_vars;
         $this->virtual_host = $vhost;
         if ($config->has('cookie', Dictionary::TYPE_ARRAY))
             $this->config = $config->get('cookie');
@@ -93,7 +96,7 @@ class Session extends Dictionary
      */
     public function start()
     {
-        if (Request::CLI())
+        if (PHP_SAPI === "cli")
             $this->startCLISession();
         else
             $this->startHttpSession();
@@ -167,7 +170,6 @@ class Session extends Dictionary
      */
     private function secureSession()
     {
-        $request = Request::current();
         $expired = false;
         if ($this->has('session_mgmt', 'destroyed'))
         {
@@ -183,7 +185,7 @@ class Session extends Dictionary
             {
                 $expired = true;
             }
-            elseif ($ua === $request->server['HTTP_USER_AGENT'] && $ip === $request->remote_id)
+            elseif ($ua === $this->server_vars['HTTP_USER_AGENT'] && $ip === $this->server_vars['REMOTE_ADDR'])
             {
                 // If UA and IP match, we can redirect to the new sesssion
                 // within 1 minute avoid session loss on bad connections.
@@ -221,8 +223,8 @@ class Session extends Dictionary
         }
 
         // Store the current user agent and IP address to prevent session hijacking
-        $ua = $this->set('session_mgmt', 'last_ua', $request->server['REMOTE_ADDR']);
-        $ip = $this->set('session_mgmt', 'last_ip', $request->server['HTTP_USER_AGENT']);
+        $ua = $this->set('session_mgmt', 'last_ua', $this->server_vars['REMOTE_ADDR']);
+        $ip = $this->set('session_mgmt', 'last_ip', $this->server_vars['HTTP_USER_AGENT']);
 
         // Check if it's time to regenerate the session ID
         if ($this->has('session_mgmt', 'start_time'))

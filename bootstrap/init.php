@@ -35,7 +35,7 @@ $root =
 
 require_once $root . "/core/lib/WASP/Autoload/Autoloader.php";
 Autoloader::registerNS('WASP', $root . '/core/lib/WASP');
-Autoloader::registerNS('Psr\\Log', $this->path->core . '/lib/Psr/Log');
+Autoloader::registerNS('Psr\\Log', $root . '/core/lib/Psr/Log');
 
 // Disable some testing code with a define, because they cannot be overridden.
 define('WASP_TEST', 0);

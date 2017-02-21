@@ -51,6 +51,7 @@ class System
             throw new \RuntimeException("Cannot initialize more than once");
 
         self::$instance = new System($path, $config);
+        return self::$instance;
     }
 
     public static function getInstance()

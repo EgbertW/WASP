@@ -87,7 +87,7 @@ class OutputHandler
     public static function handleException($exception)
     {
         // First set headers as configured in the request
-        $request = Request::current();
+        $request = System::getInstance()->request();
 
         if (method_exists($exception, "getRequest"))
         {
@@ -125,7 +125,7 @@ class OutputHandler
 
     private static function handleOtherException(Request $request, Throwable $exception)
     {
-        $request = Request::current();
+        $request = System::getInstance()->request();
         self::$logger->error("Exception: {exception}", ["exception" => $exception]);
         self::$logger->error(
             "*** [{0}] Failed processing {1} request to {2}",

@@ -41,6 +41,7 @@ class AssetManager implements ResponseHookInterface
     protected $minified = true;
     protected $tidy = false;
     protected $request;
+    protected $resolver;
 
     protected $inline_variables = array();
     protected $inline_style = array();
@@ -48,6 +49,7 @@ class AssetManager implements ResponseHookInterface
     public function __construct(Request $request)
     {
         $this->request = $request;
+        $this->resolver = $request->getResolver();
     }
     
     public function setMinified(bool $minified)
@@ -114,8 +116,8 @@ class AssetManager implements ResponseHookInterface
             $relpath = $type . "/" . $asset['path'];
             $unminified_path = $relpath . "." . $type;
             $minified_path = $relpath . ".min." . $type;
-            $unminified_file = Resolve::asset($unminified_path);
-            $minified_file = Resolve::asset($minified_path);
+            $unminified_file = $this->resolver->asset($unminified_path);
+            $minified_file = $this->resolver->asset($minified_path);
 
             $asset_path = null;
             if (!$this->minified && $unminified_file)

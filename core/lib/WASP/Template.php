@@ -47,9 +47,9 @@ namespace WASP
         public $translations = array();
         public $mime = null;
 
-
         public function __construct($name)
         {
+            $this->resolve = System::getInstance()->resolver();
             if (file_exists($name))
                 $tpl = $name;
             else
@@ -60,7 +60,7 @@ namespace WASP
                 throw new HttpError(500, "Template does not exist: " . $name);
 
             self::$last_template = $this;
-            $this->request = Request::current();
+            $this->request = System::getInstance()->request();
             $this->path = $this->request->path;
             $this->resolve = $this->request->resolver;
         }
@@ -72,7 +72,7 @@ namespace WASP
 
         public function resolve($name)
         {
-            $path = Resolve::template($name);
+            $path = $this->resolve->template($name);
 
             if ($path === null)
                 throw new HttpError(500, "Template file could not be found: " . $name);
@@ -149,7 +149,7 @@ namespace WASP
 
         public function want($mime, $charset = null)
         {
-            $priority = Request::current()->isAccepted($mime);
+            $priority = $this->request->isAccepted($mime);
             if ($priority === false)
                 return false;
             if (!empty($charset))

@@ -60,7 +60,7 @@ $ext = null;
 if ($extpos !== false)
     $ext = strtolower(substr($path, $extpos + 1));
 
-$full_path = Resolve::asset($path);
+$full_path = $resolver->asset($path);
 
 if ($path)
 {

@@ -129,6 +129,7 @@ class AppRunner
     {
         // Prepare some variables that come in handy in apps
         $request = $this->request;
+        $resolver = $this->request->getResolver();
         $config = $request->config;
         $url = $request->url;
         $db = DB::get();

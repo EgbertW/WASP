@@ -30,10 +30,10 @@ $root = dirname(dirname(__FILE__));
 $path = new WASP\Path(array('root' => $root));
 
 // Dispatch the request
-$config = WASP\Dictionary::loadFile($root . '/config/main.ini')
+$config = WASP\Dictionary::loadFile($root . '/config/main.ini');
 
-WASP\Bootstrap::getBootstrapper($path)->bootstrap();
-$request = new WASP\Http\Request($_GET, $_POST, $_COOKIE, $_SERVER, $path, $config);
+$wasp = WASP\System::setup($path, $config);
+$request = $wasp->request();
 $request->dispatch();
 
 die();

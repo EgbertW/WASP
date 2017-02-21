@@ -233,7 +233,7 @@ class Request
         $this->vhost = $vhost;
 
         // Start the session
-        $this->session = new Session($this->vhost, $this->config);
+        $this->session = new Session($this->vhost, $this->config, $this->server);
         $this->session->start();
 
         // Resolve the application to start
@@ -368,54 +368,6 @@ class Request
             header("Content-type: " . $type);
             // @codeCoverageIgnoreEnd
         }
-    }
-
-    /**
-     * Set up a real HTTP Session or a persisted CLI session
-     */
-    public function setupSession()
-    {
-        $domain = $this->vhost->getHost()->host;
-
-        if (!self::CLI())
-        {
-            // @codeCoverageIgnoreStart
-            if (session_status() === PHP_SESSION_DISABLED)
-                throw new Error(500, "Sesssions are disabled");
-
-            if (session_status() === PHP_SESSION_ACTIVE)
-                throw new Error(500, "Repeated session initialization");
-
-            $lifetime = $this->config->dget('cookie', 'lifetime', '30D');
-            if (WASP\is_int_val($lifetime))
-                $lifetime = $lifetime . 'S';
-
-            $path = '/';
-            $domain = (!empty($sub) && $sub !== "www") ? $sub . "." . $domain : $domain;
-            $secure = $this->secure;
-            $httponly = $this->config->dget('cookie', 'httponly', true) == true;
-            $session_name = (string)$this->config->dget('cookie', 'prefix', 'cms_') . str_replace(".", "_", $domain);
-
-            session_set_cookie_params($lifetime, $path, $domain, $secure, $httponly);
-            session_name($session_name);
-            session_start();
-
-            // Make sure the cookie expiry is updated every time.
-            $cookie = new Cookie(session_name(), session_id());
-            $cookie->setExpiresIn('P' . $lifetime);
-            setcookie(session_name(), session_id(), time() + $lifetime);
-            // @codeCoverageIgnoreEnd
-        }
-        else
-        {
-            // Simulate a CLI-session by creating a cached array in $_SESSION
-            $this->session_cache = new Cache('cli-session');
-            $GLOBALS['_SESSION'] = $this->session_cache->get();
-        }
-
-        $this->session = Dictionary::wrap($GLOBALS['_SESSION']);
-        if ($this->session->has('language'))
-            $this->language = $this->session->get('language');
     }
 
     /**
