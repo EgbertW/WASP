@@ -52,14 +52,16 @@ var2 = "value2"
 var3 = "value3"
 var4 = "value4"
 EOT;
+    
+        $old_path = Path::current();
 
-        $old_val = Path::$CONFIG;
-        Path::$CONFIG = Path::$ROOT . '/var/test';
-        if (!is_dir(Path::$CONFIG))
-            mkdir(Path::$CONFIG);
+        $old_root = $old_path->root;
+        $cfg_dir = $old_root . '/var/test';
+        if (!is_dir($cfg_dir))
+            mkdir($cfg_dir);
 
-        $file = Path::$CONFIG . '/test.ini';
-
+        $path = new Path(array('root' => $old_root, 'config' => $cfg_dir));
+        $file = $cfg_dir . '/test.ini';
         file_put_contents($file, $ini);
 
         $config = Config::getConfig('test');
@@ -75,8 +77,9 @@ EOT;
         $this->assertEquals($cfg['sec2']['var5'], 'value5');
 
         unlink($file);
-        rmdir(Path::$CONFIG);
-        Path::$CONFIG = $old_val;
+        rmdir($path->config);
+
+        Path::setCurrent($old_path);
     }
 
     /**
@@ -84,7 +87,8 @@ EOT;
      */
     public function testGetConfigFailSafe()
     {
-        $cfgdir = Path::$CONFIG;
+        $path = Path::current();
+        $cfgdir = $path->config;
         // Make sure we have a non-existing config file
         for ($i = 0; $i < 10000; ++$i)
         {
@@ -105,7 +109,8 @@ EOT;
      */
     public function testGetConfigNonExisting()
     {
-        $cfgdir = Path::$CONFIG;
+        $path = Path::current();
+        $cfgdir = $path->config;
         // Make sure we have a non-existing config file
         for ($i = 0; $i < 10000; ++$i)
         {

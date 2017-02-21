@@ -28,6 +28,7 @@ namespace WASP;
 final class Path
 {
     private $root;
+    private $config;
     private $var;
     private $cache;
     private $log;
@@ -59,6 +60,7 @@ final class Path
 
         // Determine other locations based on root if not specified
         $this->core = isset($paths['core']) ? $paths['core'] : $this->root . '/core';
+        $this->config = isset($paths['config']) ? $paths['config'] : $this->root . '/config';
         $this->var = isset($paths['var']) ? $paths['var'] : $this->root . '/var';
         $this->modules = isset($paths['modules']) ? $paths['modules'] : $this->root . '/modules';
         $this->http = isset($paths['http']) ? $paths['http'] : $this->root . '/http';
@@ -70,7 +72,7 @@ final class Path
         $this->css = $this->assets . '/css';
         $this->img = $this->assets . '/img';
 
-        foreach (array('root', 'core', 'var', 'modules', 'http') as $type)
+        foreach (array('root', 'core', 'var', 'modules', 'http', 'config') as $type)
         {
             $path = $this->$type;
             if (!file_exists($path) || !is_dir($path))
@@ -97,6 +99,13 @@ final class Path
             throw new \RuntimeException("No path config available");
 
         return self::$instance;
+    }
+
+    public static function setCurrent(Path $instance)
+    {
+        if (!defined('WASP_TEST') || WASP_TEST !== 1)
+            throw new \RuntimeException("Cannot change active path instance");
+        self::$instance = $instance;
     }
 
     public function __get($field)
