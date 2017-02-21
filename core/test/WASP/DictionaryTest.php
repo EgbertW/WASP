@@ -70,7 +70,7 @@ final class DictionaryTest extends TestCase
     public function testConstructArray()
     {
         $data = array('var1' => 'val1', 'var2' => 'val2');
-        $dict = new Dictionary($data);
+        $dict = Dictionary::wrap($data);
 
         $this->assertEquals($dict['var1'], 'val1');
         $this->assertEquals($dict['var2'], 'val2');
@@ -102,7 +102,7 @@ final class DictionaryTest extends TestCase
     public function testConstructArrayRecursive()
     {
         $data = array('var1' => 'val1', 'var2' => array('a' => 1, 'b' => 2, 'c' => 3));
-        $dict = new Dictionary($data);
+        $dict = Dictionary::wrap($data);
 
         $this->assertEquals($dict['var1'], 'val1');
         $this->assertTrue($dict->has('var2', Dictionary::TYPE_ARRAY));
@@ -399,7 +399,7 @@ final class DictionaryTest extends TestCase
     public function testArrayAccess()
     {
         $data = array(1, 2, 3, 'test' => 'data', 'test2' => array('test3' => array('test4', 'test5', 'test6'), 'test7' => 'test8'));
-        $dict = new Dictionary($data);
+        $dict = Dictionary::wrap($data);
 
         $keys = array_keys($data);
         foreach ($keys as $key)
@@ -429,7 +429,7 @@ final class DictionaryTest extends TestCase
     public function testIterator()
     {
         $data = array(1, 2, 3, 'test' => 'data', 'test2' => array('test3' => array('test4', 'test5', 'test6'), 'test7' => 'test8'));
-        $dict = new Dictionary($data);
+        $dict = Dictionary::wrap($data);
 
         $iterations = 0;
         $exp = count($data);
@@ -481,7 +481,7 @@ final class DictionaryTest extends TestCase
     public function testSections()
     {
         $data = array('test' => 4, 'test2' => array('test1', 'test2', 'test'));
-        $dict = new Dictionary($data);
+        $dict = Dictionary::wrap($data);
 
         $this->assertEquals($data['test2'], $dict['test2']->toArray());
         $this->assertEquals($data['test2'], $dict->getArray('test2'));

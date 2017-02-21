@@ -157,10 +157,10 @@ class Request
      */
     public function __construct(array &$get, array &$post, array &$cookie, array &$server, Dictionary $config)
     {
-        $this->get = new Dictionary($get);
-        $this->post = new Dictionary($post);
-        $this->cookie = new Dictionary($cookie);
-        $this->server = new Dictionary($server);
+        $this->get = Dictionary::wrap($get);
+        $this->post = Dictionary::wrap($post);
+        $this->cookie = Dictionary::wrap($cookie);
+        $this->server = Dictionary::wrap($server);
         $this->config = $config;
 
         self::$current_request = $this;
@@ -168,9 +168,16 @@ class Request
         $this->method = $this->server->get('REQUEST_METHOD');
         $this->start = $this->server->dget('REQUEST_TIME_FLOAT', time());
 
-        $url = $this->server->get('REQUEST_SCHEME') . '://'
-            . $this->server->get('SERVER_NAME')
-            . $this->server->get('REQUEST_URI');
+        if ($this->server->get('REQUEST_SCHEME'))
+        {
+            $url = $this->server->get('REQUEST_SCHEME') . '://'
+                . $this->server->get('SERVER_NAME')
+                . $this->server->get('REQUEST_URI');
+        }
+        else
+        {
+            $url = $this->server->get('REQUEST_URI');
+        }
 
         $this->url = new URL($url);
         $this->ajax = 
@@ -213,6 +220,7 @@ class Request
 
         // Start the session
         $this->session = new Session($this->vhost, $this->config);
+        $this->session->start();
 
         // Resolve the application to start
         $path = $this->vhost->getPath($this->url);
@@ -383,7 +391,7 @@ class Request
             $GLOBALS['_SESSION'] = $this->session_cache->get();
         }
 
-        $this->session = new Dictionary($GLOBALS['_SESSION']);
+        $this->session = Dictionary::wrap($GLOBALS['_SESSION']);
         if ($this->session->has('language'))
             $this->language = $this->session->get('language');
     }

@@ -76,9 +76,10 @@ class Cache
     private static function checkExpiry($name)
     {
         $timeout = self::$expiry;
-        $st = isset(self::$repository[$name]['_timestamp']) ? self::$repository[$name]['_timestamp'] : 0;
+        $st = isset(self::$repository[$name]['_timestamp']) ? self::$repository[$name]['_timestamp'] : time();
+        $expires = $st + $timeout;
 
-        if (time() - $st > $timeout || $timeout === 0)
+        if (time() >= $expires || $timeout === 0)
         {
             self::$logger->info("Cache for {0} expired - clearing", [$name]);
             self::$repository[$name] = new Dictionary();
@@ -184,7 +185,7 @@ class Cache
      */
     public function replace(array &$replacement)
     {
-        self::$repository[$this->cache_name] = new Dictionary($replacement);
+        self::$repository[$this->cache_name] = Dictionary::wrap($replacement);
         self::$repository[$this->cache_name]['_changed'] = true;
         self::$repository[$this->cache_name]['_timestamp'] = time();
     }

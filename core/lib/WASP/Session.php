@@ -65,7 +65,7 @@ class Session extends Dictionary
         // Calculate the lifetime and expiry date
         $lifetime = $this->config->dget('lifetime', '30D');
         if (is_int_val($lifetime))
-            $lifetime = $lifetime . 'S';
+            $lifetime = 'T' . $lifetime . 'S';
         $lifetime = new DateInterval('P' . $lifetime);
 
         // Determine the correct expiry date
@@ -108,10 +108,12 @@ class Session extends Dictionary
     private function startCLISession()
     {
         $this->session_cache = new Cache('cli-session');
-        $GLOBALS['_SESSION'] = $this->session_cache->get();
+        $ref = &$this->session_cache->get();
+
+        $GLOBALS['_SESSION'] = &$ref;
 
         // Make sure the session variables are available through this object
-        $this->values = $this->session_cache->get();
+        $this->values = &$ref;
         $this->set('CLI', true);
     }
 

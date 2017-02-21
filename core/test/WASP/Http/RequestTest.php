@@ -50,7 +50,9 @@ final class RequestTest extends TestCase
         );
 
         $this->server = array(
-            'REQUEST_URI' => 'https://www.example.com/foo',
+            'REQUEST_SCHEME' => 'https',
+            'SERVER_NAME' => 'www.example.com',
+            'REQUEST_URI' => '/foo',
             'REMOTE_ADDR' => '127.0.0.1',
             'REQUEST_METHOD' => 'POST',
             'HTTP_ACCEPT' => 'text/plain;q=1,text/html;q=0.9'
@@ -114,11 +116,12 @@ final class RequestTest extends TestCase
      */
     public function testRouting()
     {
-        $this->server['REQUEST_URI'] = 'https://www.example.com/foo';
+        $this->server['SERVER_NAME'] = 'www.example.com';
+        $this->server['REQUEST_URI'] = '/foo';
         $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config);
         $this->assertEquals($req->route, '/');
 
-        $this->server['REQUEST_URI'] = 'https://www.example.com/assets';
+        $this->server['REQUEST_URI'] = '/assets';
         $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config);
         $this->assertEquals($req->route, '/assets');
     }
@@ -130,7 +133,9 @@ final class RequestTest extends TestCase
      */
     public function testRoutingInvalidHostIgnorePolicy()
     {
-        $this->server['REQUEST_URI'] = 'https://www.example.nl/assets';
+        $this->server['REQUEST_SCHEME'] = 'https';
+        $this->server['SERVER_NAME'] = 'www.example.nl';
+        $this->server['REQUEST_URI'] = '/assets';
         $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config);
         $this->assertEquals($req->route, '/assets');
     }
@@ -142,7 +147,9 @@ final class RequestTest extends TestCase
      */
     public function testRoutingInvalidHostErrorPolicy()
     {
-        $this->server['REQUEST_URI'] = 'https://www.example.nl/assets';
+        $this->server['REQUEST_SCHEME'] = 'https';
+        $this->server['SERVER_NAME'] = 'www.example.nl';
+        $this->server['REQUEST_URI'] = '/assets';
         $this->config['site']['unknown_host_policy'] = 'ERROR';
         $this->expectException(Error::class);
         $this->expectExceptionCode(404);
@@ -157,7 +164,9 @@ final class RequestTest extends TestCase
      */
     public function testRoutingRedirectHost()
     {
-        $this->server['REQUEST_URI'] = 'https://www.example.nl/assets';
+        $this->server['REQUEST_SCHEME'] = 'https';
+        $this->server['SERVER_NAME'] = 'www.example.nl';
+        $this->server['REQUEST_URI'] = '/assets';
         $this->config['site'] = 
             array(
                 'url' => array(
@@ -177,7 +186,9 @@ final class RequestTest extends TestCase
      */
     public function testNoSiteConfig()
     {
-        $this->server['REQUEST_URI'] = 'https://www.example.nl/assets';
+        $this->server['REQUEST_SCHEME'] = 'https';
+        $this->server['SERVER_NAME'] = 'www.example.nl';
+        $this->server['REQUEST_URI'] = '/assets';
         $this->config['site'] = array();
 
         $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config);

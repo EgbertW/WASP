@@ -27,6 +27,16 @@ namespace WASP;
 
 use WASP\Debug\LoggerAwareStaticTrait;
 
+/**
+ * Dictionary provides a flexible way to use arrays as objects. The getters and
+ * setters support multi-level retrieval and setting and provide 'null' values or
+ * default values if they are absent. It also provides type checking and type casting.
+ *
+ * Its interface closely mimicks that of the standard ArrayObject. The major difference
+ * is the existence of the static function wrap() that creates a dictionary that is bound
+ * to an existing array, so that external changes to that array are reflected within the
+ * Dictionary and vice versa.
+ */
 class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, \JsonSerializable
 {
     use LoggerAwareStaticTrait;
@@ -40,13 +50,20 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
     const TYPE_ARRAY = -7;
     const TYPE_OBJECT = -8;
 
-    private $values = array();
-    private $keys = null;
-    private $iterator = null;
+    protected $values;
+    protected $keys = null;
+    protected $iterator = null;
 
-    public function __construct(array &$values = array())
+    public function __construct(array $values = array())
     {
-        $this->values = &$values;
+        $this->values = $values; 
+    }
+
+    public static function wrap(array &$values)
+    {
+        $dict = new Dictionary();
+        $dict->values = &$values;
+        return $dict;
     }
 
     /**
@@ -95,7 +112,9 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
 
     /**
      * Get a value from the dictionary, with a default value when the key does
-     * not exist.
+     * not exist. The default value may be specified as-is or wrapped in a
+     * DefVal object. The latter is useful to combine with Dictionary::get()
+     * or any of the other getters.
      * 
      * @param $key scalar The key to get. May be repeated to go deeper
      * @param $default mixed What to return when key doesn't exist
@@ -106,6 +125,8 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
         if (is_array($key) && $default === null)
         {
             $args = $key;
+            if (end($args) instanceof DefVal && $default === null)
+                $default = array_pop($args);
         }
         else
         {
@@ -113,6 +134,9 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
             if (count($args) >= 2)
                 $default = array_pop($args);
         }
+
+        if ($default instanceof DefVal)
+            $default = $default->value;
 
         $ref = &$this->values;
         foreach ($args as $arg)
@@ -124,7 +148,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
 
         if (is_array($ref))
         {
-            $temp = new Dictionary($ref);
+            $temp = Dictionary::wrap($ref);
             return $temp;
         }
 
@@ -201,7 +225,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
      * @param $key scalar The key to get. May be repeated to go deeper
      * @return bool The value as bool
      */
-    public function getBool($key)
+    public function getBool($key, $default = null)
     {
         return $this->getType(func_get_args(), Dictionary::TYPE_BOOL);
     }
@@ -249,7 +273,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
         if ($val instanceof Dictionary)
             return $val;
         $val = cast_array($val);
-        return new Dictionary($val);
+        return Dictionary::wrap($val);
     }
 
     /**
@@ -381,6 +405,16 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
         return $this;
     }
 
+    /**
+     * Add an element to the end of the dictionary, wrapper of Dictionary#push
+     * @param mixed $element The element to add to the end
+     * @return Dictionary provides fluent interface
+     */
+    public function append($element)
+    {
+        return $this->push($element);
+    }
+
     /** 
      * Remove and return the first element of the dictionary
      * @return mixed The first element
@@ -399,6 +433,17 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
     {
         array_unshift($this->values, $element);
         return $this;
+    }
+
+    /**
+     * Add an element to the beginning of the dictionary. Wraps
+     * Dictionary#unshift
+     * @param mixed $element The element to add to the begin
+     * @return Dictionary provides fluent interface
+     */
+    public function prepend($element)
+    {
+        return $this->unshift($this->values, $element);
     }
     
     // Iterator implementation
@@ -474,6 +519,40 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
     public function unserialize($data)
     {
         $this->values = unserialize($data);
+    }
+
+    // Sorting
+    public function ksort()
+    {
+        ksort($this->values);
+        return $this;
+    }
+
+    public function asort()
+    {
+        asort($this->values); 
+    }
+
+    public function uasort($callback)
+    {
+        uasort($this->values, $callback);
+        return $this;
+    }
+
+    public function uksort($callback)
+    {
+        uksort($this->values, $callback);
+        return $this;
+    }
+
+    public function natcasesort()
+    {
+        natcasesort($this->values);
+    }
+
+    public function natsort()
+    {
+        natsort($this->values);
     }
 
     public static function loadFile($filename, $filetype = null)

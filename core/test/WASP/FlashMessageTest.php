@@ -79,7 +79,7 @@ final class FlashMessageTest extends TestCase
         }
         $end_t = time();
 
-        $this->assertEquals(FlashMessage::count(), 4);
+        $this->assertEquals(4, FlashMessage::count());
 
         $cnt = 0;
         while (FlashMessage::hasNext())

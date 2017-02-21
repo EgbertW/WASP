@@ -214,7 +214,7 @@ class JSON
     public static function writeJSON($buf, $data, bool $pretty_print = true)
     {
         return $pretty_print ?
-            self::pprint($data, 0, null, $buf);
+            self::pprint($data, 0, null, $buf)
         :
             self::UTF8SafeEncode($data, $buf);
     }
@@ -297,7 +297,7 @@ class JSON
             $v .= str_repeat(' ', $indent);
             if (!$array)
                 $v .= self::UTF8SafeEncode($key, $buf) . ': ';
-            if (\is_array_like($sub))
+            if (is_array_like($sub))
                 $v .= self::pprint($sub, $indent, null, $buf) . $ending;
             elseif (null === $sub)
                 $v .= 'null' . $ending;

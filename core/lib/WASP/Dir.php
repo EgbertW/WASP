@@ -77,7 +77,7 @@ class Dir implements Iterator
             {
                 mkdir($path);
                 chmod($path, self::$dir_mode);
-                if ($this->dir_group !== null)
+                if (self::$dir_group !== null)
                     chgrp($path, self::$dir_group);
             }
         }
