@@ -27,6 +27,7 @@ namespace WASP\Debug;
 
 use Psr\Log\LogLevel;
 use WASP\Request;
+use WASP\Util\File;
 
 class FileWriter implements LogWriterInterface
 {
@@ -67,8 +68,13 @@ class FileWriter implements LogWriterInterface
 
     private function writeLine(string $str)
     {
+        $new_file = false;
         if (!$this->file)
+        {
+            $f = new File($this->filename);
+            $f->touch();
             $this->file = fopen($this->filename, 'a');
+        }
 
         if ($this->file)
             fwrite($this->file, $str . "\n");

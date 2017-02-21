@@ -132,11 +132,11 @@ class Session extends Dictionary
         session_set_cookie_params(
             $this->lifetime, 
             $this->session_cookie->getDomain(),
-            $this->session_cookie->getHost(),
+            $this->session_cookie->getPath(),
             $this->session_cookie->getSecure(),
             $this->session_cookie->getHttpOnly()
         );
-        session_name($session_name);
+        session_name($this->session_cookie->getName());
         session_start();
 
         // Make sure the session data is accessible through this object
@@ -168,6 +168,7 @@ class Session extends Dictionary
     private function secureSession()
     {
         $request = Request::current();
+        $expired = false;
         if ($this->has('session_mgmt', 'destroyed'))
         {
             $when = $this->get('session_mgmt', 'destroyed');
@@ -178,7 +179,6 @@ class Session extends Dictionary
             $diff = $now->diff($when);
 
             $expiry = new DateInterval('P1M');
-            $expired = false;
             if (Date::lessThan($expiry, $diff))
             {
                 $expired = true;

@@ -107,10 +107,21 @@ class Bootstrap
             Util\File::setFileGroup($config->get('io', 'group'));
             Dir::setDirGroup($config->get('io', 'group'));
         }
-        if ($config->has('io', 'file_mode'))
-            Util\File::setFileMode($config->get('io', 'file_mode'));
-        if ($config->has('io', 'dir_mode'))
-            Dir::setDirMode($config->get('io', 'file_mode'));
+        $file_mode = (int)$config->get('io', 'file_mode');
+        if ($file_mode)
+        {
+            $of = $file_mode;
+            $file_mode = octdec(sprintf("%04d", $file_mode));
+            Util\File::setFileMode($file_mode);
+        }
+
+        $dir_mode = (int)$config->get('io', 'dir_mode');
+        if ($dir_mode)
+        {
+            $of = $dir_mode;
+            $dir_mode = octdec(sprintf("%04d", $dir_mode));
+            Dir::setDirMode($dir_mode);
+        }
 
         // Log beginning of request handling
         if (isset($_SERVER['REQUEST_URI']))

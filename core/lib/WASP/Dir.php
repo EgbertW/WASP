@@ -49,14 +49,12 @@ class Dir implements Iterator
 
     public static function setDirGroup(string $group)
     {
-        $this->dir_group = $group;
-        return $this;
+        self::$dir_group = $group;
     }
 
     public static function setDirMode(int $mode)
     {
-        $this->dir_mode = $mode;
-        return $this;
+        self::$dir_mode = $mode;
     }
 
     /**
