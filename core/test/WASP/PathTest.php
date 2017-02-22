@@ -47,6 +47,8 @@ final class PathTest extends TestCase
 
     /**
      * @covers WASP\Path::__construct
+     * @covers WASP\Path::checkPaths
+     * @covers WASP\Path::current
      */
     public function testPath()
     {
@@ -63,16 +65,30 @@ final class PathTest extends TestCase
         $this->assertEquals($root . '/http/assets/css', $path->css);
         $this->assertEquals($root . '/http/assets/img', $path->img);
 
-        $path = new Path(array('root' => $root, 'http' => $root . '/var'));
+        $webroot = $root . '/var/test';
+        $assets = $webroot . '/assets';
+        IO\Dir::mkdir($assets);
+
+        $path = new Path(array('root' => $root, 'http' => $webroot));
         $this->assertEquals($root, $path->root);
         $this->assertEquals($root . '/var', $path->var);
         $this->assertEquals($root . '/var/cache', $path->cache);
 
-        $this->assertEquals($root . '/var', $path->http);
-        $this->assertEquals($root . '/var/assets', $path->assets);
-        $this->assertEquals($root . '/var/assets/js', $path->js);
-        $this->assertEquals($root . '/var/assets/css', $path->css);
-        $this->assertEquals($root . '/var/assets/img', $path->img);
+        $this->assertEquals($webroot, $path->http);
+        $this->assertEquals($assets, $path->assets);
+        $this->assertEquals($assets . '/js', $path->js);
+        $this->assertEquals($assets . '/css', $path->css);
+        $this->assertEquals($assets . '/img', $path->img);
+
+        $path->checkPaths();
+
+        $current = Path::current();
+        $this->assertEquals($current, $path);
+
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Invalid path: foobar");
+        $baz = $current->foobar;
     }
 
     /**

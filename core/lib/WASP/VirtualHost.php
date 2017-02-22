@@ -29,10 +29,10 @@ use WASP\Http\URL;
 
 class VirtualHost
 {
-    private $url;
-    private $site = null;
-    private $redirect;
-    private $locales;
+    protected $url;
+    protected $site = null;
+    protected $redirect;
+    protected $locales;
 
     public function __construct($hostname, $locale)
     {

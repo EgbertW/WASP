@@ -80,7 +80,8 @@ class Error extends Response
 
         try
         {
-            $template = Template::findExceptionTemplate($exception);
+            $template = $this->getRequest()->getTemplate();
+            $template->setExceptionTemplate($exception);
             $template->assign('exception', $exception);
             $template->render();
         }

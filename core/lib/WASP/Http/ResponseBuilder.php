@@ -73,9 +73,14 @@ class ResponseBuilder
                 $this->addHook($h);
 
         $this->asset_manager = new AssetManager($request);
-        $this->asset_manager->setMinified(!$request->config->dget('site', 'dev', false));
-        $this->asset_manager->setTidy($request->config->dget('site', 'tidy-output', false));
         $this->addHook($this->asset_manager);
+
+        $cfg = $request->config;
+        if ($cfg !== null)
+        {
+            $this->asset_manager->setMinified(!$cfg->dget('site', 'dev', false));
+            $this->asset_manager->setTidy($cfg->dget('site', 'tidy-output', false));
+        }
     }
 
     /**

@@ -46,7 +46,7 @@ final class AppRunnerTest extends TestCase
 
     public function setUp()
     {
-        $this->request = new MockRequest();
+        $this->request = new MockAppRunnerRequest();
         $this->pathconfig = System::getInstance()->path();
 
         $this->testpath = $this->pathconfig->var . '/test';
@@ -143,7 +143,7 @@ EOT;
 
 use WASP\Http\StringResponse;
 
-\$tpl = new WASP\Template('parts/header');
+\$tpl->setTemplate('foobar');
 \$tpl->render();
 EOT;
         file_put_contents($this->filename, $phpcode);
@@ -559,7 +559,7 @@ use WASP\Http\StringResponse;
 
 class {$classname}
 {
-    public function foo(WASP\MockDAO \$arg1, string \$arg2)
+    public function foo(WASP\MockAppRunnerDAO \$arg1, string \$arg2)
     {
         return new StringResponse(\$arg1->getName() . \$arg2, "text/plain");
     }
@@ -589,7 +589,7 @@ use WASP\Http\StringResponse;
 
 class {$classname}
 {
-    public function foo(string \$arg1, string \$arg2, WASP\MockDAO \$arg3)
+    public function foo(string \$arg1, string \$arg2, WASP\MockAppRunnerDAO \$arg3)
     {
         return new StringResponse(\$arg3->getName(), "text/plain");
     }
@@ -606,17 +606,18 @@ EOT;
     }
 }
 
-class MockRequest extends Request
+class MockAppRunnerRequest extends Request
 {
     public function __construct()
     {
         $this->url = '/';
         $this->resolver = null;
         $this->url_args = new Dictionary(["foo", "bar", "baz"]);
+        $this->template = new MockAppRunnerTemplate();
     }
 }
 
-class MockDAO extends \WASP\DB\DAO
+class MockAppRunnerDAO extends \WASP\DB\DAO
 {
     protected $name;
 
@@ -627,11 +628,25 @@ class MockDAO extends \WASP\DB\DAO
 
     public static function get($id)
     {
-        return new MocKDAO($id);
+        return new MockAppRunnerDAO($id);
     }
 
     public function getName()
     {
         return $this->name;
+    }
+}
+
+class MockAppRunnerTemplate extends Template
+{
+    public function __construct()
+    {}
+
+    public function setTemplate(string $str)
+    {}
+
+    public function render()
+    {
+        throw new StringResponse("Foobar", "text/html");
     }
 }

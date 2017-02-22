@@ -29,6 +29,6 @@ use WASP\Http\Error as HttpError;
 if ($url_args->count())
     throw new HttpError(404, "The page " . $request->url . " could not be found");
 
-$tpl = new WASP\Template('index');
-$tpl->render();
+$template->setTemplate('index');
+$template->render();
 ?>

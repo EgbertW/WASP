@@ -173,13 +173,15 @@ class AssetManager implements ResponseHookInterface
             $scripts = $this->resolveAssets($this->scripts, "js");
             $css = $this->resolveAssets($this->css, "css");
 
-            $tpl = new Template('parts/scripts');
+            $tpl = new Template($request);
+            $tpl->setTemplate('parts/scripts');
             $tpl->assign('scripts', $scripts);
             $tpl->assign('inline_js', $this->inline_variables);
             $script_html = $tpl->renderReturn()->getOutput($mime);
             $output = str_replace('#WASP-JAVASCRIPT#', $script_html, $output);
 
-            $tpl = new Template('parts/stylesheets');
+            $tpl = new Template($request);
+            $tpl->setTemplate('parts/stylesheets');
             $tpl->assign('stylesheets', $css);
             $tpl->assign('inline_css', $this->inline_style);
             $css_html = $tpl->renderReturn()->getOutput($mime);

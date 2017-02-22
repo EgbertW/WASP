@@ -289,6 +289,12 @@ class MockAssetResolver extends Autoload\Resolve
 
         return null;
     }
+
+    public function template($path)
+    {
+        $res = System::getInstance()->resolver();
+        return $res->template($path);
+    }
 }
 
 class MockAssetVhost extends VirtualHost

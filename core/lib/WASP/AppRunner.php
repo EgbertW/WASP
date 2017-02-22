@@ -157,6 +157,7 @@ class AppRunner
         // Prepare some variables that come in handy in apps
         $request = $this->request;
         $resolver = $this->request->getResolver();
+        $tpl = $template = $this->request->getTemplate();
         $config = $request->config;
         $url = $request->url;
         $db = DB::get();
@@ -193,6 +194,18 @@ class AppRunner
         if (!method_exists($object, $controller))
             throw new HttpError(404, "Unknown controller: " . $controller);
 
+        // Inject some properties when they're public
+        $vars = get_object_vars($object);
+
+        if (in_array('template', $vars))
+            $object->template = $this->request->template;
+
+        if (in_array('request', $vars))
+            $object->request = $this->request;
+
+        if (in_array('resolve', $vars))
+            $object->resolve = $this->request->getResolver();
+
         $method = new ReflectionMethod($object, $controller);
         $parameters = $method->getParameters();
 
@@ -227,6 +240,12 @@ class AppRunner
             if ($tp === "WASP\\Http\\Request")
             {
                 $args[] = $this->request;
+                continue;
+            }
+
+            if ($tp === "WASP\\Template")
+            {
+                $args[] = $this->request->template;
                 continue;
             }
             

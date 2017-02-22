@@ -37,33 +37,36 @@ namespace WASP
     {
         use LoggerAwareStaticTrait;
 
-        public static $last_template = null;
-
         private $request;
         private $path;
         private $arguments = array();
         private $title = null;
         private $template_path;
-        private $resolve;
+        private $resolver = null;
+
         public $translations = array();
         public $mime = null;
 
-        public function __construct($name)
+        public function __construct(Request $request)
         {
-            $this->resolve = System::getInstance()->resolver();
-            if (file_exists($name))
-                $tpl = $name;
+            $this->request = $request;
+            $this->resolver = $request->getResolver();
+            $this->path = $request->path;
+        }
+
+        public function setTemplate(string $template)
+        {
+            if (file_exists($template))
+                $tpl = realpath($template);
             else
-                $tpl = $this->resolve->template($name);
+                $tpl = $this->resolve($template);
             
             $this->template_path = $tpl;
-            if (!file_exists($this->template_path))
-                throw new HttpError(500, "Template does not exist: " . $name);
+        }
 
-            self::$last_template = $this;
-            $this->request = System::getInstance()->request();
-            $this->path = $this->request->path;
-            $this->resolve = $this->request->resolver;
+        public function getTemplate()
+        {
+            return $this->template_path;
         }
 
         public function assign($name, $value)
@@ -96,10 +99,15 @@ namespace WASP
 
         public function resolve($name)
         {
-            $path = $this->resolve->template($name);
+            $path = null;
+            if ($this->resolver !== null)
+            {
+                $path = $this->resolver->template($name);
+            }
 
             if ($path === null)
                 throw new HttpError(500, "Template file could not be found: " . $name);
+
             return $path;
         }
 
@@ -120,7 +128,7 @@ namespace WASP
             extract($this->arguments);
             $request = $this->request;
             $language = $request->language;
-            $config = Config::getConfig('main', true);
+            $config = $request->config;
             $dev = $config === null ? false : $config->get('site', 'dev');
             $cli = Request::CLI();
 
@@ -196,7 +204,7 @@ namespace WASP
 
         public function setLanguageOrder()
         {
-            $this->translations = func_get_args();
+            I18n\Translate::setLanguageOrder(func_get_args());
         }
 
         public function addJS($script)
@@ -225,67 +233,12 @@ namespace WASP
             return $mgr->injectCSS();
         }
 
-        public function getJS()
-        {
-            $list = array();
-            $cfg = Config::getConfig();
-            $dev = $cfg->dget('site', 'dev', true);
-            foreach (self::$js as $l)
-            {
-                $relpath = "js/" . $l;
-                $devpath = $relpath . ".js";
-                $prodpath = $relpath . ".min.js";
-                self::$logger->info("Development js path: {0}", [$devpath]);
-                self::$logger->info("Production js path: {0}", [$prodpath]);
-                $dev_file = Resolve::asset($devpath);
-                $prod_file = Resolve::asset($prodpath);
-                self::$logger->info("Development js file: {0}", [$dev_file]);
-                self::$logger->info("Production js file: {0}", [$prod_file]);
-
-                if ($dev && $dev_file)
-                    $list[] = "/assets/" .$devpath;
-                elseif ($prod_file)
-                    $list[] = "/assets/" . $prodpath;
-                elseif ($dev_file)
-                    $list[] = "/assets/" . $devpath;
-                else
-                    self::$logger->error("Requested javascript {} could not be resolved", $l);
-            }
-            return $list;
-        }
-
-        public function getCSS()
-        {
-            $list = array();
-            $cfg = Config::getConfig();
-            $dev = $cfg->dget('site', 'dev', true);
-            foreach (self::$css as $l)
-            {
-                $relpath = "css/" . $l;
-                $devpath = $relpath . ".css";
-                $prodpath = $relpath . ".min.css";
-
-                $dev_file = Resolve::asset($devpath);
-                $prod_file = Resolve::asset($prodpath);
-
-                if ($dev && $dev_file)
-                    $list[] = "/assets/" . $devpath;
-                elseif ($prod_file)
-                    $list[] = "/assets/" . $prodpath;
-                elseif ($dev_file)
-                    $list[] = "/assets/" . $devpath;
-                else
-                    self::$logger->error("Requested stylesheet {} could not be resolved", $l);
-            }
-            return $list;
-        }
-
-        public static function findExceptionTemplate(Throwable $exception)
+        public function setExceptionTemplate(Throwable $exception)
         {
             $class = get_class($exception);
             $code = $exception->getCode();
 
-            $resolver = System::getInstance()->resolver();
+            $resolver = $this->resolver;
             $resolved = null;
             while ($class)
             {
@@ -296,8 +249,7 @@ namespace WASP
                 if (!empty($code))
                 {
                     $resolved = $resolver->template($path . $code);
-                    if ($resolved)
-                        break;
+                    if ($resolved) break;
                 }
 
                 $resolved = $resolver->template($path);
@@ -307,11 +259,9 @@ namespace WASP
                 $class = get_parent_class($class);
             }
 
-            self::$logger->error("Template is {0}", [$resolved]);
-            if (!$resolved)
-                throw new \RuntimeException("Could not find any matching template for " . get_class($exception));
+            if (!$resolved) throw new \RuntimeException("Could not find any matching template for " . get_class($exception));
             
-            return $resolved ? new Template($resolved) : null;
+            $this->template_path = $resolved;
         }
     }
 
@@ -325,7 +275,8 @@ namespace
 {
     function tpl($name)
     {
-        $tpl = WASP\Template::$last_template->resolve($name);
+        $request = WASP\System::getInstance()->request();
+        $tpl = $request->getTemplate()->resolve($name);
         return $tpl;
     }
 

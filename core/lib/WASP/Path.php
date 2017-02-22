@@ -113,8 +113,7 @@ final class Path
 
     public static function current()
     {
-        if (self::$instance === null)
-            throw new \RuntimeException("No path config available");
+        if (self::$instance === null) throw new \RuntimeException("No path config available");
 
         return self::$instance;
     }
@@ -130,6 +129,6 @@ final class Path
     {
         if (property_exists($this, $field))
             return $this->$field;
-        throw new \RuntimeException("Invalid path: $field");
+        throw new \InvalidArgumentException("Invalid path: $field");
     }
 }

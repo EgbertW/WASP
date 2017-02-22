@@ -37,6 +37,7 @@ use WASP\RedirectRequest;
 use WASP\Config;
 use WASP\Session;
 use WASP\AppRunner;
+use WASP\Template;
 
 use Throwable;
 use DateTime;
@@ -71,7 +72,7 @@ class Request
     private static $default_language = 'en';
 
     /** The time at which the request was constructed */
-    private $start_time;
+    protected $start_time;
 
     /** The site configuration */
     public $config;
@@ -143,10 +144,13 @@ class Request
     public $vhost = null;
 
     /** The response builder */
-    private $response_builder = null;
+    protected $response_builder = null;
 
     /** The file / asset resolver */
-    public $resolver = null;
+    protected $resolver = null;
+
+    /** The template render engine */
+    protected $template = null;
 
     /*** 
      * Create the request based on the request data provided by webserver and client
@@ -251,6 +255,14 @@ class Request
             $this->app = null;
             $this->url_args = new Dictionary();
         }
+    }
+
+    public function getTemplate()
+    {
+        if ($this->template === null)
+            $this->template = new Template($this);
+
+        return $this->template;
     }
 
     /**
