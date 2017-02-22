@@ -26,6 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP;
 
 use PHPUnit\Framework\TestCase;
+use WASP\IO\Dir;
 
 /**
  * @covers WASP\Dictionary

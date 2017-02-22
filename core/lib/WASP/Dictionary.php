@@ -27,6 +27,7 @@ namespace WASP;
 
 use WASP\Debug\LoggerAwareStaticTrait;
 use WASP\IO\File;
+use WASP\IO\DataWriter\INIWriter;
 
 /**
  * Dictionary provides a flexible way to use arrays as objects. The getters and
@@ -634,7 +635,12 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
             $ext = strtolower($filetype);
 
         if ($ext === "ini")
-            return INIWriter::write($filename, $this->values);
+        {
+            $writer = new INIWriter();
+            $bytes = $writer->rewrite($this->values, $filename);
+            self::debug("Saved {0} bytes INI data to: {1}", [$bytes, $filename]);
+            return true;
+        }
 
         if ($ext === "phps")
         {

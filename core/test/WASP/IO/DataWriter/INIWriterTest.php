@@ -58,7 +58,9 @@ class INIWriterTest extends TestCase
         $cfg = array('sec1' => array('nest1' => array('nest2' => array('nest3' => 1))));
         $file = $this->path . '/test.ini';
         $this->expectException(\DomainException::class);
-        INIWriter::write($file, $cfg);
+
+        $writer = new INIWriter();
+        $writer->write($cfg, $file);
     }
 
     /**
@@ -89,7 +91,8 @@ class INIWriterTest extends TestCase
         );
 
         $file = $this->path . '/test.ini';
-        INIWriter::write($file, $cfg);
+        $writer = new INIWriter();
+        $writer->rewrite($cfg, $file);
 
         $ini = file_get_contents($file);
         $expected_ini = <<<EOT
@@ -172,7 +175,8 @@ EOT;
         
         $cfg['sec3']['var5'] = 'value5';
         unset($cfg['sec4']);
-        INIWriter::write($file, $cfg);
+        $writer = new INIWriter();
+        $writer->rewrite($cfg, $file);
 
         $ini_out = file_get_contents($file);
         $this->assertEquals($ini_out, $ini_expected);
