@@ -86,7 +86,7 @@ final class RequestTest extends TestCase
 
     /**
      * @covers WASP\Http\Request::__construct
-     * @covers WASP\Http\Request::setupSession
+     * @covers WASP\Session::start
      */
     public function testRequestVariables()
     {
@@ -121,7 +121,7 @@ final class RequestTest extends TestCase
 
     /**
      * @covers WASP\Http\Request::__construct
-     * @covers WASP\Http\Request::setupSession
+     * @covers WASP\Session::start
      */
     public function testRouting()
     {

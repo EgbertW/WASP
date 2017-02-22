@@ -445,7 +445,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
      */
     public function prepend($element)
     {
-        return $this->unshift($this->values, $element);
+        return $this->unshift($element);
     }
     
     // Iterator implementation
@@ -549,12 +549,14 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
 
     public function natcasesort()
     {
-        natcasesort($this->values);
+        uasort($this->values, "strnatcasecmp");
+        return $this;
     }
 
     public function natsort()
     {
-        natsort($this->values);
+        uasort($this->values, "strnatcmp");
+        return $this;
     }
 
     public static function loadFile($filename, $filetype = null)

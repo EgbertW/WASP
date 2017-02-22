@@ -200,7 +200,7 @@ final class DictionaryTest extends TestCase
     /**
      * @covers WASP\Dictionary::saveFile
      * @covers WASP\Dictionary::loadFile
-     * @covers WASP\Dictionary::info
+     * @covers WASP\Dictionary::debug
      */
     public function testJSON()
     {
@@ -220,7 +220,7 @@ final class DictionaryTest extends TestCase
     /**
      * @covers WASP\Dictionary::saveFile
      * @covers WASP\Dictionary::loadFile
-     * @covers WASP\Dictionary::info
+     * @covers WASP\Dictionary::debug
      */
     public function testPHPS()
     {
@@ -240,7 +240,7 @@ final class DictionaryTest extends TestCase
     /**
      * @covers WASP\Dictionary::saveFile
      * @covers WASP\Dictionary::loadFile
-     * @covers WASP\Dictionary::info
+     * @covers WASP\Dictionary::debug
      */
     public function testYAML()
     {
@@ -535,6 +535,191 @@ final class DictionaryTest extends TestCase
     }
 
     /**
+     * @covers WASP\Dictionary::pop
+     * @covers WASP\Dictionary::push
+     * @covers WASP\Dictionary::append
+     */
+    public function testStack()
+    {
+        $dict = new Dictionary();
+
+        $dict->push('z');
+        $dict->append('g');
+        $dict->push(0.5);
+
+        $this->assertEquals(0.5, $dict->pop());
+        $this->assertEquals('g', $dict->pop());
+        $this->assertEquals('z', $dict->pop());
+        $this->assertEquals(null, $dict->pop());
+    }
+
+    /**
+     * @covers WASP\Dictionary::push
+     * @covers WASP\Dictionary::shift
+     * @covers WASP\Dictionary::unshift
+     * @covers WASP\Dictionary::prepend
+     */
+    public function testQueue()
+    {
+        $dict = new Dictionary();
+
+        $dict->push('z');
+        $dict->push('g');
+        $dict->push(0.5);
+
+        $this->assertEquals('z', $dict->shift());
+        $this->assertEquals('g', $dict->shift());
+        $this->assertEquals(0.5, $dict->shift());
+        $this->assertEquals(null, $dict->shift());
+
+        $dict->unshift('z');
+        $dict->prepend('g');
+        $dict->unshift(0.5);
+
+        $this->assertEquals(0.5, $dict->shift());
+        $this->assertEquals('g', $dict->shift());
+        $this->assertEquals('z', $dict->shift());
+        $this->assertEquals(null, $dict->shift());
+    }
+
+    /**
+     * @covers WASP\Dictionary::append
+     * @covers WASP\Dictionary::prepend
+     * @covers WASP\Dictionary::clear
+     */
+    public function testClear()
+    {
+        $dict = new Dictionary();
+
+        $dict->append('z');
+        $dict->prepend('g');
+        $dict->append(0.5);
+
+        $c = $dict->getAll();
+        $this->assertEquals(['g', 'z', 0.5], $c);
+
+        $dict->clear();
+        $c = $dict->getAll();
+        $this->assertEmpty($c);
+    }
+
+    /**
+     * @covers WASP\Dictionary::dget
+     * @covers WASP\Dictionary::get
+     */
+    public function testDefVal()
+    {
+        $dict = new Dictionary();
+
+        $val = $dict->getBool('a', 'b', 'c', new DefVal(true));
+        $this->assertEquals($val, true);
+
+        $val = $dict->getBool('a', 'b', 'c', new DefVal(false));
+        $this->assertEquals($val, false);
+
+        $this->expectException(\OutOfRangeException::class);
+        $this->expectExceptionMessage('Key a.b.c does not exist');
+        $val = $dict->getBool('a', 'b', 'c');
+    }
+
+    public function testSort()
+    {
+        $dict = new Dictionary();
+
+        $dict['z'] = 'a';
+        $dict['y'] = 'b';
+        $dict['x'] = 'c';
+
+        $dict->asort();
+        $this->assertEquals(
+            array(
+                'z' => 'a',
+                'y' => 'b',
+                'x' => 'c'
+            ),
+            $dict->getAll()
+        );
+
+        $dict->ksort();
+        $this->assertEquals(
+            array(
+                'x' => 'c',
+                'y' => 'b',
+                'z' => 'a'
+            ),
+            $dict->getAll()
+        );
+        
+        $dict->clear();
+        $dict[] = 'img12.png';
+        $dict[] = 'img10.png';
+        $dict[] = 'IMG11.png';
+        $dict[] = 'img2.png';
+        $dict[] = 'img1.png';
+
+        $dict->asort();
+        $this->assertEquals('IMG11.png', $dict->shift());
+        $this->assertEquals('img1.png', $dict->shift());
+        $this->assertEquals('img10.png', $dict->shift());
+        $this->assertEquals('img12.png', $dict->shift());
+        $this->assertEquals('img2.png', $dict->shift());
+
+        $dict->clear();
+        $dict[] = 'img12.png';
+        $dict[] = 'img10.png';
+        $dict[] = 'IMG11.png';
+        $dict[] = 'img2.png';
+        $dict[] = 'img1.png';
+        $dict->natsort();
+        $this->assertEquals('IMG11.png', $dict->shift());
+        $this->assertEquals('img1.png', $dict->shift());
+        $this->assertEquals('img2.png', $dict->shift());
+        $this->assertEquals('img10.png', $dict->shift());
+        $this->assertEquals('img12.png', $dict->shift());
+
+        $dict->clear();
+        $dict[] = 'img12.png';
+        $dict[] = 'img10.png';
+        $dict[] = 'IMG11.png';
+        $dict[] = 'img2.png';
+        $dict[] = 'img1.png';
+        $dict->natcasesort();
+        $this->assertEquals('img1.png', $dict->shift());
+        $this->assertEquals('img2.png', $dict->shift());
+        $this->assertEquals('img10.png', $dict->shift());
+        $this->assertEquals('IMG11.png', $dict->shift());
+        $this->assertEquals('img12.png', $dict->shift());
+
+        $dict->clear();
+        $dict['a'] = '100';
+        $dict['b'] = '20';
+        $dict['c'] = '30';
+
+        $dict->uksort(function ($l, $r) { return -strcmp($l, $r); });
+        $dict->rewind();
+        $this->assertEquals('c', $dict->key());
+        $this->assertEquals('30', $dict->current());
+        $dict->next();
+        $this->assertEquals('b', $dict->key());
+        $this->assertEquals('20', $dict->current());
+        $dict->next();
+        $this->assertEquals('a', $dict->key());
+        $this->assertEquals('100', $dict->current());
+
+        $dict->uasort(function ($l, $r) { return -strnatcmp($l, $r); });
+        $dict->rewind();
+        $this->assertEquals('a', $dict->key());
+        $this->assertEquals('100', $dict->current());
+        $dict->next();
+        $this->assertEquals('c', $dict->key());
+        $this->assertEquals('30', $dict->current());
+        $dict->next();
+        $this->assertEquals('b', $dict->key());
+        $this->assertEquals('20', $dict->current());
+    }
+
+
+    /**
      * @covers WASP\Dictionary::jsonSerialize
      */
     public function testJsonSerialize()
@@ -564,7 +749,7 @@ final class DictionaryTest extends TestCase
 
     /**
      * @covers WASP\Dictionary::saveFile
-     * @covers WASP\INIWriter::write
+     * @covers WASP\IO\DataWriter\INIWriter::write
      */
     public function testWriteINI()
     {
@@ -580,7 +765,7 @@ final class DictionaryTest extends TestCase
 
     /**
      * @covers WASP\Dictionary::saveFile
-     * @covers WASP\INIWriter::write
+     * @covers WASP\IO\DataWriter\INIWriter::write
      */
     public function testWriteINIException()
     {

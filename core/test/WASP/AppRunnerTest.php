@@ -42,6 +42,7 @@ final class AppRunnerTest extends TestCase
     private $testpath;
     private $filename;
     private $classname;
+    private $devlogger;
 
     public function setUp()
     {
@@ -52,11 +53,17 @@ final class AppRunnerTest extends TestCase
         IO\Dir::mkdir($this->testpath);
         $this->filename = tempnam($this->testpath, "wasptest") . ".php";
         $this->classname = "cl_" . str_replace(".", "", basename($this->filename));
+
+        $logger = Debug\Logger::getLogger(AppRunner::class);
+        $this->devlogger = new Debug\DevLogger(LogLevel::DEBUG);
+        $logger->addLogHandler($this->devlogger);
     }
 
     public function tearDown()
     {
         IO\Dir::rmtree($this->testpath);
+        $logger = Debug\Logger::getLogger(AppRunner::class);
+        $logger->removeLogHandlers();
     }
 
     /**
@@ -101,11 +108,6 @@ EOT;
 
     public function testAppProducesOutput()
     {
-        $logger = Debug\Logger::getLogger(AppRunner::class);
-
-        $devlogger = new Debug\DevLogger(LogLevel::DEBUG);
-        $logger->addLogHandler($devlogger);
-
         $phpcode = <<<EOT
 <?php
 
@@ -125,7 +127,7 @@ EOT;
         }
         catch (StringResponse $e)
         {
-            $output = $devlogger->getLog();
+            $output = $this->devlogger->getLog();
             $found = false;
             foreach ($output as $line)
                 $found = $found || strpos($line, "Script output: 1/1: MOCK") !== false;

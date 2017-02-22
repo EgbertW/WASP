@@ -49,6 +49,9 @@ class AppRunner
     /** The application to execute */
     private $app;
 
+    /** The initial output buffer level */
+    private $output_buffer_level;
+
     /**
      * Create the AppRunner with the request and the app path
      * @param WASP\Http\Request $request The request being answered
@@ -60,6 +63,25 @@ class AppRunner
         $this->request = $request;
     }
 
+    private function logScriptOutput()
+    {
+        $output_buffers = array();
+        $ob_cnt = 0;
+        while (ob_get_level() > $this->output_buffer_level)
+        {
+            $output = trim(ob_get_contents());
+            ++$ob_cnt;
+            ob_end_clean();
+            if (!empty($output))
+            {
+                $lines = explode("\n", $output);
+                foreach ($lines as $n => $line)
+                    self::$logger->debug("Script output: {0}/{1}: {2}", [$ob_cnt, $n + 1, $line]);
+            }
+        }
+    }
+
+
     /**
      * Run the app and make produce a response.
      * @throws WASP\Http\Response
@@ -69,8 +91,9 @@ class AppRunner
         try
         {
             // No output should be produced by apps directly, so buffer
-            // everything.  All buffers will be closed by the ResponseHandler,
-            // so no need to do that here.
+            // everything, and log afterwards
+            $this->output_buffer_level = ob_get_level();
+
             ob_start();
             $response = $this->doExecute();
 
@@ -80,7 +103,7 @@ class AppRunner
             if ($response instanceof Response)
                 throw $response;
 
-            throw new HttpError(500, "App did not produce any output");
+            throw new HttpError(500, "App did not produce any response");
         }
         catch (HttpError $response)
         {
@@ -109,6 +132,10 @@ class AppRunner
             );
             throw $e;
         }
+        finally
+        {
+            $this->logScriptOutput();
+        }
     }
 
     /**
@@ -123,7 +150,7 @@ class AppRunner
      * $url_args The URL arguments sent to the script (remained of the URL after the selected route)
      *
      * @param string $path The file to execute
-     * @throws WASP\Http\Error When the route did not end and also did to execute a Template.
+     * @return mixed The response produced by the script, if any
      */
     private function doExecute()
     {
@@ -141,11 +168,7 @@ class AppRunner
         self::$logger->debug("Including {0}", [$path]);
         $resp = include $path;
 
-        if ($resp !== null)
-            return $resp;
-
-        if (Template::$last_template === null)
-            throw new HttpError(400, $request->url);
+        return $resp;
     }
     
     /**
@@ -161,7 +184,7 @@ class AppRunner
      * matched to the request. You can use string or int types, or subclasses
      * of WASP\DB\DAO. In the latter case, the object will be instantiated
      * using the parameter as identifier, that will be passed to the
-     * DAO::fetchSingle method.
+     * DAO::get method.
      */
     protected function reflect($object)
     {
@@ -173,8 +196,8 @@ class AppRunner
         $method = new ReflectionMethod($object, $controller);
         $parameters = $method->getParameters();
 
-        if (count($controller) === 0 && count($parameters) === 0)
-            return call_user_func($object, $controller);
+        if (count($parameters) === 0)
+            return call_user_func(array($object, $controller));
 
         $args = array();
         $arg_cnt = 0;
@@ -229,16 +252,13 @@ class AppRunner
                 if (!$urlargs->has(0))
                     throw new HttpError(400, "Invalid arguments - missing identifier as argument $cnt");
                 $object_id = $urlargs->shift();    
-                $obj = call_user_func(array($tp, "fetchSingle"), $object_id);
+                $obj = call_user_func(array($tp, "get"), $object_id);
                 $args[] = $obj;
                 continue;
             }
 
             throw new HttpError(500, "Invalid parameter type: " . $tp);
         }
-
-        if (count($parameters) !== count($args))
-            throw new HttpError(500, "Invalid arguments");
 
         return call_user_func_array(array($object, $controller), $args);
     }

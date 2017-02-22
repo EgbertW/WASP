@@ -51,6 +51,11 @@ class AssetManager implements ResponseHookInterface
         $this->request = $request;
         $this->resolver = $request->getResolver();
     }
+
+    public function getRequest()
+    {
+        return $this->request;
+    }
     
     public function setMinified(bool $minified)
     {
@@ -71,9 +76,19 @@ class AssetManager implements ResponseHookInterface
         return $this;
     }
 
+    public function getScripts()
+    {
+        return array_values($this->scripts);
+    }
+
     public function addStyle($style)
     {
         $this->inline_style[] = $style;
+    }
+
+    public function getStyles()
+    {
+        return array_values($this->inline_style);
     }
 
     public function addVariable($name, $value)
@@ -82,11 +97,21 @@ class AssetManager implements ResponseHookInterface
         return $this;
     }
 
+    public function getVariables()
+    {
+        return $this->inline_variables;
+    }
+
     public function addCSS(string $stylesheet, $media = "screen")
     {
         $stylesheet = $this->stripSuffix($stylesheet, ".min", ".css");
         $this->css[$stylesheet] = array("path" => $stylesheet, "media" => $media);
         return $this;
+    }
+
+    public function getCSS()
+    {
+        return array_values($this->css);
     }
     
     private function stripSuffix($path, $suffix1, $suffix2)
@@ -124,11 +149,11 @@ class AssetManager implements ResponseHookInterface
                 $asset_path = "/assets/" .$unminified_path;
             elseif ($minified_file)
                 $asset_path = "/assets/" . $minified_path;
-            elseif ($unminified_path)
+            elseif ($unminified_file)
                 $asset_path = "/assets/" . $unminified_path;
             else
             {
-                self::$logger->error("Requested asset {} could not be resolved", $asset);
+                self::$logger->error("Requested asset {0} could not be resolved", [$asset['path']]);
                 continue;
             }
 
@@ -166,11 +191,15 @@ class AssetManager implements ResponseHookInterface
                 if (class_exists("Tidy", false))
                 {
                     $tidy = new \Tidy();
-                    $config = array('indent' => true, 'wrap' => 120, 'markup' => true);
-                    $output = $tidy->repairString($output, $config, "utf8");
+                    $config = array('indent' => true, 'wrap' => 120, 'markup' => true, 'doctype' => 'omit');
+                    $output = "<!DOCTYPE html>\n" . $tidy->repairString($output, $config, "utf8");
                 }
                 else
+                {
+                    // @codeCoverageIgnoreStart
                     self::$logger->warning("Tidy output has been requested, but Tidy extension is not available");
+                    // @codeCoverageIgnoreEnd
+                }
             }
             $response->setOutput($output, $mime);
         }

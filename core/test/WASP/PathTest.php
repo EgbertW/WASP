@@ -46,7 +46,7 @@ final class PathTest extends TestCase
     }
 
     /**
-     * @covers WASP\Path::setup
+     * @covers WASP\Path::__construct
      */
     public function testPath()
     {
@@ -76,7 +76,7 @@ final class PathTest extends TestCase
     }
 
     /**
-     * @covers WASP\Path::setup
+     * @covers WASP\Path::__construct
      */
     public function testExceptionRootInvalid()
     {
@@ -86,7 +86,7 @@ final class PathTest extends TestCase
     }
 
     /**
-     * @covers WASP\Path::setup
+     * @covers WASP\Path::__construct
      */
     public function testExceptionWebrootInvalid()
     {

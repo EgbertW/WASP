@@ -30,7 +30,7 @@ use WASP\IO\Dir;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers WASP\INIWriter
+ * @covers WASP\IO\DataWriter\INIWriter
  */
 class INIWriterTest extends TestCase
 {
@@ -64,8 +64,8 @@ class INIWriterTest extends TestCase
     }
 
     /**
-     * @covers WASP\INIWriter::write
-     * @covers WASP\INIWriter::writeParameter
+     * @covers WASP\IO\DataWriter\INIWriter::write
+     * @covers WASP\IO\DataWriter\INIWriter::writeParameter
      */
     public function testIniWriterHierarchical()
     {
@@ -121,8 +121,8 @@ EOT;
     }
 
     /**
-     * @covers WASP\INIWriter::write
-     * @covers WASP\INIWriter::writeParameter
+     * @covers WASP\IO\DataWriter\INIWriter::write
+     * @covers WASP\IO\DataWriter\INIWriter::writeParameter
      */
     public function testIniWriterComments()
     {

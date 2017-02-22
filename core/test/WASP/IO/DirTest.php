@@ -29,7 +29,7 @@ use WASP\System;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers WASP\Dir
+ * @covers WASP\IO\Dir
  */
 final class DirTest extends TestCase
 {
@@ -72,9 +72,9 @@ final class DirTest extends TestCase
     }
 
     /**
-     * @covers WASP\Dir::setRequiredPrefix
-     * @covers WASP\Dir::mkdir
-     * @covers WASP\Dir::rmtree
+     * @covers WASP\IO\Dir::setRequiredPrefix
+     * @covers WASP\IO\Dir::mkdir
+     * @covers WASP\IO\Dir::rmtree
      */
     public function testDir()
     {
@@ -128,8 +128,8 @@ final class DirTest extends TestCase
     }
 
     /**
-     * @covers WASP\Dir::mkdir
-     * @covers WASP\Dir::rmtree
+     * @covers WASP\IO\Dir::mkdir
+     * @covers WASP\IO\Dir::rmtree
      */
     public function testRMDirPermission()
     {
@@ -144,8 +144,8 @@ final class DirTest extends TestCase
     }
 
     /**
-     * @covers WASP\Dir::mkdir
-     * @covers WASP\Dir::rmtree
+     * @covers WASP\IO\Dir::mkdir
+     * @covers WASP\IO\Dir::rmtree
      */
     public function testRMFile()
     {
@@ -166,8 +166,8 @@ final class DirTest extends TestCase
     }
 
     /**
-     * @covers WASP\Dir::mkdir
-     * @covers WASP\Dir::rmtree
+     * @covers WASP\IO\Dir::mkdir
+     * @covers WASP\IO\Dir::rmtree
      */
     public function testRMFilePermission()
     {
@@ -186,8 +186,8 @@ final class DirTest extends TestCase
     }
 
     /**
-     * @covers WASP\Dir::mkdir
-     * @covers WASP\Dir::rmtree
+     * @covers WASP\IO\Dir::mkdir
+     * @covers WASP\IO\Dir::rmtree
      */
     public function testRMDirDeepPermission()
     {
@@ -203,12 +203,12 @@ final class DirTest extends TestCase
     }
 
     /**
-     * @covers WASP\Dir::__construct
-     * @covers WASP\Dir::current
-     * @covers WASP\Dir::key
-     * @covers WASP\Dir::hasNext
-     * @covers WASP\Dir::next
-     * @covers WASP\Dir::rewind
+     * @covers WASP\IO\Dir::__construct
+     * @covers WASP\IO\Dir::current
+     * @covers WASP\IO\Dir::key
+     * @covers WASP\IO\Dir::hasNext
+     * @covers WASP\IO\Dir::next
+     * @covers WASP\IO\Dir::rewind
      */
     public function testDirRead()
     {
