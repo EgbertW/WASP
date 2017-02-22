@@ -60,7 +60,7 @@ elseif (method_exists($exception, 'getUserMessage'))
 
 $type_name = str_replace("/", "_" ,$type) . ".php";
 
-$path = WASP\Autoload\Resolve::template($type_name);
+$path = $request->resolver->template($type_name);
 if ($path !== null)
     require $path;
 else

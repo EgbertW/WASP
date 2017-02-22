@@ -23,8 +23,10 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP;
+namespace WASP\IO\DataWriter;
 
+use WASP\System;
+use WASP\IO\Dir;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -48,8 +50,8 @@ class INIWriterTest extends TestCase
     }
 
     /**
-     * @covers WASP\INIWriter::write
-     * @covers WASP\INIWriter::writeParameter
+     * @covers WASP\IO\DataWriter\INIWriter::format
+     * @covers WASP\IO\DataWriter\INIWriter::writeParameter
      */
     public function testIniWriterException()
     {

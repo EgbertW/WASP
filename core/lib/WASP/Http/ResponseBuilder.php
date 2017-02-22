@@ -197,7 +197,7 @@ class ResponseBuilder
         {
             $transformed = $this->response->transformResponse($mime);
             if ($transformed instanceof Response)
-                $this->response = $tranformed;
+                $this->response = $transformed;
         }
         catch (Throwable $e)
         {} // Proceed unmodified

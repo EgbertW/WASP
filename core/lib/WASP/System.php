@@ -166,6 +166,7 @@ class System
             ini_set('max_execution_time', 0);
         }
 
+
         // Make sure xdebug does not overload var_dump
         ini_set('xdebug.overload_var_dump', 'off');
 

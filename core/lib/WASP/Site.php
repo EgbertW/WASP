@@ -179,7 +179,10 @@ class Site
             $site = isset($sitenames[$host_idx]) ? $sitenames[$host_idx] : "default";
 
             if (!isset($sites[$site]))
-                $sites[$site] = new Site($config);
+            {
+                $sites[$site] = new Site;
+                $sites[$site]->setName($site);
+            }
 
             $sites[$site]->addVirtualHost(
                 new VirtualHost($url, $lang)

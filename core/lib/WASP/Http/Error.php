@@ -82,7 +82,6 @@ class Error extends Response
         {
             $template = Template::findExceptionTemplate($exception);
             $template->assign('exception', $exception);
-            $template->assign('log', $this->devlog);
             $template->render();
         }
         catch (Response $e)
@@ -91,10 +90,8 @@ class Error extends Response
         }
         catch (Throwable $e)
         {
-            self::$logger->emergency("Could not render error template, using fallback writer!");
+            self::$logger->emergency("Could not render error template, using fallback writer! Exception: {0}", [$e]);
             $op = array('exception' => $exception);
-            if ($this->devlog)
-                $op['log'] = $this->devlog;
 
             // Write the output and return it as a string response
             ob_start();

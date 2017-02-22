@@ -42,6 +42,7 @@ namespace WASP
         private $request;
         private $path;
         private $arguments = array();
+        private $title = null;
         private $template_path;
         private $resolve;
         public $translations = array();
@@ -68,6 +69,29 @@ namespace WASP
         public function assign($name, $value)
         {
             $this->arguments[$name] = $value;
+            return $this;
+        }
+
+        public function setTitle(string $title)
+        {
+            $this->title = $title;
+            return $this;
+        }
+
+        public function title()
+        {
+            if ($this->title === null)
+            {
+                $site = $this->request->vhost->getSite();
+                $name = $site->getName();
+                $route = $this->request->route;
+                if ($name !== "default")
+                    $this->title = $name . " - " . $route;
+                else
+                    $this->title = $this->request->route;
+            }
+
+            return $this->title;
         }
 
         public function resolve($name)
@@ -161,7 +185,7 @@ namespace WASP
 
         public function chooseResponse(array $types)
         {
-            $best = Request::current()->getBestResponseType($types);
+            $best = $this->request->getBestResponseType($types);
 
             // Set the mime-type to the best selected output
             $charset = (substr($best, 0, 5) == "text/") ? "utf-8" : null;
@@ -261,6 +285,7 @@ namespace WASP
             $class = get_class($exception);
             $code = $exception->getCode();
 
+            $resolver = System::getInstance()->resolver();
             $resolved = null;
             while ($class)
             {
@@ -270,18 +295,19 @@ namespace WASP
 
                 if (!empty($code))
                 {
-                    $resolved = Resolve::template($path . $code);
+                    $resolved = $resolver->template($path . $code);
                     if ($resolved)
                         break;
                 }
 
-                $resolved = Resolve::template($path);
+                $resolved = $resolver->template($path);
                 if ($resolved)
                     break;
 
                 $class = get_parent_class($class);
             }
 
+            self::$logger->error("Template is {0}", [$resolved]);
             if (!$resolved)
                 throw new \RuntimeException("Could not find any matching template for " . get_class($exception));
             

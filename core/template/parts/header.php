@@ -32,7 +32,7 @@ $this->addCSS('foundation-icons');
 <html>
     <head lang="nl">
         <meta charset="utf-8" />
-        <title>Titel</title>
+        <title><?=txt($this->title());?></title>
         <?=$this->insertCSS();?>
     </head>
     <body>
