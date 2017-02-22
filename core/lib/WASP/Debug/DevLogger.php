@@ -95,10 +95,6 @@ class DevLogger implements LogWriterInterface, ResponseHookInterface
         {
             $response->getDictionary()->set('devlog', $this->log);
         }
-        elseif ($response instanceof Error)
-        {
-            $response->setDebugLog($this->log);
-        }
         elseif ($response instanceof StringResponse)
         {
             $mime = $response->getMimeTypes();
@@ -110,8 +106,9 @@ class DevLogger implements LogWriterInterface, ResponseHookInterface
                 fprintf($buf, "<!-- Executed in: %s s -->\n", $duration);
                 fprintf($buf, "<!-- Route resolved: %s -->\n", $request->route);
                 fprintf($buf, "<!-- App executed: %s -->\n", $request->app);
+                $width = strlen((string)count($this->log)) + 1;
                 foreach ($this->log as $no => $line)
-                    fprintf($buf, "<!-- %05d: %s -->\n", $no, htmlentities($line));
+                    fprintf($buf, "<!-- %0" . $width . "d: %s -->\n", $no, htmlentities($line));
 
                 fseek($buf, 0);
                 $output = fread($buf, 100 * 1024);

@@ -23,7 +23,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\Util;
+namespace WASP\IO;
 
 use WASP\PermissionError;
 use WASP\Debug\LoggerAwareStaticTrait;
@@ -93,30 +93,28 @@ class File
     {
         try
         {
-            $file_stat = @fileperms($path);
+            $mode = @fileperms($path);
         }
         catch (Throwable $e)
         {
             throw new IOException("Could not stat: " . $path);
         }
 
-        $mode = $file_stat['mode'];
-        
         $perms = array(
             'owner' => array(
-                'read'    => $mode & 0x0100,
-                'write'   => $mode & 0x0080,
-                'execute' => $mode & 0x0040
+                'read'    => (bool)($mode & 0x0100),
+                'write'   => (bool)($mode & 0x0080),
+                'execute' => (bool)($mode & 0x0040)
             ),
             'group' => array(
-                'read'    => $mode & 0x0020,
-                'write'   => $mode & 0x0010,
-                'execute' => $mode & 0x0008
+                'read'    => (bool)($mode & 0x0020),
+                'write'   => (bool)($mode & 0x0010),
+                'execute' => (bool)($mode & 0x0008)
             ),
             'world' => array(
-                'read'    => $mode & 0x0004,
-                'write'   => $mode & 0x0002,
-                'execute' => $mode & 0x0001
+                'read'    => (bool)($mode & 0x0004),
+                'write'   => (bool)($mode & 0x0002),
+                'execute' => (bool)($mode & 0x0001)
             )
         );
 
@@ -140,15 +138,29 @@ class File
     public static function makeWritable($path)
     {
         $perms = self::getPermissions($path);
-        while (ob_get_level())
-            ob_end_clean();
 
         $current_user = posix_getpwuid(posix_geteuid());
         $owner = posix_getpwuid(fileowner($path));
         $group = posix_getgrgid(filegroup($path));
 
-        if ($current_user['uid'] !== $owner['uid'])
+        $is_owner = $current_user['uid'] === $owner['uid'];
+        if ($is_owner && $perms['owner']['write'])
+            return;
+
+        if (!$is_owner)
+        {
+            // Check if the file is owner by a group we're in
+            $my_groups = posix_getgroups();
+            if (in_array($group['gid'], $my_groups) && $perms['group']['write'])
+                return;
+
+            // Not in the same group, check if the file is world writable
+            if ($perms['world']['write'])
+                return;
+
+            // The file is really unwritable, and we cannot change the permissions
             throw new PermissionError($path, "Cannot change permissions - not the owner");
+        }
 
         // We own the file, so we should be able to fix it
         $set_gid = false;
@@ -169,7 +181,10 @@ class File
             return;
 
         $what = is_dir($path) ? "directory" : "file";
-        self::$logger("Changing permissions of {0} {1} to {2} (was: {3})", $what, $path, $new_mode, $perms['mode']);
+        self::$logger->notice(
+            "Changing permissions of {0} {1} to {2} (was: {3})", 
+            [$what, $path, $new_mode, $perms['mode']]
+        );
 
         try
         {

@@ -103,6 +103,19 @@ abstract class Response extends \Exception
     }
 
     /**
+     * The ResponseBuilder will call this before running hooks, to allow
+     * the response to restructure itself to a DataResponse or StringResponse
+     * which allows injectors or modifiers to work on the response. In case
+     * a transformation is not appropriate, null can be returned.
+     *
+     * @param string $mime The mime-type of the final response
+     */
+    public function transformResponse(string $mime)
+    {
+        return null;
+    }
+
+    /**
      * Output the data to the client. This will be the very last method called
      * by the ResponseBuilder, and all output buffering will have been
      * disabled. Headers will have been sent, just send the output.

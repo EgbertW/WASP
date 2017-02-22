@@ -87,7 +87,7 @@ class OutputHandler
     public static function handleException($exception)
     {
         // First set headers as configured in the request
-        $request = System::getInstance()->request();
+        $request = System::hasInstance() ? System::getInstance()->request() : null;
 
         if (method_exists($exception, "getRequest"))
         {

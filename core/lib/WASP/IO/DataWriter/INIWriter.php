@@ -23,22 +23,24 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP;
+namespace WASP\IO\DataWriter;
 
 /**
  * The INI-file class writes INI-files. If the INI-file exists,
  * it will be read to extract the comments and re-adds these comments
  * to the same section in the output file
  */
-class INIWriter
+class INIWriter extends DataWriter
 {
-    public static function write($filename, array $data)
+    protected function format($data, $file_handle)
     {
-        if (file_exists($filename))
-            $contents = file_get_contents($filename);
-        else
-            $contents = "";
-
+        // First read current data from file
+        $pos = ftell($file_handle);
+        $contents = "";
+        while (!feof($file_handle))
+            $contents .= fread($file_handle);
+        fseek($file_handle, $pos);
+        
         // Attempt to write config without removing comments
         $lines = explode("\n", $contents);
         $new_contents = "";
@@ -87,7 +89,7 @@ class INIWriter
         {
             $first = false;
             foreach ($section_comments[0] as $comment)
-                $new_contents .= $comment . "\n";
+                fwrite($file_handle, $comment . "\n");
         }
 
         foreach ($data as $section => $parameters)
@@ -99,7 +101,7 @@ class INIWriter
 
             $parameters = to_array($parameters);
 
-            $new_contents .= "[" . $section . "]\n";
+            fwrite($file_handle, "[" . $section . "]\n");
             $comments = isset($section_comments[$section]) ? $section_comments[$section] : array();
             sort($comments, SORT_STRING);
             ksort($parameters, SORT_STRING);
@@ -109,16 +111,11 @@ class INIWriter
             foreach ($lines as $name => $line)
             {
                 if (is_string($line) && substr($line, 0, 1) == ";")
-                    $new_contents .= $line . "\n";
+                    fwrite($file_handle, $line . "\n");
                 else
-                    $new_contents .= self::writeParameter($name, $line);
+                    self::writeParameter($file_handle, $name, $line);
             }
         }
-
-        // Write the config file
-        file_put_contents($filename, $new_contents);
-        $file = new Util\File($filename);
-        $file->setPermissions();
     }
 
     /**
@@ -128,7 +125,7 @@ class INIWriter
      * @param $name string The name of the parameter
      * @param $parameter mixed The parameter to write
      */
-    private static function writeParameter($name, $parameter, $depth = 0)
+    private static function writeParameter($file_handle, $name, $parameter, $depth = 0)
     {
         if ($depth > 1)
             throw new \DomainException("Cannot nest arrays more than once in INI-file");
@@ -139,23 +136,20 @@ class INIWriter
             foreach ($parameter as $key => $val)
             {
                 $prefix = $name . "[" . $key . "]";
-                $str .= self::writeParameter($prefix, $val, $depth + 1); 
+                self::writeParameter($file_handle, $prefix, $val, $depth + 1); 
             }
-            return $str;
-            
         }
         elseif (is_bool($parameter))
-            $str = "$name = " . ($parameter ? "true" : "false") . "\n";
+            fwrite($file_handle, "$name = " . ($parameter ? "true" : "false") . "\n");
         elseif (is_null($parameter))
-            $str = "$name = null\n";
+            fwrite($file_handle, "$name = null\n");
         elseif (is_float($parameter) && is_int_val((string)$parameter))
-            $str = "$name = " . sprintf("%.1f", $parameter) . "\n";
+            fwrite($file_handle, "$name = " . sprintf("%.1f", $parameter) . "\n");
         elseif (is_float($parameter))
-            $str = "$name = " . $parameter . "\n";
+            fwrite($file_handle, "$name = " . $parameter . "\n");
         elseif (is_numeric($parameter))
-            $str = "$name = " . $parameter . "\n";
+            fwrite($file_handle, "$name = " . $parameter . "\n");
         else
-            $str = "$name = \"" . str_replace('"', '\\"', $parameter) . "\"\n";
-        return $str;
+            fwrite($file_handle, "$name = \"" . str_replace('"', '\\"', $parameter) . "\"\n");
     }
 }

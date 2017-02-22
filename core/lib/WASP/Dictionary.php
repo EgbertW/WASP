@@ -26,6 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP;
 
 use WASP\Debug\LoggerAwareStaticTrait;
+use WASP\IO\File;
 
 /**
  * Dictionary provides a flexible way to use arrays as objects. The getters and
@@ -699,7 +700,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
     private static function writeData(string $filename, string $data)
     {
         $ret = file_put_contents($filename, $data);
-        $file = new Util\File($filename);
+        $file = new File($filename);
         $file->setPermissions();
 
         if ($ret === false)

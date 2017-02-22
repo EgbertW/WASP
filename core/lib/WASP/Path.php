@@ -25,6 +25,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP;
 
+use WASP\IO\File;
+
 final class Path
 {
     private $root;
@@ -38,6 +40,8 @@ final class Path
     private $js;
     private $css;
     private $img;
+
+    private $path_checked = false;
 
     private static $instance = null;
 
@@ -72,14 +76,24 @@ final class Path
         $this->css = $this->assets . '/css';
         $this->img = $this->assets . '/img';
 
-        foreach (array('root', 'core', 'var', 'modules', 'http', 'config') as $type)
+    }
+
+    public function checkPaths()
+    {
+        if ($this->path_checked && (!is_defined('WASP_TEST') || WASP_TEST === 0))
+            return;
+
+        foreach (array('root', 'core', 'var', 'modules', 'http', 'config', 'assets') as $type)
         {
             $path = $this->$type;
             if (!file_exists($path) || !is_dir($path))
                 throw new IOException("Path $type (" . $path . ") does not exist");
+
+            if (!is_readable($path))
+                throw new PermissionError($path, "Path '$type' cannot be read");
         }
         
-        foreach (array('var', 'cache', 'log', 'assets', 'js', 'css') as $write_dir)
+        foreach (array('var', 'cache', 'log') as $write_dir)
         {
             $path = $this->$write_dir;
             if (!file_exists($path))
@@ -88,9 +102,10 @@ final class Path
             if (!is_dir($path))
                 throw new IOException("Path " . $path . " is not a directory");
 
-            if (!is_writable($path))
-                Util\File::makeWritable($path);
+            if (!is_writable($path)) // We can try to make it writable, if we own the file
+                File::makeWritable($path);
         }
+        $this->path_checked = true;
     }
 
     public static function current()

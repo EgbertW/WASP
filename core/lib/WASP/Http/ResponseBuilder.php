@@ -192,6 +192,15 @@ class ResponseBuilder
             $mime = $this->request->getBestResponseType($mime);
 
         $this->setHeader('Content-Type', $mime);
+            
+        try
+        {
+            $transformed = $this->response->transformResponse($mime);
+            if ($transformed instanceof Response)
+                $this->response = $tranformed;
+        }
+        catch (Throwable $e)
+        {} // Proceed unmodified
 
         // Execute hooks
         foreach ($this->hooks as $hook)

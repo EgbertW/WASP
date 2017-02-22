@@ -23,10 +23,11 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP;
+namespace WASP\IO;
 
 use Directory;
 use Iterator;
+use WASP\Path;
 
 /**
  * Provide some tools for creating and removing directories.
@@ -208,6 +209,22 @@ class Dir implements Iterator
     public function valid()
     {
         return !empty($this->cur_entry);
+    }
+
+    public static function checkPermissions($path, $file_mode, $dir_mode, $group)
+    {
+        $owner = fileowner($path);
+        $current = posix_getuid();
+
+        if ($owner !== $current)
+            return;
+
+        $dir = new Dir($path, Dir::READ_ALL);
+        foreach ($dir as $entry)
+        {
+            $full_path = $path . '/' . $entry;
+            echo $full_path;
+        }
     }
 }
 

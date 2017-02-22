@@ -39,7 +39,6 @@ class Error extends Response
 
     private static $nesting_counter = 0;
     private $user_message;
-    private $devlog = null;
 
     public function __construct($code, $error, $user_message = null, $previous = null)
     {
@@ -57,41 +56,23 @@ class Error extends Response
         return array_keys(DataResponse::$representation_types);
     }
 
-    public function setDebugLog(array $log)
-    {
-        $this->devlog = $log;
-    }
-
     public function output(string $mime)
     {
-        // @codeCoverageIgnoreStart
-        // If this executes, there's debugging to do
-        if (self::$nesting_counter++ > 5)
-            die("Too much nesting in error output - probably a bug");
-        // @codeCoverageIgnoreEnd
-
-        if ($mime === "text/html")
-            return $this->outputTemplate();
-        
-        $status = $this->getStatusCode();
-        $msg = isset(StatusCode::$CODES[$status]) ? StatusCode::$CODES[$status] : "Internal Server Error";
-        $data = array(
-            'message' => $msg,
-            'status_code' => $this->getStatusCode(),
-            'exception' => $this,
-            'status' => $this->getStatusCode(),
-            'chain' => array()
-        );
-
-        if (!empty($this->devlog))
-            $data['log'] = $this->devlog;
-
-        $dict = new Dictionary($data);
-        $wrapped = new DataResponse($dict);
-        $wrapped->output($mime);
+        if ($mime === "text/html" || $mime === "text/plain")
+            $this->toStringResponse($mime)->output($mime);
+        else
+            $this->toDataResponse($mime)->output($mime);
     }
 
-    protected function outputTemplate()
+    public function transformResponse(string $mime)
+    {
+        if ($mime === "text/html" || $mime === "text/plain")
+            return $this->toStringResponse($mime);
+
+        return $this->toDataResponse($mime);
+    }
+
+    private function toStringResponse(string $mime)
     {
         $exception = $this->getPrevious();
         if ($exception === null)
@@ -106,7 +87,7 @@ class Error extends Response
         }
         catch (Response $e)
         {
-            $e->output("text/html");
+            return $e;
         }
         catch (Throwable $e)
         {
@@ -114,8 +95,30 @@ class Error extends Response
             $op = array('exception' => $exception);
             if ($this->devlog)
                 $op['log'] = $this->devlog;
-            self::fallbackWriter($op, "text/html");
+
+            // Write the output and return it as a string response
+            ob_start();
+            self::fallbackWriter($op, $mime);
+            $op = ob_get_contents();
+            ob_end_clean();
+
+            return new StringResponse($op, $mime);
         }
+    }
+
+    private function toDataResponse(string $mime)
+    {
+        $status = $this->getStatusCode();
+        $msg = isset(StatusCode::$CODES[$status]) ? StatusCode::$CODES[$status] : "Internal Server Error";
+        $data = array(
+            'message' => $msg,
+            'status_code' => $this->getStatusCode(),
+            'exception' => $this,
+            'status' => $this->getStatusCode()
+        );
+
+        $dict = new Dictionary($data);
+        return new DataResponse($dict);
     }
 
     public static function fallbackWriter($output, $mime = "text/plain")

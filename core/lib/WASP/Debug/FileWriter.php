@@ -27,7 +27,7 @@ namespace WASP\Debug;
 
 use Psr\Log\LogLevel;
 use WASP\Request;
-use WASP\Util\File;
+use WASP\IO\File;
 
 class FileWriter implements LogWriterInterface
 {

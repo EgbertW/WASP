@@ -29,6 +29,8 @@ use WASP\Autoload\Autoloader;
 use WASP\Autoload\Resolve;
 use WASP\Http\Request;
 use WASP\Http\Error as HttpError;
+use WASP\IO\File;
+use WASP\IO\Dir;
 use WASP\Debug\{Logger, LoggerFactory, FileWriter};
 use PSR\Log\LogLevel;
 
@@ -52,6 +54,11 @@ class System
 
         self::$instance = new System($path, $config);
         return self::$instance;
+    }
+
+    public static function hasInstance()
+    {
+        return self::$instance !== null;
     }
 
     public static function getInstance()
@@ -88,6 +95,16 @@ class System
         else
             ini_set('error_log', $this->path->log . '/error-php' . $test . '.log');
 
+        // Make sure permissions are adequate
+        try
+        {
+            $this->path->checkPaths();
+        }
+        catch (PermissionError $e)
+        {
+            return $this->showPermissionError($e);
+        }
+
         // Autoloader requires manual logger setup to avoid depending on external files
         LoggerFactory::setLoggerFactory(new LoggerFactory());
         Autoloader::setLogger(LoggerFactory::getLogger([Autoloader::class]));
@@ -112,7 +129,7 @@ class System
         // Set default permissions for files and directories
         if ($this->config->has('io', 'group'))
         {
-            Util\File::setFileGroup($this->config->get('io', 'group'));
+            File::setFileGroup($this->config->get('io', 'group'));
             Dir::setDirGroup($this->config->get('io', 'group'));
         }
         $file_mode = (int)$this->config->get('io', 'file_mode');
@@ -120,7 +137,7 @@ class System
         {
             $of = $file_mode;
             $file_mode = octdec(sprintf("%04d", $file_mode));
-            Util\File::setFileMode($file_mode);
+            File::setFileMode($file_mode);
         }
 
         $dir_mode = (int)$this->config->get('io', 'dir_mode');
@@ -187,5 +204,29 @@ class System
         if ($this->resolver === null)
             $this->resolver = new Resolve($this->path);
         return $this->resolver;
+    }
+
+    private function showPermissionError(PermissionError $e)
+    {
+        $dev = $this->config->get('site', 'dev');
+
+        if (PHP_SAPI !== "CLI")
+        {
+            http_response_code(500);
+            header("Content-type: text/plain");
+        }
+
+        if ($dev)
+        {
+            $file = $e->path;
+            echo "{$e->getMessage()}\n";
+            echo "\n";
+            echo Logger::str($e, $html);
+        }
+        else
+        {
+            echo "A permission error is preventing this page from displaying properly.";
+        }
+        die();
     }
 }
