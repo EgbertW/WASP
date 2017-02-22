@@ -27,10 +27,12 @@ namespace WASP;
 
 use WASP\Debug;
 use WASP\Debug\LoggerAwareStaticTrait;
+use WASP\IO\DataReader\PHPSReader;
+use WASP\IO\DataWriter\PHPSWriter;
 
-/** Cache requires Dictionary and Path, so always load it */
-require_once 'Dictionary.php';
-require_once 'Path.php';
+/// /** Cache requires Dictionary and Path, so always load it */
+/// require_once 'Dictionary.php';
+/// require_once 'Path.php';
 
 /**
  * Provides automatic persistent caching facilities. You can store and retrieve
@@ -107,7 +109,8 @@ class Cache
 
             try
             {
-                self::$repository[$name] = Dictionary::loadFile($cache_file, "phps");
+                $reader = new PHPSReader;
+                self::$repository[$name] = Dictionary::loadFile($cache_file, $reader);
                 self::$repository[$name]['_changed'] = false;
                 self::checkExpiry($name);
             }
@@ -135,6 +138,7 @@ class Cache
     {
         $path = System::getInstance()->path();
         $cache_dir = $path->cache;
+        $writer = new PHPSWriter;
         foreach (self::$repository as $name => $cache)
         {
             if (empty($cache['_changed']))
@@ -142,7 +146,7 @@ class Cache
 
             unset($cache['_changed']);
             $cache_file = $cache_dir . '/' . $name . '.cache';
-            $cache->saveFile($cache_file, 'phps');
+            $cache->saveFile($cache_file, $writer);
         }
     }
 

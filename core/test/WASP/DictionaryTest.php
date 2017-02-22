@@ -801,7 +801,7 @@ EOT;
         $ret = file_put_contents($file, $ini);
         $this->assertEquals($ret, strlen($ini));
 
-        $dict = Dictionary::loadFile($file, 'ini');
+        $dict = Dictionary::loadFile($file, new IO\DataReader\INIReader);
         $this->assertEquals($dict->get('section1', 'var1'), 'val1');
         $this->assertEquals($dict->get('section1', 'var2'), 'val2');
         $this->assertEquals($dict->get('section2', 'var3'), 3.5);
@@ -819,7 +819,7 @@ EOT;
         file_put_contents($file, '{garbage json]-');
         
         $this->expectException(IOException::class);
-        $dict = Dictionary::loadFile($file, 'json');
+        $dict = Dictionary::loadFile($file, new IO\DataReader\JSONReader);
     }
 
     /**
@@ -831,7 +831,7 @@ EOT;
         file_put_contents($file, '{garbage phps]-');
         
         $this->expectException(IOException::class);
-        $dict = Dictionary::loadFile($file, 'phps');
+        $dict = Dictionary::loadFile($file, new IO\DataReader\PHPSReader);
     }
 
     /**
@@ -846,7 +846,7 @@ EOT;
         file_put_contents($file, '{garbage yaml]-');
         
         $this->expectException(IOException::class);
-        $dict = Dictionary::loadFile($file, 'yaml');
+        $dict = Dictionary::loadFile($file, new IO\DataReader\YAMLReader);
     }
 
     public function testLoadNotExistingFileException()
@@ -856,7 +856,7 @@ EOT;
             unlink($file);
 
         $this->expectException(IOException::class);
-        $dict = Dictionary::loadFIle($file, 'json');
+        $dict = Dictionary::loadFile($file, new IO\DataReader\JSONReader);
     }
 
     /**
@@ -865,7 +865,7 @@ EOT;
     public function testSaveException()
     {
         $a = new Dictionary();
-        $this->expectException(\DomainException::class);
+        $this->expectException(\InvalidArgumentException::class);
         $a->saveFile('random_file', 'garbage');
     }
 
@@ -879,7 +879,7 @@ EOT;
         fputs($fh, 'test');
         fclose($fh);
 
-        $this->expectException(\DomainException::class);
+        $this->expectException(\InvalidArgumentException::class);
         Dictionary::loadFile($file, 'garbage');
     }
 

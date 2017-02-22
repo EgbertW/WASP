@@ -95,6 +95,9 @@ class System
         else
             ini_set('error_log', $this->path->log . '/error-php' . $test . '.log');
 
+        // Set default permissions for files and directories
+        $this->setCreatePermissions();
+
         // Make sure permissions are adequate
         try
         {
@@ -124,28 +127,6 @@ class System
         {
             $devlogger = new Debug\DevLogger(LogLevel::DEBUG);
             $root_logger->addLogHandler($devlogger);
-        }
-
-        // Set default permissions for files and directories
-        if ($this->config->has('io', 'group'))
-        {
-            File::setFileGroup($this->config->get('io', 'group'));
-            Dir::setDirGroup($this->config->get('io', 'group'));
-        }
-        $file_mode = (int)$this->config->get('io', 'file_mode');
-        if ($file_mode)
-        {
-            $of = $file_mode;
-            $file_mode = octdec(sprintf("%04d", $file_mode));
-            File::setFileMode($file_mode);
-        }
-
-        $dir_mode = (int)$this->config->get('io', 'dir_mode');
-        if ($dir_mode)
-        {
-            $of = $dir_mode;
-            $dir_mode = octdec(sprintf("%04d", $dir_mode));
-            Dir::setDirMode($dir_mode);
         }
 
         // Log beginning of request handling
@@ -230,4 +211,27 @@ class System
         }
         die();
     }
+
+    private function setCreatePermissions()
+    {
+        if ($this->config->has('io', 'group'))
+            File::setFileGroup($this->config->get('io', 'group'));
+
+        $file_mode = (int)$this->config->get('io', 'file_mode');
+        if ($file_mode)
+        {
+            $of = $file_mode;
+            $file_mode = octdec(sprintf("%04d", $file_mode));
+            File::setFileMode($file_mode);
+        }
+
+        $dir_mode = (int)$this->config->get('io', 'dir_mode');
+        if ($dir_mode)
+        {
+            $of = $dir_mode;
+            $dir_mode = octdec(sprintf("%04d", $dir_mode));
+            File::setDirMode($dir_mode);
+        }
+    }
+
 }

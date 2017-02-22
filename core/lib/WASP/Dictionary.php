@@ -27,7 +27,10 @@ namespace WASP;
 
 use WASP\Debug\LoggerAwareStaticTrait;
 use WASP\IO\File;
-use WASP\IO\DataWriter\INIWriter;
+use WASP\IO\DataWriter\DataWriter;
+use WASP\IO\DataWriter\DataWriterFactory;
+use WASP\IO\DataReader\DataReader;
+use WASP\IO\DataReader\DataReaderFactory;
 
 /**
  * Dictionary provides a flexible way to use arrays as objects. The getters and
@@ -559,64 +562,30 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
         return $this;
     }
 
-    public static function loadFile($filename, $filetype = null)
+    public static function loadFile($filename, $reader = null)
     {
         if (!is_readable($filename))
             throw new IOException("File not readable: $filename");
 
-        if ($filetype === null)
-        {
-            $extpos = strrpos($filename, ".");
-            $ext = strtolower(substr($filename, $extpos + 1));
-        }
-        else
-            $ext = strtolower($filetype);
+        if ($reader !== null && !($reader instanceof DataReader))
+            throw new \InvalidArgumentException("Reader should be an instance of WASP\\IO\\DataReader\\DataReader");
 
-        if ($ext === "ini")
-        {
-            $arr = parse_ini_file($filename, true, INI_SCANNER_TYPED);
-            return new Dictionary($arr);
-        }
+        if ($reader === null)
+            $reader = DataReaderFactory::factory($filename);
 
-        if ($ext === "json")
-        {
-            $contents = file_get_contents($filename);
-            $arr = json_decode($contents, true);
-            if (!is_array($arr))
-                throw new IOException("Invalid JSON in $filename: " . json_last_error_msg());
-            return new Dictionary($arr);
-        }
+        $data = $reader->readFile($filename);
+        if (empty($data))
+            throw new IOException("Didn't read anything from $filename");
 
-        if ($ext === "phps")
-        {
-            $contents = file_get_contents($filename);
-
-            $arr = call_error_exception(function () use ($contents) {
-                return unserialize($contents);
-            });
-
-            self::debug("Loaded {0} bytes serialized data from: {1}", [strlen($contents), $filename]);
-            return new Dictionary($arr);
-        }
-
-        if ($ext === "yaml")
-        {
-            self::checkYAML();
-            $contents = file_get_contents($filename);
-            
-            $arr = call_error_exception(function () use ($contents) {
-                return yaml_parse($contents);
-            });
-
-            self::debug("Loaded {0} bytes serialized YAML-data from: {1}", [strlen($contents), $filename]);
-            return new Dictionary($arr);
-        }
-
-        throw new \DomainException("Invalid data type: " . $ext);
+        self::debug("Read data from {0} using {1}", [$filename, get_class($reader)]);
+        return new Dictionary($data);
     }
 
-    public function saveFile($filename, $filetype = null)
+    public function saveFile($filename, $writer = null)
     {
+        if ($writer !== null && !($writer instanceof DataWriter))
+            throw new \InvalidArgumentException("Writer should be an instance of WASP\\IO\\DataWriter\\DataWriter");
+
         $f = $filename;
         $d = dirname($f);
         if (!is_dir($d))
@@ -628,47 +597,14 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
         if (!file_exists($f) && !is_writable($d))
             throw new IOException("Cannot save to $f - directory is not writable");
         
-        if ($filetype === null)
-        {
-            $extpos = strrpos($filename, ".");
-            $ext = strtolower(substr($filename, $extpos + 1));
-        }
-        else
-            $ext = strtolower($filetype);
+        if ($writer === null)
+            $writer = DataWriterFactory::factory($filename);
 
-        if ($ext === "ini")
-        {
-            $writer = new INIWriter();
-            $bytes = $writer->rewrite($this->values, $filename);
-            self::debug("Saved {0} bytes INI data to: {1}", [$bytes, $filename]);
-            return true;
-        }
+        $bytes = $writer->write($this->values, $filename);
+        self::debug("Wrote {0} bytes to {1} using {2}", [$bytes, $filename, get_class($writer)]);
 
-        if ($ext === "phps")
-        {
-            $data = serialize($this->values);
-            $bytes = self::writeData($filename, $data);
-            self::debug("Saved {0} bytes serialized data to: {1}", [$bytes, $filename]);
-            return true;
-        }
-
-        if ($ext === "json")
-        {
-            $json = JSON::pprint($this->values);
-            $bytes = self::writeData($filename, $json);
-            self::debug("Saved {0} bytes JSON-serialized data to: {1}", [$bytes, $filename]);
-            return true;
-        }
-
-        if ($ext === "yaml")
-        {
-            self::checkYAML();
-            $yaml = yaml_emit($this->values);
-            $bytes = self::writeData($filename, $yaml);
-            self::debug("Saved {0} bytes YAML-serialized data to: {1}", [$bytes, $filename]);
-            return true;
-        }
-        throw new \DomainException("Invalid data type: " . $ext);
+        $f = new File($filename);
+        $f->setPermissions();
     }
 
     /**
@@ -683,38 +619,6 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
             return;
 
         call_user_func_array(array(self::$logger, "debug"), func_get_args());
-    }
-
-    /**
-     * @codeCoverageIgnore We can't influence the presence of the extension in a unit test
-     */
-    private static function checkYAML()
-    {
-        if (!function_exists('yaml_parse_file'))
-            throw new \RuntimeException('YAML extension is not installed - cannot handle YAML files');
-    }
-
-    /**
-     * Write the data to the file. Throw an exception if it fails.
-     * 
-     * @param $filename string The file to write
-     * @param $data string The data to write to the file
-     *
-     * @return int The amount of bytes written
-     * @throws WASP\IOException When it failed
-     * @codeCoverageIgnore We want to check the write went ok, but as most checks were alread done,
-     * problems hace to be due to race conditions in the OS which are nearly impossible to simulate.
-     */
-    private static function writeData(string $filename, string $data)
-    {
-        $ret = file_put_contents($filename, $data);
-        $file = new File($filename);
-        $file->setPermissions();
-
-        if ($ret === false)
-            throw new IOException("Failed to write JSON data to " . $filename);
-
-        return $ret;
     }
 }
 
