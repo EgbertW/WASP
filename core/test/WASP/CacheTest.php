@@ -27,6 +27,8 @@ namespace WASP;
 
 use PHPUnit\Framework\TestCase;
 
+use WASP\IO\Dir;
+
 /**
  * @covers WASP\Cache
  */
@@ -176,6 +178,28 @@ final class CacheTest extends TestCase
 
         if (file_exists($path->cache . '/testcache2.cache'))
             unlink($path->cache . '/testcache2.cache');
+    }
+
+    /**
+     * @covers WASP\Cache::__construct
+     * @covers WASP\Cache::get
+     * @covers WASP\Cache::put
+     * @covers WASP\Cache::clear
+     */
+    public function testClearCache()
+    {
+        $c = new Cache('testcache');
+
+        $c->put('test', 'mock');
+        $this->assertEquals('mock', $c->get('test'));
+
+        $c->clear();
+        $this->assertEquals(null, $c->get('test'));
+
+        $a = $c->get();
+        unset($a['_changed']);
+        unset($a['_timestamp']);
+        $this->assertEmpty($a);
     }
 }
 
