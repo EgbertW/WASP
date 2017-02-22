@@ -144,4 +144,88 @@ EOT;
         $this->expectException(\RuntimeException::class);
         $json = JSON::pprint($obj);
     }
+
+    /**
+     * @covers WASP\JSON::getJSON
+     */
+    public function testGetJson()
+    {
+        $a = array('b' => 3, 'c' => array(1, 2, 3));
+        $str = JSON::getJSON($a, true);
+
+        $pprint = <<<EOT
+{
+    "b": 3,
+    "c": [
+        1,
+        2,
+        3
+    ]
 }
+EOT;
+        $this->assertEquals($pprint, $str);
+
+        $str = JSON::getJSON($a, false);
+        $json = '{"b":3,"c":[1,2,3]}';
+        $this->assertEquals($json, $str);
+    }
+
+    /**
+     * @covers WASP\JSON::writeJSON
+     */
+    public function testWriteJson()
+    {
+        $a = array('b' => 3, 'c' => array(1, 2, 3));
+        $buf = fopen("php://memory", "rw");
+
+        JSON::writeJSON($buf, $a, true);
+        $l = ftell($buf);
+        fseek($buf, 0);
+        $str = fread($buf, $l);
+        fclose($buf);
+
+        $pprint = <<<EOT
+{
+    "b": 3,
+    "c": [
+        1,
+        2,
+        3
+    ]
+}
+EOT;
+        $this->assertEquals($pprint, $str);
+
+        $buf = fopen("php://memory", "rw");
+        JSON::writeJSON($buf, $a, false);
+        $l = ftell($buf);
+        fseek($buf, 0);
+        $str = fread($buf, $l);
+        fclose($buf);
+
+        $json = '{"b":3,"c":[1,2,3]}';
+        $this->assertEquals($json, $str);
+    }
+
+    /**
+     * @covers WASP\JSON::pprint
+     */
+    public function testJsonIsArray()
+    {
+        $a = array(1, 2, 3, 4, 5, 6, 7);
+        $json = JSON::pprint($a, 0, true, null);
+
+        $pprint = <<<EOT
+[
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+]
+EOT;
+        $this->assertEquals($pprint, $json);
+    }
+};

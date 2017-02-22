@@ -296,9 +296,9 @@ class JSON
             $ending = (++$cur < $tot ? ",\n" : "\n");
             $v .= str_repeat(' ', $indent);
             if (!$array)
-                $v .= self::UTF8SafeEncode($key, $buf) . ': ';
+                $v .= self::UTF8SafeEncode($key) . ': ';
             if (is_array_like($sub))
-                $v .= self::pprint($sub, $indent, null, $buf) . $ending;
+                $v .= self::pprint($sub, $indent, null) . $ending;
             elseif (null === $sub)
                 $v .= 'null' . $ending;
             elseif (is_numeric($sub))
@@ -306,7 +306,7 @@ class JSON
             elseif (is_bool($sub))
                 $v .= ($sub ? "true" : "false") . $ending;
             else
-                $v .= self::UTF8SafeEncode($sub, $buf) . $ending;
+                $v .= self::UTF8SafeEncode($sub) . $ending;
         }
         $v .= str_repeat(' ', $indent - 4) . ($array ? ']' : '}');
 
