@@ -12,7 +12,7 @@ fi
 pushd $LOC
 
 echo "**** Running core tests..."
-$PHPUNIT --bootstrap bootstrap/initTest.php core/test $@
+$PHPUNIT --bootstrap bootstrap/initTest.php core/test --stop-on-error $@
 if [ "$?" -ne 0 ]
 then
     echo "**** Core tests failed!"
@@ -26,7 +26,7 @@ do
     if [ -d "modules/$module/test" ]
     then
         echo "**** Running tests for module ${module}..."
-        $PHPUNIT --bootstrap bootstrap/initTest.php modules/$module/test $@
+        $PHPUNIT --bootstrap bootstrap/initTest.php modules/$module/test --stop-on-error $@
         if [ "$?" -ne 0 ]
         then
             echo "Tests for module $module failed!"
