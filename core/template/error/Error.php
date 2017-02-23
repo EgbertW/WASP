@@ -26,26 +26,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 $type = $this->chooseResponse(array("text/html", "text/plain"));
 
 $error_code = 500;
-if ($exception instanceof WASP\Http\Error)
-    $error_code = (int)$exception->getCode();
-
 $error_title = "Unexpected error";
 $error_description = "The server encountered an error while processing your request";
-switch ($error_code)
-{
-    case 404:
-        $error_title = "Not Found";
-        $error_description = "The resource you requested can not be found";
-        break;
-    case 400:
-        $error_title = "Bad Request";
-        $error_description = "Your browser sent a request that cannot be handled";
-        break;
-    case 403:
-        $error_title = "Forbidden";
-        $error_description = "Your request cannot be handled because you are not authorized for it.";
-        break;
-}
 
 if ($dev || $cli)
 {
@@ -53,13 +35,8 @@ if ($dev || $cli)
         "\nDescription: " . $exception->getMessage() . "\n" 
         . $exception->getTraceAsString();
 }
-elseif (method_exists($exception, 'getUserMessage'))
-{
-    $error_description .= "\nDescription: " . $exception->getUserMessage();
-}
 
 $type_name = str_replace("/", "_" ,$type) . ".php";
-
 $path = $request->getResolver()->template($type_name);
 if ($path !== null)
     require $path;

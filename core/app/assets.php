@@ -62,7 +62,7 @@ if ($extpos !== false)
 
 $full_path = $resolver->asset($path);
 
-if ($path)
+if ($full_path)
 {
     if ($ext === "css")
         $mime = "text/css";

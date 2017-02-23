@@ -33,7 +33,7 @@ $path = new WASP\Path(array('root' => $root));
 $config = WASP\Dictionary::loadFile($root . '/config/main.ini');
 
 $wasp = WASP\System::setup($path, $config);
-$request = $wasp->request();
+$request = $wasp->request;
 $request->dispatch();
 
 die();
