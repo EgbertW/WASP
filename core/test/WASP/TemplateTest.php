@@ -28,6 +28,7 @@ namespace WASP;
 use PHPUnit\Framework\TestCase;
 use WASP\Http\Error as HttpError;
 use WASP\Http\Request;
+use WASP\Http\StringResponse;
 
 /**
  * @covers WASP\Template
@@ -36,12 +37,24 @@ final class TemplateTest extends TestCase
 {
     private $request;
     private $resolver;
+    private $testpath;
+    private $filename;
 
     public function setUp()
     {
         $this->request = new MockTemplateRequest;
         $this->resolver = System::resolver();
+
+        $this->testpath = System::path()->var . '/test';
+        IO\Dir::mkdir($this->testpath);
+        $this->filename = tempnam($this->testpath, "wasptest") . ".php";
     }
+
+    public function tearDown()
+    {
+        IO\Dir::rmtree($this->testpath);
+    }
+
 
     /**
      * @covers WASP\Template::__construct
@@ -141,15 +154,152 @@ final class TemplateTest extends TestCase
         $this->assertEquals($file, $tpl->getTemplate());
     }
 
-    public function testTranslations()
+    /**
+     * @covers WASP\Template::render
+     * @covers WASP\Template::renderReturn
+     */
+    public function testRender()
     {
-        $tpl = new Template($this->request);
-        $this->request->setTemplate($tpl);
+        $tpl_file = <<<EOT
+<html><head><title>Test</title></head><body><p><?=\$foo;?></p></body></html>
+EOT;
+        file_put_contents($this->filename, $tpl_file);
 
-        I18n\Translate::setLanguage('en');
-        $tpl->setLanguageOrder('en', 'nl');
-        $res = \tl('foo', 'bar');
-        $this->assertEquals('foo', $res);
+        $tpl = new Template($this->request);
+        $tpl->setTemplate($this->filename);
+
+        $tpl->assign('foo', 'bar');
+
+        try
+        {
+            $tpl->render();
+        }
+        catch (StringResponse $e)
+        {
+            $actual = $e->getOutput('text/html');
+
+            $expected = str_replace('<?=$foo;?>', 'bar', $tpl_file);
+            $this->assertEquals($expected, $actual);
+        }
+    }
+
+    /**
+     * @covers WASP\Template::render
+     * @covers WASP\Template::renderReturn
+     */
+    public function testRenderThrowsError()
+    {
+        $tpl_file = <<<EOT
+<?php
+throw new RuntimeException("Foo");
+?>
+EOT;
+        file_put_contents($this->filename, $tpl_file);
+
+        $tpl = new Template($this->request);
+        $tpl->setTemplate($this->filename);
+
+        $tpl->assign('foo', 'bar');
+
+        $this->expectException(HttpError::class);
+        $this->expectExceptionCode(500);
+        $this->expectExceptionMessage("Template threw exception");
+        $tpl->render();
+    }
+
+    /**
+     * @covers WASP\Template::render
+     * @covers WASP\Template::renderReturn
+     */
+    public function testRenderThrowsCustomResponse()
+    {
+        $tpl_file = <<<EOT
+<?php
+if (\$this->wantJSON())
+{
+    \$data = ['foo', 'bar'];
+    throw new WASP\Http\DataResponse(\$data);
+}
+?>
+EOT;
+        file_put_contents($this->filename, $tpl_file);
+
+        $tpl = new Template($this->request);
+        $tpl->setTemplate($this->filename);
+
+        $tpl->assign('foo', 'bar');
+
+        try
+        {
+            $tpl->render();
+        }
+        catch (\WASP\Http\DataResponse $e)
+        {
+            $actual = $e->getDictionary()->getAll();
+            $expected = ['foo', 'bar'];
+            $this->assertEquals($expected, $actual);
+        }
+    }
+
+    /**
+     * @covers WASP\Template::render
+     * @covers WASP\Template::renderReturn
+     */
+    public function testRenderThrowsTerminateRequest()
+    {
+        $tpl_file = <<<EOT
+<?php
+throw new WASP\TerminateRequest("Foobar!");
+?>
+EOT;
+        file_put_contents($this->filename, $tpl_file);
+
+        $tpl = new Template($this->request);
+        $tpl->setTemplate($this->filename);
+
+        $this->expectException(TerminateRequest::class);
+        $this->expectExceptionMessage("Foobar!");
+        $tpl->render();
+    }
+
+    /**
+     * @covers \txt
+     */
+    public function testEscaper()
+    {
+        $actual = \txt('some <html special& "characters');
+        $expected = 'some &lt;html special&amp; &quot;characters'; 
+
+        $this->assertEquals($expected, $actual);
+    }
+
+    /**
+     * @covers \tpl
+     */
+    public function testResolveTpl()
+    {
+        $cur = System::template();
+
+        $this->request->setResolver(new MockTemplateResolver());
+        $tpl = new Template($this->request);
+        System::getInstance()->template = $tpl;
+
+        $actual = \tpl('baz');
+        $expected = '/foobar/baz';
+        $this->assertEquals($expected, $actual);
+
+        System::getInstance()->template = $cur;
+    }
+}
+
+class MockTemplateResolver extends \WASP\Autoload\Resolve
+{
+    public function __construct()
+    {}
+
+    public function template(string $tpl)
+    {
+        return '/foobar/' . $tpl;
     }
 }
 
@@ -167,6 +317,11 @@ class MockTemplateRequest extends Request
     public function setTemplate($tpl)
     {
         $this->template = $tpl;
+    }
+
+    public function setResolver($res)
+    {
+        $this->resolver = $res;
     }
 }
 

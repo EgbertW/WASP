@@ -26,6 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP;
 
 use WASP\Http\URL;
+use Locale;
 
 class Site
 {
@@ -83,12 +84,9 @@ class Site
             if (!$vhost->match($url))
                 continue;
 
-            $redirect = $vhost->getRedirect();
+            $redirect = $vhost->getRedirect($url);
             if ($redirect)
-            {
-                $path = $vhost->getPath($url);     
-                return $redirect->URL($path);
-            }
+                return $redirect;
 
             $host = $vhost->getHost();
             if ($host->scheme !== $url->scheme)
@@ -102,15 +100,12 @@ class Site
 
     public function URL($path, $locale = null)
     {
-        if (empty($locale))
-            $locale = getlocale(LC_MESSAGES, 0);
-
-        $locale = Locale::canonicalize($locale);
         foreach ($this->vhosts as $vhost)
         {
             if ($vhost->matchLocale($locale))
                 return $vhost->URL($path);
         }
+        return null;
     }
 
     /**
@@ -170,6 +165,7 @@ class Site
         $urls = $config->getSection('url'); 
         $languages = $config->getSection('language');
         $sitenames = $config->getSection('site');
+        $redirects = $config->getSection('redirect');
         $default_language = $config->get('default_language');
         $sites = array();
 
@@ -177,6 +173,7 @@ class Site
         {
             $lang = isset($languages[$host_idx]) ? $languages[$host_idx] : $default_language;
             $site = isset($sitenames[$host_idx]) ? $sitenames[$host_idx] : "default";
+            $redirect = isset($redirects[$host_idx]) ? $redirects[$host_idx] : null;
 
             if (!isset($sites[$site]))
             {
@@ -184,9 +181,11 @@ class Site
                 $sites[$site]->setName($site);
             }
 
-            $sites[$site]->addVirtualHost(
-                new VirtualHost($url, $lang)
-            );
+            $vhost = new VirtualHost($url, $lang);
+            if ($redirect)
+                $vhost->setRedirect($redirect);
+
+            $sites[$site]->addVirtualHost($vhost);
         }
 
         return $sites;

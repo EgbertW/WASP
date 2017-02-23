@@ -195,16 +195,19 @@ class AppRunner
             throw new HttpError(404, "Unknown controller: " . $controller);
 
         // Inject some properties when they're public
-        $vars = get_object_vars($object);
+        $vars = array_keys(get_object_vars($object));
 
         if (in_array('template', $vars))
-            $object->template = $this->request->template;
+            $object->template = $this->request->getTemplate();
 
         if (in_array('request', $vars))
             $object->request = $this->request;
 
         if (in_array('resolve', $vars))
             $object->resolve = $this->request->getResolver();
+
+        if (in_array('url_args', $vars))
+            $object->url_args = $this->request->url_args;
 
         $method = new ReflectionMethod($object, $controller);
         $parameters = $method->getParameters();
@@ -245,7 +248,7 @@ class AppRunner
 
             if ($tp === "WASP\\Template")
             {
-                $args[] = $this->request->template;
+                $args[] = $this->request->getTemplate();
                 continue;
             }
             

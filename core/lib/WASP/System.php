@@ -205,7 +205,10 @@ class System
                 return $this->resolver;
             case "translate":
                 if ($this->translate === null)
-                    $this->translate = new I18n\Translate();
+                {
+                    $this->translate = new I18n\Translate($this->path);
+                    $this->translate->registerTextDomain('core', $this->path->core . '/language');
+                }
                 return $this->translate;
             case "template":
                 if ($this->template === null)

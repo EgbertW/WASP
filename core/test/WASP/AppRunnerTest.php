@@ -314,7 +314,7 @@ EOT;
         $apprunner->execute();
     }
 
-    public function testAppReturnsObjectWantsRequestAndDictionary()
+    public function testAppReturnsObjectWantsRequestTemplateAndDictionary()
     {
         $classname = $this->classname;
         $phpcode = <<<EOT
@@ -323,12 +323,15 @@ EOT;
 use WASP\Http\StringResponse;
 use WASP\Dictionary;
 use WASP\Http\Request;
+use WASP\Template;
 
 class {$classname}
 {
-    public function foo(Request \$arg1, Dictionary \$arg2)
+    public function foo(Request \$arg1, Template \$arg2, Dictionary \$arg3)
     {
-        \$vals = \$arg2->toArray();
+        \$vals = \$arg3->toArray();
+        if (!(\$arg2 instanceof WASP\Template))
+            throw new WASP\Http\Error('No template');
         \$vals[] = \$arg1->url;
         return new StringResponse(implode(",", \$vals), "text/plain");
     }
@@ -347,6 +350,63 @@ EOT;
         catch (StringResponse $e)
         {
             $this->assertEquals('bar,baz,/', $e->getOutput('text/plain'));
+        }
+    }
+
+    public function testAppReturnsObjectWithPublicProperties()
+    {
+        $classname = $this->classname;
+        $phpcode = <<<EOT
+<?php
+
+use WASP\Http\StringResponse;
+use WASP\Http\Request;
+use WASP\Template;
+use WASP\Dictionary;
+use WASP\Autoload\Resolve;
+
+class {$classname}
+{
+    public \$template;
+    public \$request;
+    public \$resolve;
+    public \$url_args;
+
+    public function foo(Request \$arg1, Template \$arg2, Dictionary \$arg3)
+    {
+        \$response = ['Foo'];
+        if (\$this->template instanceof Template)
+            \$response[] = "Template";
+        if (\$this->request instanceof Request)
+            \$response[] = "Request";
+        if (\$this->resolve instanceof Resolve)
+            \$response[] = "Resolve";
+        else
+            throw new \RuntimeException('Invalid resolve: ' . WASP\\Debug\\Logger::str(\$this->resolve));
+
+        if (\$this->url_args instanceof Dictionary)
+            \$response[] = "Dictionary";
+        else
+            throw new \RuntimeException('Invalid url args');
+
+        var_dump(\$response);
+        return new StringResponse(implode(",", \$response), "text/plain");
+    }
+}
+
+return new $classname();
+EOT;
+        file_put_contents($this->filename, $phpcode);
+
+        $apprunner = new AppRunner($this->request, $this->filename);
+
+        try
+        {
+            $apprunner->execute();
+        }
+        catch (StringResponse $e)
+        {
+            $this->assertEquals('Foo,Template,Request,Resolve,Dictionary', $e->getOutput('text/plain'));
         }
     }
 
@@ -611,7 +671,7 @@ class MockAppRunnerRequest extends Request
     public function __construct()
     {
         $this->url = '/';
-        $this->resolver = null;
+        $this->resolver = System::resolver();
         $this->url_args = new Dictionary(["foo", "bar", "baz"]);
         $this->template = new MockAppRunnerTemplate();
     }

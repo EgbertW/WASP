@@ -28,6 +28,7 @@ namespace WASP\Http;
 use WASP\Dictionary;
 use WASP\Debug\Logger;
 use WASP\Debug\LoggerAwareStaticTrait;
+use function WASP\to_array;
 
 /**
  * DataResponse represents structured data, such as JSON or XML. The
@@ -46,9 +47,12 @@ class DataResponse extends Response
         'text/plain' => "PLAIN"
     );
 
-    public function __construct(Dictionary $dict)
+    public function __construct($dict)
     {
-        $this->dictionary = $dict;
+        if ($dict instanceof Dictionary)
+            $this->dictionary = $dict;
+        else
+            $this->dictionary = new Dictionary(to_array($dict));
     }
 
     public function getDictionary()

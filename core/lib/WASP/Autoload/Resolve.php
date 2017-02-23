@@ -70,7 +70,7 @@ class Resolve
      * Find installed modules in the module path
      * @param $module_path string Where to look for the modules
      */
-    public function listModules($module_path)
+    public function listModules(string $module_path)
     {
         $dirs = glob($module_path . '/*');
 
@@ -103,7 +103,7 @@ class Resolve
      * @param $name string The name of the module. Just for logging purposes.
      * @param $path string The path of the module.
      */
-    public function registerModule($name, $path)
+    public function registerModule(string $name, string $path)
     {
         $this->modules[$name] = $path;
     }
@@ -125,7 +125,7 @@ class Resolve
      *               'module' => The source module for the controller
      *               'remainder' => Arguments object with the unmatched part of the request
      */
-    public function app($request)
+    public function app(string $request)
     {
         $parts = array_filter(explode("/", $request));
 
@@ -165,7 +165,7 @@ class Resolve
      * @param $recursive boolean Whether to also scan subdirectories
      * @return array The contents of the directory.
      */
-    private static function listDir($dir, $recursive = true)
+    private static function listDir(string $dir, bool $recursive = true)
     {
         $contents = array();
         $subdirs = array();
@@ -268,34 +268,6 @@ class Resolve
     }
 
     /**
-     * Locate a class in any of the modules. The class name will be
-     * constructed by replacing all namespace separators by slashes
-     * and appending .class.php or .php.
-     * 
-     */
-    public function class($class_name)
-    {
-        self::$logger->debug("Lookup up class {0}", [$class_name]);
-        $resolved = $this->cache->get('class', $class_name);
-        if ($resolved === null)
-        {
-            $path1 = str_replace('\\', '/',  $class_name) . ".class.php";
-            $path2 = str_replace('\\', '/',  $class_name) . ".php";
-
-            $resolved = $this->resolve('lib', $path1, false, true);
-            if (!$resolved)
-                $resolved = $this->resolve('lib', $path2, false, true);
-
-            if ($resolved === null) // Store failure as false in the cache
-                $resolved = false;
-
-            $this->cache->put('class', $class_name, $resolved);
-        }
-
-        return $resolved ? $resolved : null;
-    }
-
-    /**
      * Resolve a template file. This method will traverse the installed
      * modules in reversed order. The files are ordered alphabetically, and
      * core always comes first.  By reversing the order, it becomes
@@ -304,7 +276,7 @@ class Resolve
      * @param $template string The template identifier. 
      * @return string The location of a matching template.
      */
-    public function template($template)
+    public function template(string $template)
     {
         if (substr($template, -4) != ".php")
             $template .= ".php";
@@ -321,7 +293,7 @@ class Resolve
      * @param $asset string The name of the asset file
      * @return string The location of a matching asset
      */
-    public function asset($asset)
+    public function asset(string $asset)
     {
         return $this->resolve('assets', $asset, true);
     }
@@ -336,7 +308,7 @@ class Resolve
      * @param $case_insensitive boolean When this is true, all files will be compared lowercased
      * @return string A matching file. Null is returned if nothing was found.
      */
-    private function resolve($type, $file, $reverse = false, $case_insensitive = false)
+    private function resolve(string $type, string $file, bool $reverse = false, bool $case_insensitive = false)
     {
         if ($case_insensitive)
             $file = strtolower($file);

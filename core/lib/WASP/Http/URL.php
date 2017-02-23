@@ -73,8 +73,11 @@ class URL implements \ArrayAccess
         if (empty($scheme))
             $scheme = $default_scheme;
 
-        if (!in_array($scheme, array('http', 'https', 'ftp')))
-            throw new URLException("Unsupported scheme: '" . $scheme . "'");
+        if ($scheme || $host)
+        {
+            if (!in_array($scheme, array('http', 'https', 'ftp')))
+                throw new URLException("Unsupported scheme: '" . $scheme . "'");
+        }
 
         return array(
             'scheme' => $scheme,

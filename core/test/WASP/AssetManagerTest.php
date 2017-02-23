@@ -269,10 +269,9 @@ class MockAssetRequest extends Http\Request
 class MockAssetResolver extends Autoload\Resolve
 {
     public function __construct()
-    {
-    }
+    {}
 
-    public function asset($path)
+    public function asset(string $path)
     {
         $min = strpos($path, '.min.') !== false;
         // test1 is only available minified
@@ -290,7 +289,7 @@ class MockAssetResolver extends Autoload\Resolve
         return null;
     }
 
-    public function template($path)
+    public function template(string $path)
     {
         $res = System::resolver();
         return $res->template($path);
@@ -303,7 +302,7 @@ class MockAssetVhost extends VirtualHost
     {
     }
 
-    public function URL($path = '')
+    public function URL($path = '', $current_url = null)
     {
         return $path;
     }
