@@ -97,9 +97,15 @@ class Session extends Dictionary
     public function start()
     {
         if (PHP_SAPI === "cli")
+        {
             $this->startCLISession();
+        }
         else
+        {
+            // @codeCoverageIgnoreStart
             $this->startHttpSession();
+            // @codeCoverageIgnoreEnd
+        }
 
         if (!$this->has('session_mgmt', 'start_time'))
             $this->set('session_mgmt', 'start_time', time());
@@ -108,8 +114,9 @@ class Session extends Dictionary
     /**
      * Provide a CLI-session by creating a cached array in $_SESSION
      */
-    private function startCLISession()
+    public function startCLISession()
     {
+        if (PHP_SAPI === "CLI" && (!defined('WASP_TEST') || WASP_TEST === 0)) return;
         $this->session_cache = new Cache('cli-session');
         $ref = &$this->session_cache->get();
 
@@ -140,7 +147,7 @@ class Session extends Dictionary
             $this->session_cookie->getHttpOnly()
         );
         session_name($this->session_cookie->getName());
-        session_start();
+        @session_start();
 
         // Make sure the session data is accessible through this object
         $this->values = &$_SESSION;
@@ -209,22 +216,8 @@ class Session extends Dictionary
         {
             // Shut down session completely
             $this->clear();
-            $this->set('session_mgmt', 'destroyed', 0);
-            $session_id = session_create_id();
-            $session->commit();
-
-            // Start a new session
-            ini_set('session.use_strict_mode', 0);
-            session_id($session_id);
-            session_start();
-            $this->values = &$_SESSION;
-            ini_set('session.use_strict_mode', 1);
-            unset($this['session_mgmt']['destroyed']);
+            $this->resetID();
         }
-
-        // Store the current user agent and IP address to prevent session hijacking
-        $ua = $this->set('session_mgmt', 'last_ua', $this->server_vars['REMOTE_ADDR']);
-        $ip = $this->set('session_mgmt', 'last_ip', $this->server_vars['HTTP_USER_AGENT']);
 
         // Check if it's time to regenerate the session ID
         if ($this->has('session_mgmt', 'start_time'))
@@ -234,7 +227,7 @@ class Session extends Dictionary
             $now = new DateTime();
             $elapsed = $now->diff($start);
             $interval = new DateInterval('P5D');
-            if (Date::moreThan($elaped, $interval))
+            if (Date::moreThan($elapsed, $interval))
                 $this->resetID();
         }
     }
@@ -253,20 +246,34 @@ class Session extends Dictionary
             if ($auth)
                 unset($this['authentication']);
 
-            $new_session_id = session_create_id();
+            $new_session_id = self::create_new_id();
             $this->set('session_mgmt', 'new_session_id', $new_session_id);
             session_commit();
             
             ini_set('session.use_strict_mode', 0);
             session_id($new_session_id);
-            session_start();
+            @session_start();
             ini_set('session.use_strict_mode', 1);
             $this->values = &$_SESSION;
-            unset($this['session_mgmt']['destroyed']);
+            $this->session_cookie->setValue($new_session_id);
+            
+            if ($this->has('session_mgmt', 'destroyed'))
+                $this->set('session_mgmt', 'destroyed', null);
+
             if ($auth)
                 $this['authentication'] = $auth;
 
+            // Store the current user agent and IP address to prevent session hijacking
+            $ua = $this->set('session_mgmt', 'last_ua', $this->server_vars['REMOTE_ADDR']);
+            $ip = $this->set('session_mgmt', 'last_ip', $this->server_vars['HTTP_USER_AGENT']);
         }
+    }
+
+    private static function create_new_id()
+    {
+        if (function_exists('session_create_id'))
+            return session_create_id('wasp');
+        return "wasp" . bin2hex(random_bytes(8));
     }
 
     /** 
