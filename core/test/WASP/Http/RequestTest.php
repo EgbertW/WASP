@@ -80,7 +80,7 @@ final class RequestTest extends TestCase
         );
         $this->config = new Dictionary($config);
 
-        $this->path = System::getInstance()->path();
+        $this->path = System::path();
         $this->resolve = new Resolve($this->path);
     }
 

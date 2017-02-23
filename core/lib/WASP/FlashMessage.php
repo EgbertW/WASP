@@ -55,7 +55,7 @@ class FlashMessage
             return;
         }
 
-        $request = System::getInstance()->request();
+        $request = System::request();
         if (empty($request->session))
             throw new \RuntimeException("No session available - cannot store Flash Message");
 

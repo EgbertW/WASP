@@ -47,7 +47,7 @@ final class AppRunnerTest extends TestCase
     public function setUp()
     {
         $this->request = new MockAppRunnerRequest();
-        $this->pathconfig = System::getInstance()->path();
+        $this->pathconfig = System::path();
 
         $this->testpath = $this->pathconfig->var . '/test';
         IO\Dir::mkdir($this->testpath);

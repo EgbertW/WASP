@@ -38,7 +38,7 @@ final class DictionaryTest extends TestCase
 
     public function setUp()
     {
-        $this->pathconfig = System::getInstance()->path();
+        $this->pathconfig = System::path();
         Dir::setRequiredPrefix($this->pathconfig->var);
         $this->path = $this->pathconfig->var . '/test';
         if (file_exists($this->path))

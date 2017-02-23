@@ -55,7 +55,7 @@ class JSON
     public static function init($request = null)
     {
         if ($request === null)
-            $request = System::getInstance()->request();
+            $request = System::request();
         $request->accept = array(
             'application/json' => 1.0,
             '*/*' => 0.5

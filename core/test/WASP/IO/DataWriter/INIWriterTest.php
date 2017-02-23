@@ -38,7 +38,7 @@ class INIWriterTest extends TestCase
 
     public function setUp()
     {
-        $path = System::getInstance()->path(); 
+        $path = System::path(); 
         Dir::setRequiredPrefix($path->root);
         $this->path = $path->var . '/test';
         Dir::mkdir($this->path);

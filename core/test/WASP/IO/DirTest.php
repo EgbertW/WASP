@@ -37,7 +37,7 @@ final class DirTest extends TestCase
 
     public function setUp()
     {
-        $this->path = System::getInstance()->path();
+        $this->path = System::path();
         $root = $this->path->root;
         if (empty($root))
             throw new \RuntimeException("Need a proper WASP Root");

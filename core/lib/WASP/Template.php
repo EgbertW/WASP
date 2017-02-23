@@ -275,8 +275,7 @@ namespace
 {
     function tpl($name)
     {
-        $request = WASP\System::getInstance()->request();
-        $tpl = $request->getTemplate()->resolve($name);
+        $tpl = WASP\System::template()->resolve($name);
         return $tpl;
     }
 

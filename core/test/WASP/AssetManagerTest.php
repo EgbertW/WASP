@@ -292,7 +292,7 @@ class MockAssetResolver extends Autoload\Resolve
 
     public function template($path)
     {
-        $res = System::getInstance()->resolver();
+        $res = System::resolver();
         return $res->template($path);
     }
 }

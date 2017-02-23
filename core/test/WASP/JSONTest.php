@@ -47,7 +47,7 @@ final class JSONTest extends TestCase
             '*/*' => 0.5
         );
             
-        $request = System::getInstance()->request();
+        $request = System::request();
         $this->assertNotEquals($request->accept, $accept);
         JSON::init();
         $this->assertEquals($request->accept, $accept);

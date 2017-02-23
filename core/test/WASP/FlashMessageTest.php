@@ -35,7 +35,7 @@ final class FlashMessageTest extends TestCase
 {
     public function setUp()
     {
-        $this->request = System::getInstance()->request();
+        $this->request = System::request();
 
         // Make sure there are no session variables to begin with
         $keys = array_keys($_SESSION);

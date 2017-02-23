@@ -46,6 +46,8 @@ class System
     private $config;
     private $request;
     private $resolver;
+    private $translate;
+    private $template;
 
     public static function setup(Path $path, Dictionary $config)
     {
@@ -155,7 +157,7 @@ class System
         Cache::setHook($this->config);
 
         // Find installed modules and initialize them
-        Module\Manager::setup($this->path->modules, $this->resolver());
+        Module\Manager::setup($this->path->modules, $this->get('resolver'));
 
         // Load utility functions
         Functions::load();
@@ -163,29 +165,71 @@ class System
         // Do not run again
         $this->bootstrapped = true;
     }
-
-    public function config()
+    
+    public static function __callStatic($func, $arguments)
     {
-        return $this->config;
+        $instance = self::getInstance();
+        return $instance->__get($func);
     }
 
-    public function path()
+    public function __get($parameter)
     {
-        return $this->path;
+        return $this->get($parameter);
     }
 
-    public function request()
+    public function get($parameter)
     {
-        if ($this->request === null)
-            $this->request = new Request($_GET, $_POST, $_COOKIE, $_SERVER, $this->config, $this->path, $this->resolver);
-        return $this->request;
+        switch ($parameter)
+        {
+            case "config":
+                return $this->config;
+            case "path":
+                return $this->path;
+            case "request":
+                if ($this->request === null)
+                {
+                    $this->request = new Request(
+                        $_GET,
+                        $_POST,
+                        $_COOKIE,
+                        $_SERVER,
+                        $this->config,
+                        $this->path, 
+                        $this->resolver
+                    );
+                }
+                return $this->request;
+            case "resolver":
+                if ($this->resolver === null)
+                    $this->resolver = new Resolve($this->path);
+                return $this->resolver;
+            case "translate":
+                if ($this->translate === null)
+                    $this->translate = new I18n\Translate();
+                return $this->translate;
+            case "template":
+                if ($this->template === null)
+                {
+                    $r = $this->__get('request');
+                    $this->template = $r->getTemplate();
+                }
+                return $this->template;
+        }
+        throw new \InvalidArgumentException("No such object: $parameter");
     }
 
-    public function resolver()
+    /**
+     * Overwrite system objects, only to be used in unit tests
+     */
+    public function __set($parameter, $value)
     {
-        if ($this->resolver === null)
-            $this->resolver = new Resolve($this->path);
-        return $this->resolver;
+        if (!defined('WASP_TEST') || WASP_TEST !== 1)
+            throw new \RuntimeException("Cannot modify system objects");
+        
+        if (!property_exists($this, $parameter))
+            throw new \InvalidArgumentException("No such object: $parameter");
+
+        $this->$parameter = $value;
     }
 
     private function showPermissionError(PermissionError $e)

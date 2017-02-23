@@ -43,7 +43,7 @@ final class CacheTest extends TestCase
      */
     public function testConstruct()
     {
-        $path = System::getInstance()->path();
+        $path = System::path();
         $data = array('test' => array('a' => true, 'b' => false, 'c' => true), 'test2' => array(1, 2, 3));
         $file = $path->cache . '/testcache.cache';
 
@@ -111,7 +111,7 @@ final class CacheTest extends TestCase
         $testdata = array('var1' => 'val1', 'var2' => 'var2');
         $data = serialize($testdata);
 
-        $path = System::getInstance()->path();
+        $path = System::path();
         $file = $path->cache . '/testcache.cache';
         $fh = fopen($file, 'w');
         fputs($fh, $data);
@@ -138,7 +138,7 @@ final class CacheTest extends TestCase
         $config = new Dictionary();
         $config->set('cache', 'expire', 0);
 
-        $path = System::getInstance()->path();
+        $path = System::path();
         $file = $path->cache . '/testcache.cache';
         $fh = fopen($file, 'w');
         fputs($fh, 'garbage-data');
@@ -163,7 +163,7 @@ final class CacheTest extends TestCase
         $config = new Dictionary();
         $config->set('cache', 'expire', 0);
 
-        $path = System::getInstance()->path();
+        $path = System::path();
         if (file_exists($path->cache . '/testcache2.cache'))
             unlink($path->cache . '/testcache2.cache');
         $cc = new Cache('testcache2');

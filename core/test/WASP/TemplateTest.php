@@ -40,7 +40,7 @@ final class TemplateTest extends TestCase
     public function setUp()
     {
         $this->request = new MockTemplateRequest;
-        $this->resolver = System::getInstance()->resolver();
+        $this->resolver = System::resolver();
     }
 
     /**
@@ -131,7 +131,7 @@ final class TemplateTest extends TestCase
     {
         $tpl = new Template($this->request);
 
-        $resolve = System::getInstance()->resolver(); 
+        $resolve = System::resolver(); 
         $file = $resolve->template('error/HttpError');
 
         $tpl->setExceptionTemplate(new HttpError(500, 'Foobarred'));
@@ -157,7 +157,7 @@ class MockTemplateRequest extends Request
 {
     public function __construct()
     {
-        $this->resolver = System::getInstance()->resolver(); 
+        $this->resolver = System::resolver(); 
         $this->route = '/';
         $this->vhost = new MockTemplateVhost();
         $this->response_builder = new Http\ResponseBuilder($this);

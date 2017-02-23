@@ -136,7 +136,7 @@ class Cache
      */
     public static function saveCache()
     {
-        $path = System::getInstance()->path();
+        $path = System::path();
         $cache_dir = $path->cache;
         $writer = new PHPSWriter;
         foreach (self::$repository as $name => $cache)
