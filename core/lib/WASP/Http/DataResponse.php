@@ -47,8 +47,9 @@ class DataResponse extends Response
         'text/plain' => "PLAIN"
     );
 
-    public function __construct($dict)
+    public function __construct($dict, $status_code = 200)
     {
+        parent::__construct("DataResponse", $status_code);
         if ($dict instanceof Dictionary)
             $this->dictionary = $dict;
         else
@@ -67,8 +68,8 @@ class DataResponse extends Response
 
     public function output(string $mime)
     {
-        $type = isset($representation_types[$mime]) ? $representation_types[$mime] : "HTML";
-        $classname = "WASP\\DataWriter\\" . $type . "Writer";
+        $type = isset(self::$representation_types[$mime]) ? self::$representation_types[$mime] : "HTML";
+        $classname = "WASP\\IO\\DataWriter\\" . $type . "Writer";
 
         $config = $this->getRequest()->config;
         $pprint = $config->getBool('site', 'dev');
@@ -79,16 +80,18 @@ class DataResponse extends Response
             if (class_exists($classname))
             {
                 $writer = new $classname($pprint);
-                $output = $writer->write($data);
+                $op = fopen("php://output", "w");
+                $writer->write($this->dictionary, $op);
+                fclose($op);
             }
             else
-                Error::fallbackWriter($this->dictionary);
+                Error::fallbackWriter($this->dictionary, $mime);
         }
         catch (Throwable $e)
         {
             // Bad. Attempt to override response type if still possible
             self::$logger->critical('Could not output data, exception occured while writing: {0}', [$e]);
-            Error::fallbackWriter($this->dictionary);
+            Error::fallbackWriter($this->dictionary, $mime);
         }
     }
 }

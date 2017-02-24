@@ -32,6 +32,7 @@ use WASP\Http\Error as HttpError;
 use WASP\IO\File;
 use WASP\IO\Dir;
 use WASP\Debug\{Logger, LoggerFactory, FileWriter};
+use WASP\I18n\TranslateLogger;
 use PSR\Log\LogLevel;
 
 /**
@@ -119,6 +120,9 @@ class System
         $root_logger->setLevel(LogLevel::DEBUG);
         $logfile = $this->path->log . '/wasp' . $test . '.log';
         $root_logger->addLogHandler(new FileWriter($logfile, LogLevel::INFO));
+
+        //
+        $this->setupTranslateLog();
 
         // Attach the error handler
         OutputHandler::setErrorHandler();
@@ -281,4 +285,10 @@ class System
         }
     }
 
+    private function setupTranslateLog()
+    {
+        $logger = Logger::getLogger('WASP.I18n.Translator.Translator');
+        $handler = new TranslateLogger($this->path->log . '/translate-%s-%s.pot');
+        $logger->addLogHandler($handler);
+    }
 }

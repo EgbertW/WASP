@@ -258,6 +258,7 @@ class Resolve
 
                     // Move the pointer deeper
                     $ptr = &$ptr[$part];
+                    ++$cnt;
                 }
             }
         }

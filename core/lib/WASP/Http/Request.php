@@ -297,7 +297,7 @@ class Request
     public function dispatch()
     {
         if ($this->route === null)
-            throw new HttpError(404, 'Could not resolve ' . $this->url);
+            throw new Error(404, 'Could not resolve ' . $this->url);
 
         $app = new AppRunner($this, $this->app);
         $app->execute();

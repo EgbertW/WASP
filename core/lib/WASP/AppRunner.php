@@ -88,6 +88,7 @@ class AppRunner
      */
     public function execute()
     {
+        $tr = System::translate();
         try
         {
             // No output should be produced by apps directly, so buffer
@@ -191,8 +192,17 @@ class AppRunner
     {
         $urlargs = $this->request->url_args;
         $controller = $urlargs->shift();
-        if (!method_exists($object, $controller))
-            throw new HttpError(404, "Unknown controller: " . $controller);
+        if (!method_exists($object, $controller) || $controller === null)
+        {
+            if (method_exists($object, "index"))
+            {
+                if ($controller !== null)
+                    $urlargs->unshift($controller);
+                $controller = "index";
+            }
+            else
+                throw new HttpError(404, "Unknown controller: " . $controller);
+        }
 
         // Inject some properties when they're public
         $vars = array_keys(get_object_vars($object));
