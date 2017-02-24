@@ -33,11 +33,11 @@ use WASP\Site;
 use WASP\VirtualHost;
 use WASP\Cache;
 use WASP\TerminateRequest;
-use WASP\RedirectRequest;
 use WASP\Config;
 use WASP\Session;
 use WASP\AppRunner;
 use WASP\Template;
+use WASP\Http\RedirectRequest;
 
 use Throwable;
 use DateTime;
@@ -241,6 +241,12 @@ class Request
             }
             else
                 throw \RuntimeException("Unexpected response from handleUnknownWebsite");
+        }
+        else
+        {
+            $target = $vhost->getRedirect($this->url);
+            if ($target)
+                throw new RedirectRequest($target, 301);
         }
         $this->vhost = $vhost;
 
