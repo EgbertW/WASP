@@ -30,6 +30,7 @@ use WASP\Autoload\Resolve;
 use WASP\System;
 use WASP\Path;
 use WASP\Dictionary;
+use WASP\Http\RedirectRequest;
 
 /**
  * @covers WASP\Http\Request
@@ -166,28 +167,29 @@ final class RequestTest extends TestCase
         $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
     }
 
-    // /**
-    //  * @covers WASP\Http\Request::__construct
-    //  * @covers WASP\Http\Request::findVirtualHost
-    //  * @covers WASP\Http\Request::handleUnknownHost
-    //  */
-    // public function testRoutingRedirectHost()
-    // {
-    //     $this->server['REQUEST_SCHEME'] = 'https';
-    //     $this->server['SERVER_NAME'] = 'www.example.nl';
-    //     $this->server['REQUEST_URI'] = '/assets';
-    //     $this->config['site'] = 
-    //         array(
-    //             'url' => array(
-    //                 'http://www.example.com',
-    //                 'http://www.example.nl'
-    //             ),
-    //             'language' => array('en'),
-    //             'redirect' => array(1 => 'http://www.example.com/')
-    //         );
+    /**
+     * @covers WASP\Http\Request::__construct
+     * @covers WASP\Http\Request::findVirtualHost
+     * @covers WASP\Http\Request::handleUnknownHost
+     */
+    public function testRoutingRedirectHost()
+    {
+        $this->server['REQUEST_SCHEME'] = 'https';
+        $this->server['SERVER_NAME'] = 'www.example.nl';
+        $this->server['REQUEST_URI'] = '/assets';
+        $this->config['site'] = 
+            array(
+                'url' => array(
+                    'http://www.example.com',
+                    'http://www.example.nl'
+                ),
+                'language' => array('en'),
+                'redirect' => array(1 => 'http://www.example.com/')
+            );
 
-    //     $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
-    // }
+        $this->expectException(RedirectRequest::class);
+        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
+    }
 
     /**
      * @covers WASP\Http\Request::findBestMatching

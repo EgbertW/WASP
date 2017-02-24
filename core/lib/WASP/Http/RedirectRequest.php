@@ -33,7 +33,7 @@ use WASP\TerminateRequest;
  */
 class RedirectRequest extends Response
 {
-    private $url = $url;
+    private $url;
     private $timeout;
 
     /**
@@ -51,6 +51,7 @@ class RedirectRequest extends Response
             throw new \RuntimeException("A redirect should have a 3XX status code, not: " . $status_code);
 
         parent::__construct("Redirect request to: " . $url, $status_code, $previous);
+        $this->url = $url;
         $this->timeout = $timeout;
     }
 
@@ -91,7 +92,7 @@ class RedirectRequest extends Response
     public function getHeaders()
     {
         $h = array();
-        if (!empty(this->timeout))
+        if (!empty($this->timeout))
             $h['Refresh'] = $timeout . '; url=' . $this->url;
         else
             $h['Location'] = (string)$this->url;
@@ -102,7 +103,7 @@ class RedirectRequest extends Response
      * The redirect itself produces no output, but if a previous / chained
      * Response is available, output may be generated.
      */
-    public function output()
+    public function output(string $mime)
     {
         $prev = $this->getPrevious();
         if ($prev instanceof Response)
