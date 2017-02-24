@@ -50,6 +50,9 @@ class Session extends Dictionary
     /** Session lifetime in seconds */
     private $lifetime = 0;
 
+    /** The ID of the session - mainly for tests */
+    private $session_id = null;
+
     /**
      * Create the session based on a VirtualHost and a configuration
      * @param WASP\VirtualHost $vhost The virtual host determining the domain
@@ -127,6 +130,35 @@ class Session extends Dictionary
         $this->set('CLI', true);
     }
 
+    /**
+     * Change the session ID, useful for tests. Disallowed in normal operation.
+     *
+     * @codeCoverageIgnore
+     */
+    public function setSessionID(string $session_id)
+    {
+        if (!defined('WASP_TEST') || WASP_TEST === 0)
+            throw new \RuntimeException("Cannot change the session ID");
+
+        $this->session_id = $session_id;
+    }
+
+    /**
+     * @return string The current session ID.
+     */
+    public function getSessionID()
+    {
+        return $this->session_id;
+    }
+
+    /**
+     * @return string The name of the session
+     */
+    public function getSessionName()
+    {
+        return $this->session_cookie->getName();
+    }
+
     /** 
      * Set up a HTTP session using cookies and the PHP session machinery
      */
@@ -147,7 +179,21 @@ class Session extends Dictionary
             $this->session_cookie->getHttpOnly()
         );
         session_name($this->session_cookie->getName());
+
+        $custom_session_id = defined('WASP_TEST') && WASP_TEST === 1 && $this->session_id !== null;
+        if ($custom_session_id)
+        {
+            ini_set('session.use_strict_mode', 0);
+            session_id($this->session_id);
+        }
+            
         @session_start();
+
+        if ($custom_session_id)
+            ini_set('session.use_strict_mode', 1);
+
+        // Store the session ID
+        $this->session_id = session_id();
 
         // Make sure the session data is accessible through this object
         $this->values = &$_SESSION;
@@ -184,37 +230,46 @@ class Session extends Dictionary
             $ua = $this->get('session_mgmt', 'last_ua');
             $ip = $this->get('session_mgmt', 'last_ip');
 
-            $when = new DateTime('@' . $when);
-            $diff = $now->diff($when);
+            $now = time();
+            $diff = $now - $when;
 
-            $expiry = new DateInterval('P1M');
-            if (Date::lessThan($expiry, $diff))
+            if ($diff > Date::SECONDS_IN_MINUTE)
             {
+                // The session exists, but it was expired more than 1 minute ago,
+                // so its ready to be deleted.
                 $expired = true;
             }
             elseif ($ua === $this->server_vars['HTTP_USER_AGENT'] && $ip === $this->server_vars['REMOTE_ADDR'])
             {
                 // If UA and IP match, we can redirect to the new sesssion
-                // within 1 minute avoid session loss on bad connections.
+                // within 1 minute to avoid session loss on bad connections.
                 $new_session = $this->get('session_mgmt', 'new_session_id');
                 if (!empty($new_session))
                 {
                     session_commit(); 
                     ini_set('session.use_strict_mode', 0);
                     session_id($new_session);
-                    session_start();
+                    @session_start();
                     ini_set('session.use_strict_mode', 1);
+                    $this->session_id = session_id();
                 }
                 else
                 {
+                    // The old session does not contain redirect information,
+                    // so it was closed, not changed. Destroy it now.
                     $expired = true;
                 }
+            }
+            else
+            {
+                // This seems like a hi-jack attempt, make sure to destroy the old session
+                $expired = true;
             }
         }
 
         if ($expired)
         {
-            // Shut down session completely
+            // Shut down expired session completely
             $this->clear();
             $this->resetID();
         }
@@ -223,13 +278,19 @@ class Session extends Dictionary
         if ($this->has('session_mgmt', 'start_time'))
         {
             $start = $this->getInt('session_mgmt', 'start_time');
-            $start = new DateTime('@' . $start);
-            $now = new DateTime();
-            $elapsed = $now->diff($start);
-            $interval = new DateInterval('P5D');
-            if (Date::moreThan($elapsed, $interval))
+
+            $now = time();
+            $elapsed = $now - $start;
+            $interval = Date::SECONDS_IN_DAY * 5;
+            if ($elapsed > $interval)
                 $this->resetID();
         }
+        else
+            $this->set('session_mgmt', 'start_time', time());
+
+        // Store the current user agent and IP address to prevent session hijacking
+        $this->set('session_mgmt', 'last_ip', $this->server_vars['REMOTE_ADDR']);
+        $this->set('session_mgmt', 'last_ua', $this->server_vars['HTTP_USER_AGENT']);
     }
 
     /** 
@@ -254,6 +315,7 @@ class Session extends Dictionary
             session_id($new_session_id);
             @session_start();
             ini_set('session.use_strict_mode', 1);
+            $this->session_id = session_id();
             $this->values = &$_SESSION;
             $this->session_cookie->setValue($new_session_id);
             
@@ -263,17 +325,35 @@ class Session extends Dictionary
             if ($auth)
                 $this['authentication'] = $auth;
 
-            // Store the current user agent and IP address to prevent session hijacking
-            $ua = $this->set('session_mgmt', 'last_ua', $this->server_vars['REMOTE_ADDR']);
-            $ip = $this->set('session_mgmt', 'last_ip', $this->server_vars['HTTP_USER_AGENT']);
+            // Store the start time of the new session
+            $this->set('session_mgmt', 'start_time', time());
         }
     }
 
-    private static function create_new_id()
+    /**
+     * Helper function. PHP 7.1 introduces session_create_id function. This
+     * is used in PHP 7.1 but a fallback using random_bytes is used on
+     * PHP 7.0.
+     *
+     * @param string $prefix A prefix to prepend to the session ID
+     * @return string A hexadecimal session ID
+     */
+    private static function create_new_id(string $prefix = "WASP")
     {
-        if (function_exists('session_create_id'))
-            return session_create_id('wasp');
-        return "wasp" . bin2hex(random_bytes(8));
+        if (version_compare(PHP_VERSION, '7.1.0') > 0)
+            return session_create_id($prefix);
+        return $prefix . bin2hex(random_bytes(16));
+    }
+
+    public function close()
+    {
+        if (session_status() === PHP_SESSION_ACTIVE)
+        {
+            session_commit();
+            $this->values = array();
+            $this->session_id = null;
+        }
+        return $this;
     }
 
     /** 

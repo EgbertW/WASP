@@ -38,6 +38,8 @@ final class SessionTest extends TestCase
     private $vhost;
     private $config;
 
+    private $session_id;
+
     public function setUp()
     {
         $this->vhost = new VirtualHost('http://www.foobar.com', null);
@@ -52,7 +54,12 @@ final class SessionTest extends TestCase
         if (session_status() === PHP_SESSION_ACTIVE)
             session_commit();
     }
-
+    
+    /**
+     * @covers WASP\Session::__construct
+     * @covers WASP\Session::getCookie
+     * @covers WASP\Session::startHttpSession
+     */
     public function testSession()
     {
         $a = new Session($this->vhost, $this->config, $this->server_vars);
@@ -67,6 +74,12 @@ final class SessionTest extends TestCase
         $this->assertEquals(true, $cookie->GetHttpOnly());
     }
 
+    /**
+     * @covers WASP\Session::__construct
+     * @covers WASP\Session::getCookie
+     * @covers WASP\Session::startHttpSession
+     * @covers WASP\Session::resetID
+     */
     public function testSessionReset()
     {
         $a = new Session($this->vhost, $this->config, $this->server_vars);
@@ -85,20 +98,35 @@ final class SessionTest extends TestCase
         $mgmt = $a['session_mgmt']->getAll();
     }
 
+    /**
+     * @covers WASP\Session::__construct
+     * @covers WASP\Session::getCookie
+     * @covers WASP\Session::startHttpSession
+     * @covers WASP\Session::destroy
+     * @covers WASP\Session::setSessionID
+     */
     public function testSessionDestroy()
     {
         $a = new Session($this->vhost, $this->config, $this->server_vars);
         $a->startHttpSession();
-
+        $sid = $a->getSessionID();
         $a['pi'] = 3.14;
-
         $this->assertEquals(3.14, $_SESSION['pi']);
         $a->destroy();
         $this->assertFalse(isset($_SESSION['pi']));
-
         $this->assertEquals(PHP_SESSION_NONE, session_status());
+
+        $a = new Session($this->vhost, $this->config, $this->server_vars);
+        $a->setSessionID($sid);
+        $a->startHttpSession();
+        $this->assertFalse(isset($_SESSION['pi']));
     }
 
+    /**
+     * @covers WASP\Session::__construct
+     * @covers WASP\Session::startHttpSession
+     * @covers WASP\Session::getCookie
+     */
     public function testSessionConfigWithLifetime()
     {
         $cfg = new Dictionary;
@@ -120,6 +148,11 @@ final class SessionTest extends TestCase
         $this->assertTrue(Date::isBefore($expires, $day2));
     }
 
+    /**
+     * @covers WASP\Session::__construct
+     * @covers WASP\Session::startHttpSession
+     * @covers WASP\Session::getCookie
+     */
     public function testSessionConfigWithLifetimeIntValue()
     {
         $cfg = new Dictionary;
@@ -141,6 +174,11 @@ final class SessionTest extends TestCase
         $this->assertTrue(Date::isBefore($expires, $day2));
     }
 
+    /**
+     * @covers WASP\Session::__construct
+     * @covers WASP\Session::startCLISession
+     * @covers WASP\Session::getCookie
+     */
     public function testCLISession()
     {
         $a = new Session($this->vhost, $this->config, $this->server_vars);
@@ -149,5 +187,113 @@ final class SessionTest extends TestCase
         $a['test'] = 3.14;
         $_SESSION['test2'] = 6.28;
         $this->assertEquals($a->getAll(), $_SESSION);
+    }
+
+    /**
+     * @covers WASP\Session::__construct
+     * @covers WASP\Session::startHttpSession
+     * @covers WASP\Session::getSessionName
+     * @covers WASP\Session::getSessionID
+     * @covers WASP\Session::setSessionID
+     * @covers WASP\Session::secureSession
+     * @covers WASP\Session::resetID
+     * @covers WASP\Session::close
+     */
+    public function testSessionExpires()
+    {
+        $a = new Session($this->vhost, $this->config, $this->server_vars);
+        $name = $a->getSessionName();
+
+        $sid = 'foobar';
+
+        // Make sure there is no left over session data
+        ini_set('session.use_strict_mode', 0);
+        session_name($name);
+        session_id($sid);
+        @session_start();
+        session_destroy();
+        ini_set('session.use_strict_mode', 1);
+
+        // Configure the session ID
+        $a->setSessionId($sid);
+
+        $a->startHttpSession();
+        $this->assertEquals($sid, $a->getSessionID());
+
+        $a->set('session_mgmt', 'start_time', 0);
+        $this->assertEquals(0, $_SESSION['session_mgmt']['start_time']);
+        $a->close();
+
+        $this->assertNull($a->get('session_mgmt', 'start_time'));
+
+        $a = new Session($this->vhost, $this->config, $this->server_vars);
+        $a->setSessionId($sid);
+
+        $a->startHttpSession();
+        $this->assertNotEquals($sid, $a->getSessionId());
+        $a->close();
+    }
+
+    /**
+     * @covers WASP\Session::__construct
+     * @covers WASP\Session::startHttpSession
+     * @covers WASP\Session::getSessionName
+     * @covers WASP\Session::getSessionID
+     * @covers WASP\Session::setSessionID
+     * @covers WASP\Session::secureSession
+     * @covers WASP\Session::resetID
+     * @covers WASP\Session::close
+     */
+    public function testSessionDestroyed()
+    {
+        $a = new Session($this->vhost, $this->config, $this->server_vars);
+        $name = $a->getSessionName();
+
+        $sid = 'foobar2';
+
+        // Make sure there is no left over session data
+        ini_set('session.use_strict_mode', 0);
+        session_name($name);
+        session_id($sid);
+        @session_start();
+        session_destroy();
+        ini_set('session.use_strict_mode', 1);
+
+        // Configure the session ID
+        $a->setSessionId($sid);
+        $a->startHttpSession();
+        $this->assertEquals($sid, $a->getSessionID());
+
+        $a['authentication'] = "LOGGEDIN";
+        $this->assertEquals('LOGGEDIN', $_SESSION['authentication']);
+        
+        $a->resetID();
+
+        $this->assertEquals('LOGGEDIN', $_SESSION['authentication']);
+        $new_session_id = $a->getSessionID();
+        $a->close();
+
+        // Start a new 'good' session
+        $a = new Session($this->vhost, $this->config, $this->server_vars);
+        $a->setSessionID($sid);
+        $a->startHttpSession();
+
+        // Should be redirected to the new session now, as we're the good client
+        $this->assertEquals($new_session_id, $a->getSessionID());
+        $this->assertEquals('LOGGEDIN', $_SESSION['authentication']);
+        $a->close();
+
+        // Start a new 'evil' session with a different UA
+        $orig_ua = $this->server_vars['HTTP_USER_AGENT'];
+        $this->assertNotEquals('EvilClient', $orig_ua);
+        $this->server_vars['HTTP_USER_AGENT'] = "EvilClient";
+        $a = new Session($this->vhost, $this->config, $this->server_vars);
+        $a->setSessionID($sid);
+        $a->startHttpSession();
+
+        // Should be redirected to a new session, without authentication
+        $this->assertNotEquals($new_session_id, $a->getSessionID());
+        $this->assertFalse(isset($_SESSION['authentication']));
+        $a->close();
     }
 }
