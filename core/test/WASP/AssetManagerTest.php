@@ -230,6 +230,10 @@ final class AssetManagerTest extends TestCase
 
     public function testExecuteHookTidy()
     {
+        // This functionality depends on presence of Tidy extension
+        if (!class_exists('Tidy', false))
+            return;
+
         $mgr = new AssetManager(new MockAssetRequest);
         $mgr->setTidy(true);
 

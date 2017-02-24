@@ -35,16 +35,13 @@ final class FlashMessageTest extends TestCase
 {
     public function setUp()
     {
-        $this->request = System::request();
-
-        // Make sure there are no session variables to begin with
-        $keys = array_keys($_SESSION);
-        foreach ($keys as $key)
-            unset($_SESSION[$key]);
+        $this->request = new MockFlashMessageRequest;
+        System::getInstance()->request = $this->request;
     }
 
     public function tearDown()
     {
+        System::getInstance()->request = null;
     }
 
     /**
@@ -77,7 +74,7 @@ final class FlashMessageTest extends TestCase
             $fms[] = $fm;
         }
         $end_t = time();
-
+        
         $this->assertEquals(4, FlashMessage::count());
 
         $cnt = 0;
@@ -129,7 +126,7 @@ final class FlashMessageTest extends TestCase
      */
     public function testFlashMessageCountEmpty()
     {
-        unset($_SESSION['WASP_FM']);
+        unset($this->request->session['WASP_FM']);
         $this->assertEquals(FlashMessage::count(), 0);
     }
 
@@ -154,5 +151,13 @@ final class FlashMessageTest extends TestCase
             FlashMessage::next();
 
         $this->assertNull(FlashMessage::next());
+    }
+}
+
+class MockFlashMessageRequest extends Http\Request
+{
+    public function __construct()
+    {
+        $this->session = new Dictionary();
     }
 }
