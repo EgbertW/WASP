@@ -47,7 +47,7 @@ class FlashMessage
 
     public function __construct($msg, $type = FlashMessage::INFO)
     {
-        if (is_array($msg))
+        if (is_array_like($msg))
         {
             $this->msg = $msg[0];
             $this->type = $msg[1];
@@ -55,19 +55,15 @@ class FlashMessage
             return;
         }
 
-        $request = System::request();
-        if (empty($request->session))
+        $storage = self::getStorage();
+        if ($storage === null)
             throw new \RuntimeException("No session available - cannot store Flash Message");
 
-        $session = $request->session;
         $this->msg = $msg;
         $this->type = $type;
         $this->date = new \DateTime();
 
-        if (!$session->has(self::$KEY, Dictionary::TYPE_ARRAY))
-            $session->set(self::$KEY, array());
-
-        $session->get(self::$KEY)[] = array($this->msg, $this->type, $this->date->getTimestamp());
+        $storage->push(array($this->msg, $this->type, $this->date->getTimestamp()));
     }
 
     public function getMessage()
@@ -92,23 +88,37 @@ class FlashMessage
 
     public static function hasNext()
     {
-        return !empty($_SESSION[self::$KEY]);
+        return self::count() > 0;
+    }
+
+    private static function getStorage()
+    {
+        $session = System::request()->session;
+        if ($session === null)
+            return null;
+
+        if (!$session->has(self::$KEY, Dictionary::TYPE_ARRAY))
+            $session->set(self::$KEY, array());
+
+        return $session->get(self::$KEY);
     }
 
     public static function next()
     {
-        if (empty($_SESSION[self::$KEY]))
-            return null;
+        $dict = self::getStorage();
+        if ($dict === null || count($dict) === 0)
+            return;
 
-        $next = array_shift($_SESSION[self::$KEY]);
+        $next = $dict->shift();
         return new FlashMessage($next);
     }
 
     public static function count()
     {
-        if (empty($_SESSION[self::$KEY]))
+        $storage = self::getStorage();
+        if ($storage === null)
             return 0;
 
-        return count($_SESSION[self::$KEY]);
+        return count($storage);
     }
 }

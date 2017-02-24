@@ -131,7 +131,7 @@ class CLI
         list($opt_str, $long_opts, $mapping) = $this->getOptString();
         $opts = \getopt($opt_str, $long_opts);
         $options = $this->mapOptions($opts, $mapping);
-        return new Dictionary($res);
+        return new Dictionary($options);
     }
 
     public function mapOptions(array $opts, array $mapping)
