@@ -48,19 +48,19 @@ final class SiteTest extends TestCase
 
         $this->assertEquals(['en', 'nl'], $s->getLocales());
 
-        $actual = $s->match('http://foobar.com/baz');
+        $actual = $s->match('http://foobar.com/');
         $this->assertEquals($vhost1, $actual);
 
-        $actual = $s->match('https://foobar.com/baz');
+        $actual = $s->match('https://foobar.com/');
         $this->assertEquals($vhost1, $actual);
 
-        $actual = $s->match('http://foobar.nl/foo');
+        $actual = $s->match('http://foobar.nl/');
         $this->assertEquals($vhost2, $actual);
 
-        $actual = $s->match('https://foobar.nl/foo');
+        $actual = $s->match('https://foobar.nl/');
         $this->assertEquals($vhost2, $actual);
 
-        $actual = $s->match('http://foobar.de/foo');
+        $actual = $s->match('http://foobar.de/');
         $this->assertNull($actual);
 
         $actual = $s->getVirtualHosts();

@@ -73,7 +73,7 @@ final class Path
         if (isset($paths['http']))
         {
             // Check if explicitly configured
-            $this->http = $path['http'];
+            $this->http = $paths['http'];
         }
         elseif (PHP_SAPI !== 'cli' && isset($_SERVER['SCRIPT_FILENAME']))
         {
