@@ -469,4 +469,10 @@ namespace
     {
         return htmlentities($str, ENT_HTML5 | ENT_SUBSTITUTE | ENT_QUOTES);
     }
+
+    function URL($path)
+    {
+        $vhost = WASP\System::request()->vhost;
+        return $vhost->URL($path);
+    }
 }

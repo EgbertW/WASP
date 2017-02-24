@@ -68,8 +68,21 @@ final class Path
         $this->config = isset($paths['config']) ? $paths['config'] : $this->root . '/config';
         $this->var = isset($paths['var']) ? $paths['var'] : $this->root . '/var';
         $this->modules = isset($paths['modules']) ? $paths['modules'] : $this->root . '/modules';
-        $this->http = isset($paths['http']) ? $paths['http'] : $this->root . '/http';
         $this->log = isset($paths['log']) ? $paths['log'] : $this->var . '/log';
+
+        if (isset($paths['http']))
+        {
+            // Check if explicitly configured
+            $this->http = $path['http'];
+        }
+        elseif (PHP_SAPI !== 'cli' && isset($_SERVER['SCRIPT_FILENAME']))
+        {
+            // We should be able to detect the webroot automatically, based on the location of the index.php
+            $filename = realpath($_SERVER['SCRIPT_FILENAME']);
+            $this->http = dirname($filename);
+        }
+        else
+            $this->http = $this->root . '/http';
 
         $this->cache = $this->var . '/cache';
         $this->assets = $this->http . '/assets';
@@ -103,10 +116,7 @@ final class Path
                 throw new IOException("Path " . $path . " is not a directory");
 
             if (!is_writable($path)) // We can try to make it writable, if we own the file
-            {
-                echo "PATH $path is not WRITABLE TO US!\n";
                 File::makeWritable($path);
-            }
         }
         $this->path_checked = true;
     }

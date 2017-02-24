@@ -1,7 +1,7 @@
 <?php
 
 $this->addJS('vendor/jquery');
-$this->addStyle('#phplog,#wasplog {overflow: auto; white-space: pre-wrap;}');
+$this->addStyle('#phplog,#wasplog {overflow: auto; white-space: pre-wrap;font-size:0.8em;}');
 include tpl('parts/header');
 ?>
         <div class="large-12 medium-12 columns callout">
@@ -11,6 +11,7 @@ include tpl('parts/header');
         <div class="large-12 medium-12 columns callout">
             <pre id="phplog" title="<?=txt(t('PHP errors are displayed here'));?>">
             </pre>
+            <p><?php var_dump($_SERVER); ?>
         </div>
         <script>
             setInterval(updateLog, 2500);

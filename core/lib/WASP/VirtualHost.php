@@ -207,13 +207,13 @@ class VirtualHost
     }
 
     /**
-     * @param string $url The URL to match
+     * @param string $webroot The current webroot
      * @return bool If the VirtualHost matches the provided URL
      */
-    public function match($url)
+    public function match($webroot)
     {
-        $url = new URL($url, $this->url->scheme);
-        return $url->host === $this->url->host;
+        $url = new URL($webroot, $this->url->scheme);
+        return $url->host === $this->url->host && $url->path === $this->url->path;
     }
 
     /**

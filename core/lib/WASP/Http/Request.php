@@ -89,6 +89,9 @@ class Request
     /** The full request URL */
     public $url;
 
+    /** The URL from the webroot */
+    public $webroot;
+
     /** The selected app path, based on the route */
     public $app;
 
@@ -191,13 +194,18 @@ class Request
             $url = $this->server->get('REQUEST_SCHEME') . '://'
                 . $this->server->get('SERVER_NAME')
                 . $this->server->get('REQUEST_URI');
+
+            $url_webroot = dirname($this->server->get('SCRIPT_NAME')) . '/';
+            $this->webroot = $this->server->get('REQUEST_SCHEME') . '://' . $this->server->get('SERVER_NAME') . $url_webroot;
         }
         else
         {
             $url = $this->server->get('REQUEST_URI');
+            $this->webroot = "/";
         }
 
         $this->url = new URL($url);
+        $this->webroot = new URL($this->webroot);
         $this->ajax = 
             $this->server->get('HTTP_X_REQUESTED_WITH') === 'xmlhttprequest' ||
             $this->get->has('ajax') || 
@@ -210,10 +218,10 @@ class Request
         // Determine the proper VirtualHost
         $cfg = $this->config->getSection('site');
         $this->sites = Site::setupSites($cfg);
-        $vhost = self::findVirtualHost($this->url, $this->sites);
+        $vhost = self::findVirtualHost($this->webroot, $this->sites);
         if ($vhost === null)
         {
-            $result = $this->handleUnknownHost($this->url, $this->sites, $cfg);
+            $result = $this->handleUnknownHost($this->webroot, $this->sites, $cfg);
             
             // Handle according to the outcome
             if ($result === null)
@@ -454,23 +462,25 @@ class Request
      *               * URI: if the policy is to redirect to the closest matching host
      *               * VirtualHost: if the policy is to ignore / accept unknown hosts
      */
-    public static function handleUnknownHost(URL $url, array $sites, Dictionary $cfg)
+    public static function handleUnknownHost(URL $webroot, array $sites, Dictionary $cfg)
     {
         // Determine behaviour on unknown host
         $on_unknown = strtoupper($cfg->dget('unknown_host_policy', "IGNORE"));
-        $best_matching = self::findBestMatching($url, $sites);
+        $best_matching = self::findBestMatching($webroot, $sites);
 
         if ($on_unknown === "ERROR" || ($best_matching === null && $on_unknown === "REDIRECT"))
             return null;
 
         if ($on_unknown === "REDIRECT")
         {
-            $redir = $best_matching->URL($url->getPath);
+            $redir = $best_matching->URL($webroot->getPath);
             return $redir;
         }
+
         // Generate a proper VirtualHost on the fly
-        $url = new URL($url);
-        $url->setPath('/')->set('query', null)->set('fragment', null);
+        $url = new URL($webroot);
+        $url->fragment = null;
+        $url->query = null;
         $vhost = new VirtualHost($url, self::$default_language);
 
         // Add the new virtualhost to a site.

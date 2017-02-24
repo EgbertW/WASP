@@ -27,7 +27,7 @@ if ($this->wantHTML()):
 require tpl('parts/header');
 ?>
         <div class="large-2 medium-2 small-1 columns">
-            <img src="/assets/img/touch-icon-180.png" style="width 100%;" />
+            <img src="<?=URL('assets/img/touch-icon-180.png');?>" style="width 100%;" />
         </div>
         <div class="large-10 medium-10 small-11 columns callout">
             <h1>It works</h1/>

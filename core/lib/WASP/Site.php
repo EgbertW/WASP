@@ -65,9 +65,9 @@ class Site
         return array_keys($this->locales);
     }
 
-    public function match($url)
+    public function match($webroot)
     {
-        $url = new URL($url);
+        $url = new URL($webroot);
         foreach ($this->vhosts as $vhost)
         {
             if ($vhost->match($url))
