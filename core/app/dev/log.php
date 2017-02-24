@@ -7,7 +7,7 @@ use WASP\Http\DataResponse;
 use WASP\Http\Error as HttpError;
 
 if (!System::config()->get('site', 'dev'))
-    throw new HttpError(403, 'Forbidden', 'Developer mode is disabled');
+    throw new HttpError(403, 'Forbidden', t('Developer mode is disabled'));
 
 /**
  * LogOutput provides a way to show the logs using your browser
@@ -19,13 +19,14 @@ class LogOutput
     public function index(Template $tpl) 
     {
         $tpl->setTemplate('dev/log');
+        $tpl->setTitle(t('WASP Log Viewer'));
         $tpl->render();
     }
 
     public function getLog()
     {
         if (!System::config()->get('site', 'dev'))
-            throw new HttpError(403, 'Forbidden', 'Developer mode is disabled');
+            throw new HttpError(403, 'Forbidden', t('Developer mode is disabled'));
 
         $lines = 10;
         if ($this->request->get->has('count', Dictionary::TYPE_INT))
