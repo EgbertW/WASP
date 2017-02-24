@@ -25,11 +25,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\Http;
 
-use function parse_url;
-
-class URLException extends \RuntimeException
-{}
-
 /**
  * URL is a class that parses and modifies URLs. This
  * class is limited to a limited set of schemes - it
@@ -65,13 +60,16 @@ class URL implements \ArrayAccess
         if (empty($default_scheme) && isset($_SERVER['REQUEST_SCHEME']))
             $default_scheme = $_SERVER['REQUEST_SCHEME'];
 
-        if (substr($url, 0, 1) !== "/" && strpos($url, ":") === false)
-            $url = $default_scheme . "://" . $url;
-
         $parts = parse_url($url);
 
         if ($parts === false)
             throw new URLException("Invalid URL: " . $url);
+
+        if (empty($parts['scheme']) && substr($url, 0, 1) !== "/" && !empty($default_scheme))
+        {
+            $url = $default_scheme . "://" . $url;
+            $parts = parse_url($url);
+        }
 
         $scheme   = isset($parts['scheme'])   ? $parts['scheme']   : null;
         $username = isset($parts['user'])     ? $parts['user']     : null;

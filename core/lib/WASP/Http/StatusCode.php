@@ -116,6 +116,6 @@ final class StatusCode
 
     public static function description(int $code)
     {
-        return isset(self::$CODES[$code]) ? self::$CODES[$code] : "UNKNOWN";
+        return isset(self::$CODES[$code]) ? self::$CODES[$code] : "Unknown Error";
     }
 }

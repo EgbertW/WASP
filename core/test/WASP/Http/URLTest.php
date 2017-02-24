@@ -313,10 +313,40 @@ final class URLTest extends TestCase
      * @covers WASP\Http\URL::__construct
      * @covers WASP\Http\URL::parse
      */
-    public function testInvalid()
+    public function testUnsupportNonExistingScheme()
     {
         $this->expectException(URLException::class);
         $url = new URL('random-garbage:example^@!foobar');
+    }
+
+    /**
+     * @covers WASP\Http\URL::__construct
+     * @covers WASP\Http\URL::parse
+     */
+    public function testInvalidUrl()
+    {
+        $this->expectException(URLException::class);
+        $url = new URL('http:///example.com');
+    }
+
+
+    /**
+     * @covers WASP\Http\URL::__construct
+     * @covers WASP\Http\URL::parse
+     */
+    public function testPathCannotBeEmpty()
+    {
+        $url = new URL('http://example.foo');
+        $this->assertEquals('/', $url->path);
+
+        $url->setPath('');
+        $this->assertEquals('/', $url->path);
+    }
+
+    public function testDefaultFtpPort()
+    {
+        $url = new URL('ftp://example.foo');
+        $this->assertEquals(21, $url->port);
     }
 
     /**
