@@ -110,7 +110,6 @@ class AppRunner
         catch (Response $response)
         {
             self::$logger->debug("While executing controller: {0}", [$this->app]);
-            $vhost = $this->request->vhost->getHost();
             $desc = StatusCode::description($response->getCode());
             self::$logger->info(
                 "{0} {1} - {2}",
