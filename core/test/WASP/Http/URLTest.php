@@ -44,7 +44,7 @@ final class URLTest extends TestCase
         $this->assertEquals(null, $url->username);
         $this->assertEquals(null, $url->password);
         $this->assertEquals('example.com', $url->host);
-        $this->assertEquals(null, $url->port);
+        $this->assertEquals(80, $url->port);
         $this->assertEquals('/', $url->path);
         $this->assertEquals(null, $url->query);
         $this->assertEquals(null, $url->fragment);
@@ -54,7 +54,7 @@ final class URLTest extends TestCase
         $this->assertEquals(null, $url->username);
         $this->assertEquals(null, $url->password);
         $this->assertEquals('example.com', $url->host);
-        $this->assertEquals(null, $url->port);
+        $this->assertEquals(80, $url->port);
         $this->assertEquals('/', $url->path);
         $this->assertEquals(null, $url->query);
         $this->assertEquals(null, $url->fragment);
@@ -64,7 +64,7 @@ final class URLTest extends TestCase
         $this->assertEquals(null, $url->username);
         $this->assertEquals(null, $url->password);
         $this->assertEquals('example.com', $url->host);
-        $this->assertEquals(null, $url->port);
+        $this->assertEquals(443, $url->port);
         $this->assertEquals('/', $url->path);
         $this->assertEquals(null, $url->query);
         $this->assertEquals(null, $url->fragment);
@@ -74,7 +74,7 @@ final class URLTest extends TestCase
         $this->assertEquals(null, $url->username);
         $this->assertEquals(null, $url->password);
         $this->assertEquals('example.com', $url->host);
-        $this->assertEquals(null, $url->port);
+        $this->assertEquals(443, $url->port);
         $this->assertEquals('/', $url->path);
         $this->assertEquals('foo=bar', $url->query);
         $this->assertEquals(null, $url->fragment);
@@ -84,7 +84,7 @@ final class URLTest extends TestCase
         $this->assertEquals(null, $url->username);
         $this->assertEquals(null, $url->password);
         $this->assertEquals('example.com', $url->host);
-        $this->assertEquals(null, $url->port);
+        $this->assertEquals(443, $url->port);
         $this->assertEquals('/', $url->path);
         $this->assertEquals(null, $url->query);
         $this->assertEquals('foobar', $url->fragment);
@@ -94,7 +94,7 @@ final class URLTest extends TestCase
         $this->assertEquals(null, $url->username);
         $this->assertEquals(null, $url->password);
         $this->assertEquals('example.com', $url->host);
-        $this->assertEquals(null, $url->port);
+        $this->assertEquals(443, $url->port);
         $this->assertEquals('/', $url->path);
         $this->assertEquals('foo=bar', $url->query);
         $this->assertEquals('foobar', $url->fragment);
@@ -104,7 +104,7 @@ final class URLTest extends TestCase
         $this->assertEquals(null, $url->username);
         $this->assertEquals(null, $url->password);
         $this->assertEquals('example.com', $url->host);
-        $this->assertEquals(null, $url->port);
+        $this->assertEquals(443, $url->port);
         $this->assertEquals('/index', $url->path);
         $this->assertEquals('foo=bar', $url->query);
         $this->assertEquals('foobar', $url->fragment);
@@ -114,7 +114,7 @@ final class URLTest extends TestCase
         $this->assertEquals(null, $url->username);
         $this->assertEquals(null, $url->password);
         $this->assertEquals('example.com', $url->host);
-        $this->assertEquals(null, $url->port);
+        $this->assertEquals(443, $url->port);
         $this->assertEquals('/index.php/my/route/', $url->path);
         $this->assertEquals('foo=bar', $url->query);
         $this->assertEquals('foobar', $url->fragment);
@@ -218,7 +218,7 @@ final class URLTest extends TestCase
         $url['scheme'] = 'http';
         unset($url['port']);
 
-        $this->assertNull($url['port']);
+        $this->assertEquals(80, $url['port']);
 
         $this->assertFalse(isset($url['foo']));
         $this->assertTrue(isset($url['host']));
@@ -337,5 +337,18 @@ final class URLTest extends TestCase
         $str2 = $url->toString(true);
         $this->assertEquals($str1, 'http://crême.fr/');
         $this->assertEquals($str2, 'http://xn--crme-hpa.fr/');
+    }
+
+    public function testSameScheme()
+    {
+        $backup = isset($_SERVER['REQUEST_SCHEME']) ? $_SERVER['REQUEST_SCHEME'] : null;
+        $_SERVER['REQUEST_SCHEME'] = 'http';
+
+        $url = (new URL('//example.com/foo/bar'))->toString();
+        $this->assertEquals('http://example.com/foo/bar', $url);
+
+        $_SERVER['REQUEST_SCHEME'] = 'https';
+        $url = (new URL('//example.com/foo/bar'))->toString();
+        $this->assertEquals('https://example.com/foo/bar', $url);
     }
 }

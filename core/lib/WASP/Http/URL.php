@@ -25,6 +25,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\Http;
 
+use function parse_url;
+
 class URLException extends \RuntimeException
 {}
 
@@ -60,32 +62,41 @@ class URL implements \ArrayAccess
 
     public static function parse(string $url, string $default_scheme = '')
     {
-        if (!preg_match('/^(((([a-z]+):)?\/\/)?((([^:]+):([^@]+)@)?([\w\d.-]+))(:([1-9][0-9]*))?)?(\/.*)?$/u', $url, $matches))
+        if (empty($default_scheme) && isset($_SERVER['REQUEST_SCHEME']))
+            $default_scheme = $_SERVER['REQUEST_SCHEME'];
+
+        if (substr($url, 0, 1) !== "/" && strpos($url, ":") === false)
+            $url = $default_scheme . "://" . $url;
+
+        $parts = parse_url($url);
+
+        if ($parts === false)
             throw new URLException("Invalid URL: " . $url);
 
-        $scheme = !empty($matches[4]) ? $matches[4] : null;
-        $user   = !empty($matches[7]) ? $matches[7] : null;
-        $pass   = !empty($matches[8]) ? $matches[8] : null;
-        $host   = !empty($matches[9]) ? $matches[9] : null;
-        $port   = !empty($matches[11]) ? (int)$matches[11] : null;
-        $path   = !empty($matches[12]) ? $matches[12] : '/';
+        $scheme   = isset($parts['scheme'])   ? $parts['scheme']   : null;
+        $username = isset($parts['user'])     ? $parts['user']     : null;
+        $password = isset($parts['pass'])     ? $parts['pass']     : null;
+        $host     = isset($parts['host'])     ? $parts['host']     : null;
+        $port     = isset($parts['port'])     ? $parts['port']     : null;
+        $path     = isset($parts['path'])     ? $parts['path']     : '/';
+        $query    = isset($parts['query'])    ? $parts['query']    : null;
+        $fragment = isset($parts['fragment']) ? $parts['fragment'] : null;
 
-        if (empty($scheme))
+        if (!$scheme && $host)
             $scheme = $default_scheme;
-
-        if ($scheme || $host)
-        {
-            if (!in_array($scheme, array('http', 'https', 'ftp')))
-                throw new URLException("Unsupported scheme: '" . $scheme . "'");
-        }
+        
+        if (!empty($scheme) && !in_array($scheme, array('http', 'https', 'ftp')))
+            throw new URLException("Unsupported scheme: '" . $scheme . "'");
 
         return array(
             'scheme' => $scheme,
-            'username' => $user,
-            'password' => $pass,
+            'username' => $username,
+            'password' => $password,
             'host' => $host,
             'port' => $port,
-            'path' => $path
+            'path' => $path,
+            'query' => $query,
+            'fragment' => $fragment
         );
     }
 
@@ -218,6 +229,13 @@ class URL implements \ArrayAccess
     {
         if ($field === "secure")
             return $this->scheme === "https";
+
+        if ($field === "port" && $this->port === null)
+        {
+            if ($this->scheme === "http") return 80;
+            if ($this->scheme === "https") return 443;
+            if ($this->scheme === "ftp") return 21;
+        }
 
         if (property_exists($this, $field))
             return $this->$field;
