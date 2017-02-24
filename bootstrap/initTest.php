@@ -38,7 +38,7 @@ Autoloader::registerNS('WASP', $root . '/core/lib/WASP');
 Autoloader::registerNS('Psr\\Log', $root . '/core/lib/Psr/Log');
 
 $path = new WASP\Path(array('root' => $root));
-$config = WASP\Dictionary::loadFile($root . '/config/main.ini');
+$config = new WASP\Dictionary();
 
 // Enable testing code
 define('WASP_TEST', 1);

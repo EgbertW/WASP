@@ -245,7 +245,12 @@ class SafeHTML
     {
         $dom = new DOMDocument();
 
-        @$dom->loadHTML($this->html);
+        try
+        {
+            $dom->loadHTML($this->html);
+        }
+        catch (\ErrorException $e)
+        {}
         
         $body = $dom->getElementsByTagName('body')->item(0);
 

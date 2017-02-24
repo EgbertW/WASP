@@ -112,15 +112,17 @@ class BBCode
 
         $cb = is_callable($replacement);
 
-        if ($cb)
-            $ret = @preg_replace_callback($pattern, $replacement, "");
-        else
-            $ret = @preg_replace($pattern, $replacement, "");
-
-        if ($ret === null)
+        try
+        {
+            if ($cb)
+                $ret = preg_replace_callback($pattern, $replacement, "");
+            else
+                $ret = preg_replace($pattern, $replacement, "");
+        }
+        catch (\ErrorException $e)
         {
             self::$logger->error("Invalid pattern / replacement: {0} / {1}", [$pattern, $replacement]);
-            throw new \RuntimeException("Invalid pattern or replacement: {$pattern} / {$replacement}");
+            throw new \RuntimeException("Invalid pattern or replacement: {$pattern} / {$replacement}", 0, $e);
         }
 
         $this->rules[$pattern] = $replacement;

@@ -210,7 +210,12 @@ final class SessionTest extends TestCase
         ini_set('session.use_strict_mode', 0);
         session_name($name);
         session_id($sid);
-        @session_start();
+        try
+        {
+            session_start();
+        }
+        catch (\ErrorException $e)
+        {}
         session_destroy();
         ini_set('session.use_strict_mode', 1);
 
@@ -255,7 +260,12 @@ final class SessionTest extends TestCase
         ini_set('session.use_strict_mode', 0);
         session_name($name);
         session_id($sid);
-        @session_start();
+        try
+        {
+            session_start();
+        }
+        catch (\ErrorException $e)
+        {}
         session_destroy();
         ini_set('session.use_strict_mode', 1);
 

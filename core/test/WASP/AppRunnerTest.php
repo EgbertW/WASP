@@ -206,9 +206,12 @@ use WASP\Http\StringResponse;
 
 class {$classname}
 {
+    public \$url_args;
+
     public function foo()
     {
-        return new StringResponse("MOCK", "text/plain");
+        \$remain = \$this->url_args->getAll();
+        return new StringResponse(implode(",", \$remain), "text/plain");
     }
 }
 
@@ -224,7 +227,42 @@ EOT;
         }
         catch (StringResponse $e)
         {
-            $this->assertEquals("MOCK", $e->getOutput('text/plain'));
+            $this->assertEquals("bar,baz", $e->getOutput('text/plain'));
+        }
+    }
+
+    public function testAppReturnsObjectWithIndex()
+    {
+        $classname = $this->classname;
+        $phpcode = <<<EOT
+<?php
+
+use WASP\Http\StringResponse;
+
+class {$classname}
+{
+    public \$url_args;
+
+    public function index()
+    {
+        \$remain = \$this->url_args->getAll();
+        return new StringResponse(implode(",", \$remain), "text/plain");
+    }
+}
+
+return new {$classname}();
+EOT;
+        file_put_contents($this->filename, $phpcode);
+
+        $apprunner = new AppRunner($this->request, $this->filename);
+
+        try
+        {
+            $apprunner->execute();
+        }
+        catch (StringResponse $e)
+        {
+            $this->assertEquals("foo,bar,baz", $e->getOutput('text/plain'));
         }
     }
 

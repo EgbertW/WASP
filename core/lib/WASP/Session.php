@@ -187,7 +187,7 @@ class Session extends Dictionary
             session_id($this->session_id);
         }
             
-        @session_start();
+        $this->sessionStart();
 
         if ($custom_session_id)
             ini_set('session.use_strict_mode', 1);
@@ -249,7 +249,7 @@ class Session extends Dictionary
                     session_commit(); 
                     ini_set('session.use_strict_mode', 0);
                     session_id($new_session);
-                    @session_start();
+                    $this->sessionStart();
                     ini_set('session.use_strict_mode', 1);
                     $this->session_id = session_id();
                 }
@@ -313,7 +313,8 @@ class Session extends Dictionary
             
             ini_set('session.use_strict_mode', 0);
             session_id($new_session_id);
-            @session_start();
+
+            $this->sessionStart();
             ini_set('session.use_strict_mode', 1);
             $this->session_id = session_id();
             $this->values = &$_SESSION;
@@ -328,6 +329,27 @@ class Session extends Dictionary
             // Store the start time of the new session
             $this->set('session_mgmt', 'start_time', time());
         }
+    }
+
+    /** 
+     * Wrap the session_start so that we can catch ErrorExceptions that occure
+     * when the headers have been sent. This happens mostly on CLI during tests,
+     * If in the web, it's a real error.
+     *
+     * @codeCoverageIgnore
+     */
+    private function sessionStart()
+    {
+        try
+        {
+            session_start();
+        }
+        catch (\ErrorException $e)
+        {
+            if (PHP_SAPI === 'cli')
+                return;
+            throw $e;
+        } 
     }
 
     /**

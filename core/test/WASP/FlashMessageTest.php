@@ -152,6 +152,12 @@ final class FlashMessageTest extends TestCase
 
         $this->assertNull(FlashMessage::next());
     }
+
+    public function testNoMessages()
+    {
+        $this->request->session = null;
+        $this->assertEquals(0, FlashMessage::count());
+    }
 }
 
 class MockFlashMessageRequest extends Http\Request

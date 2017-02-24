@@ -47,7 +47,8 @@ final class JSONTest extends TestCase
             '*/*' => 0.5
         );
             
-        $request = System::request();
+        $request = new MockJSONRequest();
+        System::getInstance()->request = $request;
         $this->assertNotEquals($request->accept, $accept);
         JSON::init();
         $this->assertEquals($request->accept, $accept);
@@ -229,3 +230,10 @@ EOT;
         $this->assertEquals($pprint, $json);
     }
 };
+
+class MockJSONRequest extends Http\Request
+{
+    public function __construct()
+    {}
+
+}

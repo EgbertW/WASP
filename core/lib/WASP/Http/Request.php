@@ -296,11 +296,19 @@ class Request
      */
     public function dispatch()
     {
-        if ($this->route === null)
-            throw new Error(404, 'Could not resolve ' . $this->url);
+        try
+        {
+            if ($this->route === null)
+                throw new Error(404, 'Could not resolve ' . $this->url);
 
-        $app = new AppRunner($this, $this->app);
-        $app->execute();
+            $app = new AppRunner($this, $this->app);
+            $app->execute();
+        }
+        catch (Throwable $e)
+        {
+            $this->response_builder->setThrowable($e);
+            $this->response_builder->respond();
+        }
     }
 
     /**

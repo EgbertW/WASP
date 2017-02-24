@@ -29,8 +29,10 @@ use WASP\AssetManager;
 use WASP\Debug\Logger;
 use WASP\Debug\DevLogger;
 use WASP\Debug\LoggerAwareStaticTrait;
+
 use DateTime;
 use DateInterval;
+use Throwable;
 
 /**
  * Create and output a response
@@ -84,11 +86,31 @@ class ResponseBuilder
     }
 
     /**
+     * Set the response by any throwable object. Any non-Response objects are wrapped
+     * in a HttpError with status code 500.
+     *
+     * @return WASP\Http\ResponseBuilder Provides fluent interface
+     */
+    public function setThrowable(Throwable $exception)
+    {
+        if (!($exception instanceof Response))
+        {
+            self::$logger->error("Exception: {exception}", ["exception" => $exception]);
+
+            // Wrap the error in a HTTP Error 500
+            $exception = new HttpError(500, "An error occured", $user_message = "", $exception);
+        }
+
+        $this->setResponse($exception);
+        return $this;
+    }
+
+    /**
      * Set the response object
      *
      * @param Response $response The final response
      */
-    public function setResponse(Response $response)
+    protected function setResponse(Response $response)
     {
         $this->response = $response;
         $response->setRequest($this->request);
