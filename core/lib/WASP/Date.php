@@ -10,6 +10,13 @@ use WASP\Debug\Logger;
 
 class Date
 {
+    const SECONDS_IN_MINUTE =                 60;
+    const SECONDS_IN_HOUR   =            60 * 60;
+    const SECONDS_IN_DAY    =       24 * 60 * 60;
+    const SECONDS_IN_WEEK   =   7 * 24 * 60 * 60;
+    const SECONDS_IN_MONTH  =  30 * 24 * 60 * 60;
+    const SECONDS_IN_YEAR   = 365 * 24 * 60 * 60;
+
     public static function copy($str)
     {
         if ($str instanceof DateTime)
