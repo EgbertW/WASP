@@ -83,7 +83,7 @@ class Cache
 
         if (time() >= $expires || $timeout === 0)
         {
-            self::$logger->info("Cache for {0} expired - clearing", [$name]);
+            self::$logger->debug("Cache for {0} expired - clearing", [$name]);
             self::$repository[$name] = new Dictionary();
             self::$repository[$name]['_timestamp'] = time();
         }

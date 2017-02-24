@@ -50,19 +50,7 @@ class FileWriter implements LogWriterInterface
         $message = Logger::fillPlaceholders($message, $context);
         $module = isset($context['_module']) ? $context['_module'] : "";
         $fmt = "[" . date('Y-m-d H:i:s') . '][' . $module . ']';
-        
-        if (class_exists(Request::class, false))
-        {
-            if (isset(Request::$remote_ip))
-                $fmt .= '[' . Request::$remote_ip . ']';
-
-            if (!empty(Request::$remote_host) && Request::$remote_host !== Request::$remote_ip)
-                $fmt .= '[' . Request::$remote_host . ']';
-        }
-
-        $fmt .= ' ' . strtoupper($level) . ': ';
-
-        $fmt .= ' ' . $message;
+        $fmt .= ' ' . strtoupper($level) . ': ' . $message;
         $this->writeLine($fmt);
     }
 

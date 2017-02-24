@@ -113,4 +113,9 @@ final class StatusCode
         520 => "Unknown Error",
         522 => "Origin Connection Time-out"
     );
+
+    public static function description(int $code)
+    {
+        return isset(self::$CODES[$code]) ? self::$CODES[$code] : "UNKNOWN";
+    }
 }

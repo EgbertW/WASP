@@ -30,6 +30,7 @@ use WASP\Debug\LoggerAwareStaticTrait;
 use WASP\Http\Request;
 use WASP\Http\Response;
 use WASP\Http\Error as HttpError;
+use WASP\Http\StatusCode;
 
 use ReflectionMethod;
 use Throwable;
@@ -106,21 +107,14 @@ class AppRunner
 
             throw new HttpError(500, "App did not produce any response");
         }
-        catch (HttpError $response)
-        {
-            self::$logger->debug("While executing controller: {0}", [$this->app]);
-            self::$logger->notice(
-                "Failed request ended in {0} - URL: {1}", 
-                [$response->getCode(), $this->request->url]
-            );
-            throw $response;
-        }
         catch (Response $response)
         {
             self::$logger->debug("While executing controller: {0}", [$this->app]);
+            $vhost = $this->request->vhost->getHost();
+            $desc = StatusCode::description($response->getCode());
             self::$logger->info(
-                "Request handled succesfully, status code {0} - URL: {1}",
-                [$response->getCode(), $this->request->url]
+                "{0} {1} - {2}",
+                [$response->getCode(), $desc, $this->request->url]
             );
             throw $response;
         }
