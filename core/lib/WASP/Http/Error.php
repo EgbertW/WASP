@@ -53,7 +53,12 @@ class Error extends Response
 
     public function getMimeTypes()
     {
-        return array_keys(DataResponse::$representation_types);
+        $types = array_keys(DataResponse::$representation_types);
+        unset($types['text/html']);
+
+        $keys = array_keys($types);
+        array_unshift($keys, 'text/html');
+        return $keys;
     }
 
     public function output(string $mime)
@@ -108,10 +113,12 @@ class Error extends Response
     {
         $status = $this->getStatusCode();
         $msg = isset(StatusCode::$CODES[$status]) ? StatusCode::$CODES[$status] : "Internal Server Error";
+        $exception_str = Logger::str($this);
+        $exception_list = explode("\n", $exception_str);
         $data = array(
             'message' => $msg,
             'status_code' => $this->getStatusCode(),
-            'exception' => $this,
+            'exception' => $exception_list,
             'status' => $this->getStatusCode()
         );
 
@@ -150,6 +157,8 @@ class Error extends Response
             $indentstr = str_repeat(' ', $indent);
             $nl = "\n";
         }
+
+        $cntwidth = strlen((string)count($data));
         foreach ($data as $key => $value)
         {
             if (\WASP\is_array_like($value))
@@ -160,7 +169,9 @@ class Error extends Response
             }
             else
             {
-                printf("%s%s = %s%s", str_repeat(' ', $indent), $key, Logger::str($value, $html), $nl);
+                if (is_int($key))
+                    $key = sprintf('%0' . $cntwidth . 'd', $key);
+                printf("%s%s = '%s'%s", $indentstr, $key, Logger::str($value, $html), $nl);
             }
         }
     }

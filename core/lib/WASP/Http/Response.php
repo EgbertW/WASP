@@ -25,6 +25,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\Http;
 
+use WASP\System;
+
 abstract class Response extends \Exception
 {
     /** 
@@ -54,7 +56,7 @@ abstract class Response extends \Exception
     public function getRequest()
     {
         if ($this->request === null)
-            $this->request = Request::current();
+            $this->request = System::request();
         return $this->request;
     }
 

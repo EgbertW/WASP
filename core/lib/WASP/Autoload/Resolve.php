@@ -217,6 +217,7 @@ class Resolve
             return $routes;
         
         $routes = array();
+        var_dump($this->modules);
         foreach ($this->modules as $module => $location)
         {
             $app_path = $location . '/app';
@@ -258,6 +259,7 @@ class Resolve
 
                     // Move the pointer deeper
                     $ptr = &$ptr[$part];
+                    ++$cnt;
                 }
             }
         }

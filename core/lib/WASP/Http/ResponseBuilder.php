@@ -192,9 +192,24 @@ class ResponseBuilder
         // Add Content-Type mime header
         $mime = $this->response->getMimeTypes();
         if (empty($mime))
+        {
             $mime = Request::cli() ? "text/plain" : "text/html";
+        }
         elseif (is_array($mime))
-            $mime = $this->request->getBestResponseType($mime);
+        {
+            foreach ($mime as $type)
+            {
+                if ($this->request->isAccepted($type))
+                {
+                    $mime = $type;
+                    break;
+                }
+            }
+            if (is_array($mime))
+                $mime = reset($mime);
+            if (is_array($mime))
+                $mime = $this->request->getBestResponseType($mime);
+        }
 
         $this->setHeader('Content-Type', $mime);
             

@@ -55,7 +55,9 @@ if ($dev || $cli)
 }
 elseif (method_exists($exception, 'getUserMessage'))
 {
-    $error_description .= "\nDescription: " . $exception->getUserMessage();
+    $user_message = $exception->getUserMessage();
+    if (!empty($user_message))
+        $error_description .= "\nDescription: " . $user_message;
 }
 
 $type_name = str_replace("/", "_" ,$type) . ".php";

@@ -236,6 +236,7 @@ namespace WASP
             }
             catch (Throwable $e)
             {
+                self::$logger->error("Template threw exception: {0}", [$e]);
                 self::$logger->debug("*** Finished processing {0} request to {1}", [$request->method, $request->url]);
                 return new HttpError(500, "Template threw exception", "", $e);
             }
@@ -341,6 +342,22 @@ namespace WASP
         {
             $mgr = $this->request->getResponseBuilder()->getAssetManager();
             $mgr->addScript($script);
+            return $this;
+        }
+
+        /**
+         * Add an inline CSS style to the AssetManager to be included in the
+         * response. As the assets are injected into the HTML right before
+         * output, this method can be called anywhere throughout the template
+         * without influencing the result. 
+         *
+         * @param string $style The CSS style definition to include inline
+         * @return WASP\Template Provides fluent interface
+         */
+        public function addStyle(string $style)
+        {
+            $mgr = $this->request->getResponseBuilder()->getAssetManager();
+            $mgr->addStyle($style);
             return $this;
         }
 
