@@ -113,6 +113,7 @@ class Cache
                 self::$repository[$name] = Dictionary::loadFile($cache_file, $reader);
                 self::$repository[$name]['_changed'] = false;
                 self::checkExpiry($name);
+                return;
             }
             catch (\Throwable $t)
             {
@@ -120,14 +121,10 @@ class Cache
                 self::$logger->error("Error: {0}", [$t]);
                 if (is_writable($cache_file))
                     unlink($cache_file);
-                return;
             }
         }
-        else
-        {
-            self::$logger->debug("Cache {0} does not exist - creating", [$cache_file]);
-            self::$repository[$name] = new Dictionary();
-        }
+        self::$logger->debug("Cache {0} does not exist - creating", [$cache_file]);
+        self::$repository[$name] = new Dictionary();
     }
 
     /**
