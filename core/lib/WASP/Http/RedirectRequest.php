@@ -48,22 +48,11 @@ class RedirectRequest extends Response
     {
         // 3XX are only valid redirect status codes
         if ($status_code < 300 || $status_code > 399)
-            throw new \RuntimeException("A redirect should have a 3XX status code, not: " . $status_code);
+            throw new \InvalidArgumentException("A redirect should have a 3XX status code, not: " . $status_code);
 
         parent::__construct("Redirect request to: " . $url, $status_code, $previous);
         $this->url = $url;
         $this->timeout = $timeout;
-    }
-
-    /**
-     * Set the request ot use. If this function is not called,
-     * execute() will use the default / current request.
-     *
-     * Mainly useful for testing.
-     */
-    public function setRequest(Request $request)
-    {
-        $this->request = $request;
     }
 
     /**
@@ -93,7 +82,7 @@ class RedirectRequest extends Response
     {
         $h = array();
         if (!empty($this->timeout))
-            $h['Refresh'] = $timeout . '; url=' . $this->url;
+            $h['Refresh'] = $this->timeout . '; url=' . $this->url;
         else
             $h['Location'] = (string)$this->url;
         return $h;
@@ -107,6 +96,6 @@ class RedirectRequest extends Response
     {
         $prev = $this->getPrevious();
         if ($prev instanceof Response)
-            $prev->output();
+            $prev->output($mime);
     }
 }

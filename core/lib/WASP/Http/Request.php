@@ -186,91 +186,46 @@ class Request
 
         self::$current_request = $this;
         $this->response_builder = new ResponseBuilder($this);
-        $this->method = $this->server->get('REQUEST_METHOD');
+        $this->method = $this->server['REQUEST_METHOD'];
         $this->start_time = $this->server->dget('REQUEST_TIME_FLOAT', time());
+        $this->setUrlFromServerVars();
 
-        if ($this->server->get('REQUEST_SCHEME'))
-        {
-            $url = $this->server->get('REQUEST_SCHEME') . '://'
-                . $this->server->get('SERVER_NAME')
-                . $this->server->get('REQUEST_URI');
-
-            $url_webroot = dirname($this->server->get('SCRIPT_NAME')) . '/';
-            $this->webroot = $this->server->get('REQUEST_SCHEME') . '://' . $this->server->get('SERVER_NAME') . $url_webroot;
-        }
-        else
-        {
-            $url = $this->server->get('REQUEST_URI');
-            $this->webroot = "/";
-        }
-
-        $this->url = new URL($url);
-        $this->webroot = new URL($this->webroot);
         $this->ajax = 
-            $this->server->get('HTTP_X_REQUESTED_WITH') === 'xmlhttprequest' ||
-            $this->get->has('ajax') || 
-            $this->post->has('ajax');
+            $this->server['HTTP_X_REQUESTED_WITH'] === 'xmlhttprequest' || 
+            $this->get['ajax'] ||  $this->post['ajax'];
 
         $this->remote_ip = $this->server->get('REMOTE_ADDR');
         $this->remote_host = !empty($this->remote_ip) ? gethostbyaddr($this->remote_ip) : null;
         $this->accept = self::parseAccept($this->server->dget('HTTP_ACCEPT', ''));
 
-        // Determine the proper VirtualHost
+        // Set up the site configuration
         $cfg = $this->config->getSection('site');
         $this->sites = Site::setupSites($cfg);
-        $vhost = self::findVirtualHost($this->webroot, $this->sites);
-        if ($vhost === null)
+    }
+
+    /**
+     * Determine the webroot and the URL from server variables. Webroot is
+     * based on the location of the index.php that is executing, which we
+     * consider to be the webroot.
+     */
+    protected function setUrlFromServerVars()
+    {
+        if ($this->server->get('REQUEST_SCHEME'))
         {
-            $result = $this->handleUnknownHost($this->webroot, $this->sites, $cfg);
-            
-            // Handle according to the outcome
-            if ($result === null)
-            {
-                throw new Error(404, "Not found: " . $this->url);
-            }
-            elseif ($result instanceof URL)
-            {
-                throw new RedirectRequest($result, 301);
-            }
-            elseif ($result instanceof VirtualHost)
-            {
-                $vhost = $result;
-                $site = $vhost->getSite();
-                if (isset($this->sites[$site->getName()]))
-                    $this->sites[$site->getName()] = $site;
-            }
-            else
-                throw \RuntimeException("Unexpected response from handleUnknownWebsite");
+            $base = $this->server['REQUEST_SCHEME'] . '://' . $this->server['SERVER_NAME'];
+            $this->url = new URL($base . $this->server['REQUEST_URI']);
+            $this->webroot = new URL($base . dirname($this->server->get('SCRIPT_NAME')) . '/');
         }
         else
         {
-            $target = $vhost->getRedirect($this->url);
-            if ($target)
-                throw new RedirectRequest($target, 301);
-        }
-        $this->vhost = $vhost;
-
-        // Start the session
-        $this->session = new Session($this->vhost, $this->config, $this->server);
-        $this->session->start();
-
-        // Resolve the application to start
-        $path = $this->vhost->getPath($this->url);
-        $resolved = $this->resolver->app($path);
-        if ($resolved !== null)
-        {
-            $this->route = $resolved['route'];
-            $this->app = $resolved['path'];
-            $this->url_args = new Dictionary($resolved['remainder']);
-        }
-        else
-        {
-            $this->route = null;
-            $this->app = null;
-            $this->url_args = new Dictionary();
+            $this->url = new URL($this->server->get('REQUEST_URI'));
+            $this->webroot = new URL("/");
         }
     }
 
+    /**
+     * @return WASP\Template The current template renderer
+     */
     public function getTemplate()
     {
         if ($this->template === null)
@@ -306,12 +261,14 @@ class Request
 
     /**
      * Run the selected application
-     * @throws WASP\Http\Response Contains the output for the request
      */
     public function dispatch()
     {
         try
         {
+            $this->resolveApp();
+            $this->startSession();
+
             if ($this->route === null)
                 throw new Error(404, 'Could not resolve ' . $this->url);
 
@@ -322,6 +279,87 @@ class Request
         {
             $this->response_builder->setThrowable($e);
             $this->response_builder->respond();
+        }
+    }
+
+    /**
+     * Find out which VirtualHost was targeted and redirect if configuration
+     * requests so.
+     * @throws Throwable Various exceptions depending on the configuration - 
+     *                   Error(404) when the configuration says to prohibit use of
+     *                   unknown hosts, RedirectRequest when a redirect to a different
+     *                   host is requested, RuntimeException when unexpected things happen.
+     */
+    protected function determineVirtualHost()
+    {
+        // Determine the proper VirtualHost
+        $cfg = $this->config->getSection('site');
+        $vhost = self::findVirtualHost($this->webroot, $this->sites);
+        if ($vhost === null)
+        {
+            $result = $this->handleUnknownHost($this->webroot, $this->sites, $cfg);
+            
+            // Handle according to the outcome
+            if ($result === null)
+                throw new Error(404, "Not found: " . $this->url);
+
+            if ($result instanceof URL)
+                throw new RedirectRequest($result, 301);
+
+            if ($result instanceof VirtualHost)
+            {
+                $vhost = $result;
+                $site = $vhost->getSite();
+                if (isset($this->sites[$site->getName()]))
+                    $this->sites[$site->getName()] = $site;
+            }
+            else
+                throw \RuntimeException("Unexpected response from handleUnknownWebsite");
+        }
+        else
+        {
+            // Check if the VirtualHost we matched wants to redirect somewhere else
+            $target = $vhost->getRedirect($this->url);
+            if ($target)
+                throw new RedirectRequest($target, 301);
+        }
+        $this->vhost = $vhost;
+    }
+
+    /**
+     * Start the HTTP Session, and initalize the session object
+     */
+    public function startSession()
+    {
+        if ($this->session === null)
+        {
+            $this->session = new Session($this->vhost, $this->config, $this->server);
+            $this->session->start();
+        }
+    }
+
+    /** 
+     * Resolve the app to run based on the incoming URL
+     */
+    public function resolveApp()
+    {
+        // Determine the correct vhost first
+        $this->determineVirtualHost();
+
+        // Resolve the application to start
+        $path = $this->vhost->getPath($this->url);
+        $resolved = $this->resolver->app($path);
+        if ($resolved !== null)
+        {
+            $this->route = $resolved['route'];
+            $this->app = $resolved['path'];
+            $this->url_args = new Dictionary($resolved['remainder']);
+        }
+        else
+        {
+            $this->route = null;
+            $this->app = null;
+            $this->url_args = new Dictionary();
         }
     }
 
@@ -479,7 +517,7 @@ class Request
 
         if ($on_unknown === "REDIRECT")
         {
-            $redir = $best_matching->URL($webroot->getPath);
+            $redir = $best_matching->URL($webroot->path);
             return $redir;
         }
 

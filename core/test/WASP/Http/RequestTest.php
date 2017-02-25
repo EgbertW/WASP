@@ -62,6 +62,7 @@ final class RequestTest extends TestCase
             'REQUEST_URI' => '/foo',
             'REMOTE_ADDR' => '127.0.0.1',
             'REQUEST_METHOD' => 'POST',
+            'REQUEST_TIME_FLOAT' => $_SERVER['REQUEST_TIME_FLOAT'],
             'HTTP_ACCEPT' => 'text/plain;q=1,text/html;q=0.9'
         );
 
@@ -97,7 +98,6 @@ final class RequestTest extends TestCase
         $this->assertEquals($req->post->getAll(), $this->post);
         $this->assertEquals($req->cookie->getAll(), $this->cookie);
         $this->assertEquals($req->server->getAll(), $this->server);
-        $this->assertEquals($req->session->getAll(), $_SESSION);
 
         $this->get['foobarred_get'] = true;
         $this->assertEquals($req->get->getAll(), $this->get);
@@ -110,30 +110,47 @@ final class RequestTest extends TestCase
 
         $this->server['foobarred_server'] = true;
         $this->assertEquals($req->server->getAll(), $this->server);
-
-        $_SESSION['foobarred_session'] = true;
-        $this->assertEquals($req->session->getAll(), $_SESSION);
-
-        //public static function dispatch()
-        //public static function handleException($exception)
-        //public static function getBestResponseType(array $types)
-        //public function outputBestResponseType(array $available)
     }
 
     /**
      * @covers WASP\Http\Request::__construct
-     * @covers WASP\Session::start
+     * @covers WASP\Http\Request::determineVirtualHost
+     * @covers WASP\Http\Request::resolveApp
      */
     public function testRouting()
     {
         $this->server['SERVER_NAME'] = 'www.example.com';
         $this->server['REQUEST_URI'] = '/foo';
         $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
-        $this->assertEquals($req->route, '/');
+        $req->resolveApp();
+        $this->assertEquals('/', $req->route);
 
         $this->server['REQUEST_URI'] = '/assets';
         $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
-        $this->assertEquals($req->route, '/assets');
+        $req->resolveApp();
+        $this->assertEquals('/assets', $req->route);
+    }
+
+    /**
+     * @covers WASP\Http\Request::__construct
+     * @covers WASP\Session::start
+     */
+    public function testRoutingInvalid()
+    {
+        $resolve = new MockRequestResolve();
+        $this->server['SERVER_NAME'] = 'www.example.com';
+        $this->server['REQUEST_URI'] = '/foo';
+
+        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $resolve);
+        $req->resolveApp();
+        $this->assertNull($req->route);
+        $this->assertNull($req->app);
+
+        $this->server['REQUEST_URI'] = '/';
+        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $resolve);
+        $req->resolveApp();
+        $this->assertNull($req->route);
+        $this->assertNull($req->app);
     }
 
     /**
@@ -147,6 +164,7 @@ final class RequestTest extends TestCase
         $this->server['SERVER_NAME'] = 'www.example.nl';
         $this->server['REQUEST_URI'] = '/assets';
         $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
+        $req->resolveApp();
         $this->assertEquals($req->route, '/assets');
     }
 
@@ -165,6 +183,7 @@ final class RequestTest extends TestCase
         $this->expectExceptionCode(404);
         $this->expectExceptionMessage('Not found');
         $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
+        $req->resolveApp();
     }
 
     /**
@@ -189,6 +208,7 @@ final class RequestTest extends TestCase
 
         $this->expectException(RedirectRequest::class);
         $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
+        $req->resolveApp();
     }
 
     /**
@@ -203,6 +223,7 @@ final class RequestTest extends TestCase
         $this->config['site'] = array();
 
         $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
+        $req->resolveApp();
         $this->assertEquals($this->get, $req->get->getAll());
     }
 
@@ -271,6 +292,223 @@ final class RequestTest extends TestCase
         $request->outputBestResponseType($op);
         $c = ob_get_contents();
         ob_end_clean();
+    }
 
+    public function testGetStartTime()
+    {
+        $request = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
+        $this->assertEquals($_SERVER['REQUEST_TIME_FLOAT'], $request->getStartTime());
+    }
+
+    public function testGetTemplate()
+    {
+        $request = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
+
+        $tpl = $request->getTemplate();
+        $this->assertInstanceOf(\WASP\Template::class, $tpl);
+
+        $tpl2 = $request->getTemplate();
+        $this->assertInstanceOf(\WASP\Template::class, $tpl);
+    }
+
+    public function testGetResponseBuilder()
+    {
+        $request = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
+        $rb = $request->getResponseBuilder();
+        $this->assertInstanceOf(ResponseBuilder::class, $rb);
+    }
+
+    public function testDispatchNoRoute()
+    {
+        $request = new MockRequestTestRequest();
+        $request->route = null;
+
+        $this->expectException(Error::class);
+        $this->expectExceptionCode(404);
+        $request->dispatch();
+    }
+
+    public function testDispatchNoRouteRespond()
+    {
+        $request = new MockRequestTestRequest();
+        $request->route = null;
+        $request->getResponseBuilder()->setTestRespond();
+
+        $this->expectException(Error::class);
+        $this->expectExceptionCode(404);
+        $request->dispatch();
+    }
+
+    public function testDispatchWithValidApp()
+    {
+        $pathconfig = System::path();
+        $testpath = $pathconfig->var . '/test';
+        \WASP\IO\Dir::mkdir($testpath);
+        $filename = tempnam($testpath, "wasptest") . ".php";
+        $classname = "cl_" . str_replace(".", "", basename($filename));
+
+        $phpcode = <<<EOT
+<?php
+throw new WASP\Http\StringResponse('foo');
+EOT;
+
+        $this->expectException(StringResponse::class);
+        $this->expectExceptionCode(200);
+        try
+        {
+            file_put_contents($filename, $phpcode);
+            $request = new MockRequestTestRequest;
+            $request->app = $filename;
+            $request->route = '/';
+            $request->dispatch();
+        }
+        finally
+        {
+            \WASP\IO\Dir::rmtree($testpath);
+        }
+    }
+
+    public function testDispatchReturn()
+    {
+        $request = new MockRequestTestRequest;
+        $request->getResponseBuilder()->setTestRespond();
+        $request->getResponseBuilder()->setTestReturn();
+        $this->assertNull($request->dispatch());
+    }
+
+    public function testHandleUnknownHost()
+    {
+        $dict = new Dictionary();
+        $dict['unknown_host_policy'] = "REDIRECT";
+
+        $site = new \WASP\Site;
+        $site->setName('default');
+        $vhost1 = new \WASP\VirtualHost('http://www.foo.bar', 'en');
+        $vhost2 = new \WASP\VirtualHost('http://www.foo.xxx', 'en');
+        $site->addVirtualHost($vhost1);
+        $site->addVirtualHost($vhost2);
+
+        $sites = array(
+            'default' => $site
+        );
+
+        $webroot = new URL('http://www.foo.baz');
+        $actual = Request::handleUnknownHost($webroot, $sites, $dict);
+        $this->assertEquals($vhost1->getHost(), $actual);
+
+        $webroot = new URL('http://www.foo.xxy');
+        $actual = Request::handleUnknownHost($webroot, $sites, $dict);
+        $this->assertEquals($vhost2->getHost(), $actual);
+    }
+
+    public function testNoScheme()
+    {
+        unset($this->server['REQUEST_SCHEME']);
+        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
+        
+        $expected = new URL('/foo');
+        $this->assertEquals($expected, $req->url);
+
+        $expected = new URL('/');
+        $this->assertEquals($expected, $req->webroot);
+    }
+
+    public function testHandleUnknownHostInConstructor()
+    {
+        $dict = new Dictionary();
+        $dict['url'] = array('https://foobar.de', 'https://foobar.com', 'https://foobar.nl', 'https://example.com', 'http://example.nl');
+        $dict['languages'] = array('de', 'com', 'nl', 'en');
+        $dict['site'] = array('default', 'default', 'default', 'example', 'example');
+        $dict['redirect'] = array(4 => 'https://example.com');
+        $dict['unknown_host_policy'] = "REDIRECT";
+        
+        $this->config['site'] = $dict;
+        $this->server['SERVER_NAME'] = 'example.comm';
+        $this->server['REQUEST_SCHEME'] = 'https';
+        $this->server['REQUEST_URI'] = '/';
+
+        try
+        {
+            $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
+            $req->resolveApp();
+        }
+        catch (RedirectRequest $e)
+        {
+            $expected = new URL('https://example.com/');
+            $this->assertEquals($expected, $e->getURL());
+        }
+    }
+    
+    public function testStartSession()
+    {
+        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
+        $req->resolveApp();
+        $req->startSession();
+
+        $sess_object = $req->session;
+
+        $this->assertEquals($_SESSION, $req->session->getAll());
+        $_SESSION['foobar'] = rand();
+        $this->assertEquals($_SESSION, $req->session->getAll());
+
+        $req->startSession();
+        $this->assertEquals($sess_object, $req->session);
+
+    }
+}
+
+class MockRequestTestRequest extends Request
+{
+    public function __construct()
+    {
+        $this->response_builder = new MockRequestResponseBuilder($this);
+    }
+
+    public function startSession()
+    {}
+
+    public function resolveApp()
+    {}
+}
+
+class MockRequestResponseBuilder extends ResponseBuilder
+{
+    private $testrespond = false;
+    private $testreturn = false;
+
+    public function setTestRespond()
+    {
+        $this->testrespond = true;
+    }
+
+    public function setTestReturn()
+    {
+        $this->testreturn = true;
+    }
+
+    public function setThrowable(\Throwable $e)
+    {
+        if (!$this->testrespond)
+            throw $e;
+        parent::setThrowable($e);
+    }
+
+    public function respond()
+    {
+        if ($this->testreturn)
+            return;
+
+        throw $this->response;
+    }
+}
+
+class MockRequestResolve extends \WASP\Autoload\Resolve
+{
+    public function __construct()
+    {}
+
+    public function app(string $path)
+    {
+        return null;
     }
 }

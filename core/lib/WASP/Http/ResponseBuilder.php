@@ -42,22 +42,25 @@ class ResponseBuilder
     use LoggerAwareStaticTrait;
 
     /** The headers to send to the client */
-    private $headers = array();
+    protected $headers = array();
+
+    /** The HTTP Response Code */
+    protected $response_code;
 
     /** The cookies to send to the client */
-    private $cookies = array();
+    protected $cookies = array();
 
     /** The request this is a response to */
-    private $request;
+    protected $request;
 
     /** The response to send to the client */
-    private $response = null;
+    protected $response = null;
 
     /** The hooks to execute before outputting the response */
-    private $hooks = array();
+    protected $hooks = array();
 
     /** The asset manager manages injection of CSS and JS script inclusion */
-    private $asset_manager = null;
+    protected $asset_manager = null;
 
     /**
      * Create the response to a Request
@@ -87,7 +90,7 @@ class ResponseBuilder
 
     /**
      * Set the response by any throwable object. Any non-Response objects are wrapped
-     * in a HttpError with status code 500.
+     * in a WASP\Http\Error with status code 500.
      *
      * @return WASP\Http\ResponseBuilder Provides fluent interface
      */
@@ -98,7 +101,7 @@ class ResponseBuilder
             self::$logger->error("Exception: {exception}", ["exception" => $exception]);
 
             // Wrap the error in a HTTP Error 500
-            $exception = new HttpError(500, "An error occured", $user_message = "", $exception);
+            $exception = new Error(500, "An error occured", $user_message = "", $exception);
         }
 
         $this->setResponse($exception);
@@ -167,6 +170,35 @@ class ResponseBuilder
     }
 
     /**
+     * Set the HTTP Response code
+     *
+     * @param int $code The HTTP response code
+     * @return WASP\Http\ResponseBuilder Provides fluent interface
+     */
+    public function setResponseCode(int $code)
+    {
+        if ($code < 100 || $code > 599)
+        {
+            $err = new \InvalidArgumentException("Attempting to set status code to $code");
+            self::$logger->critical("Invalid status {0}: {1}", [$code, $err]);
+            $this->response_code = 500;
+        }
+        else
+        {
+            $this->response_code = $code;
+        }
+        return $this;
+    }
+
+    /**
+     * @return int The response code
+     */
+    public function getResponseCode()
+    {
+        return $this->response_code;
+    }
+
+    /**
      * Add a hook to the ResponseHooks - these hooks will be executed just
      * before output begins. This can be used to inject or modify output.
      * @param ResponseHookInterface $hook The hook to add
@@ -199,8 +231,8 @@ class ResponseBuilder
     }
     
     /** 
-     * Respont to the clients request. This will produce the output.
-     * @codeCoverageIgnore This actually, finally dies, so nothing to test here.
+     * Prepare the output before sending it, run hooks, collect headers and
+     * finally call doRespond which produces the output.
      */
     public function respond()
     {
@@ -235,6 +267,9 @@ class ResponseBuilder
 
         $this->setHeader('Content-Type', $mime);
             
+        // Allow the Response to transform itself into a different response,
+        // e.g. the ErrorResponse will want to produce DataOutput or StringOutput
+        // depending on the mime type.
         try
         {
             $transformed = $this->response->transformResponse($mime);
@@ -258,31 +293,54 @@ class ResponseBuilder
             }
         }
 
-        // Set HTTP response code
-        $code = $this->response->getStatusCode();
-        http_response_code($code);
-
         // Add headers from response to the final response
         foreach ($this->response->getHeaders() as $key => $value)
             $this->setHeader($key, $value);
+        
+        // Store the response code
+        $this->setResponseCode($this->response->getStatusCode());
+
+        // All preparational work is done, time to send stuff to the client
+        $this->doOutput($mime);
+    }
+
+    /**
+     * This method sends data to the client after all preparational work has
+     * been done.
+     *
+     * @param string $mime The mime-type of the response that has been selected
+     *
+     * @codeCoverageIgnore This method is full of 'side-effects': output,
+     *                     sending HTTP headers, sending cookies, setting status
+     *                     code.
+     */
+    protected function doOutput(string $mime)
+    {
+        // Set HTTP response code
+        http_response_code($this->response_code);
 
         // Set headers
-        foreach ($this->headers as $name => $value)
-            header($name . ': ' . $value);
-        
-        // Set cookies
-        foreach ($this->cookies as $cookie)
+        if (!headers_sent())
         {
-            setcookie(
-                $cookie->getName(),
-                $cookie->getValue(),
-                $cookie->getExpires(),
-                $cookie->getPath(),
-                $cookie->getDomain(),
-                $cookie->getSecure(),
-                $cookie->getHttpOnly()
-            );
+            foreach ($this->headers as $name => $value)
+                header($name . ': ' . $value);
+        
+            // Set cookies
+            foreach ($this->cookies as $cookie)
+            {
+                setcookie(
+                    $cookie->getName(),
+                    $cookie->getValue(),
+                    $cookie->getExpires(),
+                    $cookie->getPath(),
+                    $cookie->getDomain(),
+                    $cookie->getSecure(),
+                    $cookie->getHttpOnly()
+                );
+            }
         }
+        else
+            self::$logger->critical('Headers were already sent when ResponseBuilder wants to send them');
 
         // Perform output
         $this->response->output($mime);

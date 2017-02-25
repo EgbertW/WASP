@@ -61,8 +61,7 @@ function is_int_val($val)
 
 /** Convert any value to a bool, somewhat more intelligently than PHP does
   * itself: this function will also take strings, and it will convert 
-  * English and localized versions of the words 'off', 'no', 'disable',
-  * 'disabled' to false.
+  * English versions of the words 'off', 'no', 'disable', 'disabled' to false.
   * 
   * @param mixed $val Any scalar or object at all
   * @param float $float_delta Used for float comparison
@@ -96,15 +95,6 @@ function parse_bool($val, float $float_delta = 0.0001)
         $lc = strtolower(trim($val));
 
         $words = array("disable", "disabled", "false", "no", "negative", "off");
-        if (function_exists('td'))
-        { // Translate if available
-            $words[] = td('disable', 'core');
-            $words[] = td('disabled', 'core');
-            $words[] = td('false', 'core');
-            $words[] = td('no', 'core');
-            $words[] = td('negative', 'core');
-            $words[] = td('off', 'core');
-        }
 
         // The empty string and some words are considered false
         // Any other non-empty string is considered to be true
