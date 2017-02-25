@@ -39,7 +39,7 @@ class LogOutput
         $log = $path->log . '/wasp.log';
         $phplog = $path->log . '/error-php.log';
 
-        $log_contents = shell_exec('tail -n ' . $lines . ' ' . $log);
+        $log_contents = shell_exec('cat ' . $log . ' | grep -v "dev\/log\/getLog" | tail -n ' . $lines);
         $phplog_contents = shell_exec('tail -n ' . $lines . ' ' . $phplog);
 
         $wasplog = explode("\n", $log_contents);
