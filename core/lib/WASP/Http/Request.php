@@ -185,7 +185,6 @@ class Request
         $this->resolver = $resolver;
 
         self::$current_request = $this;
-        $this->response_builder = new ResponseBuilder($this);
         $this->method = $this->server['REQUEST_METHOD'];
         $this->start_time = $this->server->dget('REQUEST_TIME_FLOAT', time());
         $this->setUrlFromServerVars();
@@ -248,6 +247,8 @@ class Request
      */
     public function getResponseBuilder()
     {
+        if ($this->response_builder === null)
+            $this->response_builder = new ResponseBuilder($this);
         return $this->response_builder;
     }
 
@@ -277,8 +278,9 @@ class Request
         }
         catch (Throwable $e)
         {
-            $this->response_builder->setThrowable($e);
-            $this->response_builder->respond();
+            $rb = $this->getResponseBuilder();
+            $rb->setThrowable($e);
+            $rb->respond();
         }
     }
 
@@ -472,6 +474,87 @@ class Request
     }
 
     /**
+     * @return boolean Whether the request accepts JSON as response
+     * @see WASP\Template::want
+     */
+    public function wantJSON()
+    {
+        return $this->want('application/json', 'utf-8');
+    }
+
+    /**
+     * @return boolean Whether the request accepts HTML as response
+     * @see WASP\Template::want
+     */
+    public function wantHTML()
+    {
+        return $this->want('text/html', 'utf-8');
+    }
+
+    /**
+     * @return boolean Whether the request accepts HTML as response
+     * @see WASP\Template::want
+     */
+    public function wantText()
+    {
+        return $this->want('text/plain', 'utf-8');
+    }
+
+    /**
+     * @return boolean Whether the request accepts XML as response
+     * @see WASP\Template::want
+     */
+    public function wantXML()
+    {
+        return $this->want('application/xml');
+    }
+
+    /**
+     * Check if a specified response type is accepted by the client, and if so,
+     * sets it as the preferred response type. It is therefore assumed that if
+     * you call this function and it returns true, you are going to output
+     * that response type.
+     *
+     * @param string $mime The mime-type of the response that is to be checked
+     * @param string $charset The character set / encoding use for output
+     * @return boolean Whether the request accepts the mime-type as response
+     */
+    public function want($mime, $charset = null)
+    {
+        $priority = $this->isAccepted($mime);
+        if ($priority === false)
+            return false;
+        if (!empty($charset))
+            $mime .= "; charset=" . $charset;
+
+        $this->mime = $mime;
+        return $priority;
+    }
+
+    /**
+     * Select the preferred reponse type based on a list of response types.
+     * The response types should be provided in preference of the script, if any.
+     * These are then matched with the accepted response types by the client,
+     * and the most preferred one is selected. If more than one type is equally
+     * desired by the client, the first one is selected.
+     *
+     * @param array $types The list of response types offered
+     * @return string The preferred response type
+     * @see WASP\Http\Request::want
+     */
+    public function chooseResponse(array $types)
+    {
+        $best = $this->getBestResponseType($types);
+
+        // Set the mime-type to the best selected output
+        $charset = (substr($best, 0, 5) == "text/") ? "utf-8" : null;
+        $this->want($best, $charset);
+
+        return $best;
+    }
+
+
+    /**
      * Find the VirtualHost matching the provided URL.
      * @param URL $url The URL to match
      * @param array $sites A list of Site objects from which the correct
@@ -588,6 +671,7 @@ class Request
     {
         return PHP_SAPI === "cli";
     }
+
 }
 
 // @codeCoverageIgnoreStart

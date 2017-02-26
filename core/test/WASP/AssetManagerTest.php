@@ -152,7 +152,7 @@ final class AssetManagerTest extends TestCase
         );
     }
 
-    public function testInlineJS()
+    public function testInlineJSArrayValue()
     {
         $mgr = new AssetManager(new MockAssetRequest);
 
@@ -160,6 +160,60 @@ final class AssetManagerTest extends TestCase
         $mgr->addVariable('test', $val);
         $rules = $mgr->getVariables();
         $this->assertEquals($val, $rules['test']);
+    }
+
+    public function testInlineJSScalarValue()
+    {
+        $mgr = new AssetManager(new MockAssetRequest);
+
+        $expected = 3.5;
+        $mgr->addVariable('test', 3.5);
+        $rules = $mgr->getVariables();
+        $this->assertEquals($expected, $rules['test']);
+    }
+
+    public function testInlineJSDictionary()
+    {
+        $mgr = new AssetManager(new MockAssetRequest);
+
+        $dict = new Dictionary(array('a' => 3));
+        $mgr->addVariable('test', $dict);
+        $rules = $mgr->getVariables();
+        $expected = $dict->getAll();
+        $this->assertEquals($expected, $rules['test']);
+    }
+
+    public function testInlineJsArrayLike()
+    {
+        $mgr = new AssetManager(new MockAssetRequest);
+
+        $dict = new Dictionary(array('a' => 3));
+        $mgr->addVariable('test', $dict);
+        $rules = $mgr->getVariables();
+        $expected = $dict->getAll();
+        $this->assertEquals($expected, $rules['test']);
+    }
+
+    public function testInlineJsJsonSerializable()
+    {
+        $mgr = new AssetManager(new MockAssetRequest);
+
+        $obj = new MockAssetMgrJsonSerializable();
+
+        $mgr->addVariable('test', $obj);
+        $rules = $mgr->getVariables();
+        $expected = array('foo' => 'bar', 'bar' => 'baz');
+        $this->assertEquals($expected, $rules['test']);
+    }
+
+    public function testInlineJsInvalid()
+    {
+        $mgr = new AssetManager(new MockAssetRequest);
+
+        $obj = new \StdClass();
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Invalid value provided for JS variable test");
+        $mgr->addVariable('test', $obj);
     }
 
     public function testInlineCSS()
@@ -267,6 +321,7 @@ class MockAssetRequest extends Http\Request
     {
         $this->resolver = new MockAssetResolver();
         $this->vhost = new MockAssetVhost();
+        $this->response_builder = new Http\ResponseBuilder($this);
     }
 }
 
@@ -310,4 +365,13 @@ class MockAssetVhost extends VirtualHost
     {
         return $path;
     }
+}
+
+class MockAssetMgrJsonSerializable implements \JSONSerializable
+{
+    public function jsonSerialize()
+    {
+        return array('foo' => 'bar', 'bar' => 'baz');
+    }
+
 }

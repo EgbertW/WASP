@@ -103,30 +103,6 @@ final class TemplateTest extends TestCase
         $this->assertEquals('/', $tpl->title());
     }
 
-    public function testWants()
-    {
-        $tpl = new Template($this->request);
-
-        $this->request->accept = Request::parseAccept('text/html;q=1,text/plain;q=0.9');
-        $this->assertFalse($tpl->wantJSON());
-        $this->assertTrue($tpl->wantHTML() !== false);
-        $this->assertTrue($tpl->wantText() !== false);
-        $this->assertFalse($tpl->wantXML());
-
-        $this->request->accept = Request::parseAccept('application/json;q=1,application/*;q=0.9');
-        $this->assertTrue($tpl->wantJSON() !== false);
-        $this->assertFalse($tpl->wantHTML());
-        $this->assertFalse($tpl->wantText());
-        $this->assertTrue($tpl->wantXML() !== false);
-
-        $this->request->accept = Request::parseAccept('application/json;q=1,text/html;q=0.9,text/plain;q=0.8');
-        $type = $tpl->chooseResponse(array('application/json', 'text/html'));
-        $this->assertEquals('application/json', $type);
-
-        $type = $tpl->chooseResponse(array('text/plain', 'text/html'));
-        $this->assertEquals('text/html', $type);
-    }
-
     public function testAssets()
     {
         $tpl = new Template($this->request);
@@ -215,7 +191,7 @@ EOT;
     {
         $tpl_file = <<<EOT
 <?php
-if (\$this->wantJSON())
+if (\$this->request->wantJSON())
 {
     \$data = ['foo', 'bar'];
     throw new WASP\Http\DataResponse(\$data);
@@ -289,6 +265,83 @@ EOT;
         $this->assertEquals($expected, $actual);
 
         System::getInstance()->template = $cur;
+    }
+
+    public function testSetMime()
+    {
+        $tpl = System::template();
+        $tpl->setMimeType('text/html');
+        $this->assertEquals('text/html', $tpl->getMimeType());
+
+        $tpl->setMimeType('text/plain');
+        $this->assertEquals('text/plain', $tpl->getMimeType());
+    }
+
+    public function testAddStyle()
+    {
+        $tpl = System::template();
+        $mgr = $tpl->getAssetManager();
+
+        $my_style = '.random-foo-class {random-style: property;}';
+
+        $tpl->addStyle($my_style);
+
+        $styles = $mgr->getStyles();
+        $found = false;
+        foreach ($styles as $style)
+            if ($style === $my_style)
+                $found = true;
+
+        $this->assertTrue($found);
+    }
+
+    public function testAddJSVariable()
+    {
+        $tpl = System::template();
+        $mgr = $tpl->getAssetManager();
+
+        $my_style = '.random-foo-class {random-style: property;}';
+
+        $tpl->addJSVariable('foo', 'bar');
+        $variables = $mgr->getVariables();
+        $this->assertTrue(isset($variables['foo']));
+        $this->assertEquals('bar', $variables['foo']);
+
+        $tpl->addJSVariable('foo', 'baz');
+        $variables = $mgr->getVariables();
+        $this->assertTrue(isset($variables['foo']));
+        $this->assertEquals('baz', $variables['foo']);
+    }
+
+    public function testGetRequest()
+    {
+        $dict = new Dictionary();
+        $serv = array('REQUEST_URI' => '/');
+        $arr = array();
+        $req = new Request($arr, $arr, $arr, $serv, $dict, System::path(), System::resolver());
+        
+        $tpl = System::template();
+
+        $reqsys = $tpl->getRequest();
+        $this->assertInstanceOf(Http\Request::class, $reqsys);
+        $this->assertNotEquals($req, $reqsys);
+
+        $tpl = new Template($req);
+
+        $req2 = $tpl->getRequest();
+        $this->assertEquals($req, $req2);
+    }
+
+    public function testGetAssetManager()
+    {
+        $dict = new Dictionary();
+        $serv = array('REQUEST_URI' => '/');
+        $arr = array();
+        $req = new Request($arr, $arr, $arr, $serv, $dict, System::path(), System::resolver());
+        $tpl = new Template($req);
+
+        $this->assertInstanceOf(AssetManager::class, $tpl->getAssetManager());
+        $this->assertEquals($req->getResponseBuilder()->getAssetManager(), $tpl->getAssetManager());
     }
 }
 

@@ -740,7 +740,7 @@ class MockAppRunnerTemplate extends Template
     public function __construct()
     {}
 
-    public function setTemplate(string $str)
+    public function setTemplate(string $str, string $mime = 'text/html')
     {}
 
     public function render()

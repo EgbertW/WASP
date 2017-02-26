@@ -32,6 +32,9 @@ use WASP\Http\Response;
 use WASP\Http\StringResponse;
 use WASP\Debug\LoggerAwareStaticTrait;
 
+use JSONSerializable;
+use InvalidArgumentException;
+
 class AssetManager implements ResponseHookInterface
 {
     use LoggerAwareStaticTrait;
@@ -91,8 +94,22 @@ class AssetManager implements ResponseHookInterface
         return array_values($this->inline_style);
     }
 
-    public function addVariable($name, $value)
+    public function addVariable(string $name, $value)
     {
+        // Convert value to something usable in the output
+        if (is_array_like($value))
+        {
+            $value = to_array($value);
+        }
+        elseif (is_subclass_of($value, JSONSerializable::class))
+        {
+            $value = $value->jsonSerialize();
+        }
+        elseif (!is_scalar($value))
+        {
+            throw new InvalidArgumentException("Invalid value provided for JS variable $name");
+        }
+
         $this->inline_variables[$name] = $value;
         return $this;
     }

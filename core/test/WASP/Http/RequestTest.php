@@ -455,6 +455,31 @@ EOT;
         $this->assertEquals($sess_object, $req->session);
 
     }
+
+    public function testWants()
+    {
+        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
+
+        $req->accept = Request::parseAccept('text/html;q=1,text/plain;q=0.9');
+        $this->assertFalse($req->wantJSON());
+        $this->assertTrue($req->wantHTML() !== false);
+        $this->assertTrue($req->wantText() !== false);
+        $this->assertFalse($req->wantXML());
+
+        $req->accept = Request::parseAccept('application/json;q=1,application/*;q=0.9');
+        $this->assertTrue($req->wantJSON() !== false);
+        $this->assertFalse($req->wantHTML());
+        $this->assertFalse($req->wantText());
+        $this->assertTrue($req->wantXML() !== false);
+
+        $req->accept = Request::parseAccept('application/json;q=1,text/html;q=0.9,text/plain;q=0.8');
+        $type = $req->chooseResponse(array('application/json', 'text/html'));
+        $this->assertEquals('application/json', $type);
+
+        $type = $req->chooseResponse(array('text/plain', 'text/html'));
+        $this->assertEquals('text/html', $type);
+    }
+
 }
 
 class MockRequestTestRequest extends Request
