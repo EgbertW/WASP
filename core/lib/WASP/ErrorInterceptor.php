@@ -100,7 +100,7 @@ class ErrorInterceptor
      */
     public function getInterceptedErrors()
     {
-        return $this->produced;
+        return $this->intercepted;
     }
 
     /**
@@ -120,7 +120,7 @@ class ErrorInterceptor
         {
             if ($errno & $warning[0] && strpos($errstr, $warning[1]) !== false)
             {
-                $this->produced[] = new \ErrorException($errstr, 0, $errno, $errfile, $errline);
+                $this->intercepted[] = new \ErrorException($errstr, 0, $errno, $errfile, $errline);
                 return true;
             }
         }
@@ -168,6 +168,5 @@ class ErrorInterceptor
     {
         self::$interceptor_stack = array();
         set_error_handler(array("WASP\\ErrorInterceptor", "errorHandler"), E_ALL);
-        fprintf(STDERR, "Registered interceptor error handler\n");
     }
 }
