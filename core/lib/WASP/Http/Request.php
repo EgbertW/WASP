@@ -350,6 +350,21 @@ class Request
 
         // Resolve the application to start
         $path = $this->vhost->getPath($this->url);
+
+        // Check if a mime-type is included
+        list($ext, $mime) = ResponseTypes::extractFromPath($path);
+        if ($mime)
+        {
+            foreach ($this->accept as $type => $q)
+                $this->accept[$type] *= 0.9;
+            $this->accept[$mime] = 1.0;
+                
+            $path = substr($path, 0, -(strlen($ext) + 1));
+
+            // Override accept headers
+            $this->accept = array($mime => 1);
+        }
+
         $resolved = $this->resolver->app($path);
         if ($resolved !== null)
         {

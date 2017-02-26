@@ -23,7 +23,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-$type = $this->chooseResponse(array("text/html", "text/plain"));
+$type = $this->request->chooseResponse(array("text/html", "text/plain"));
 
 $error_code = 500;
 if ($exception instanceof WASP\Http\Error)
