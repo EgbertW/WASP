@@ -58,7 +58,7 @@ class System
         self::$instance = new System($path, $config);
 
         // Attach the error handler - all PHP Errors should be thrown as Exceptions
-        self::$instance->setErrorHandler();
+        ErrorInterceptor::registerErrorHandler();
         return self::$instance;
     }
 
@@ -290,29 +290,6 @@ class System
         $logger = Logger::getLogger('WASP.I18n.Translator.Translator');
         $handler = new TranslateLogger($this->path->log . '/translate-%s-%s.pot');
         $logger->addLogHandler($handler);
-    }
-
-    public static function setErrorHandler()
-    {
-        set_error_handler(array("WASP\\System", "throwErrorException"), E_ALL | E_STRICT);
-    }
-
-    /**
-     * Catch all PHP errors, notices and throw them as an exception instead.
-     * @param int $errno Error number
-     * @param string $errstr Error description
-     * @param string $errfile The file where the error occured
-     * @param int $errline The line where the error occured
-     * @param mixed $errcontext Erro context
-     */
-    public static function throwErrorException($errno, $errstr, $errfile, $errline, $errcontext)
-    {
-        Debug\error(
-            "WASP.System", 
-            "PHP Error {0}: {1} on {2}({3})",
-            [$errno, $errstr, $errfile, $errline]
-        );
-        throw new \ErrorException($errstr, 0, $errno, $errfile, $errline);
     }
 
 }

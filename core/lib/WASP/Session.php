@@ -340,16 +340,15 @@ class Session extends Dictionary
      */
     private function sessionStart()
     {
-        try
-        {
-            session_start();
-        }
-        catch (\ErrorException $e)
-        {
-            if (PHP_SAPI === 'cli')
-                return;
-            throw $e;
-        } 
+        $interceptor = new ErrorInterceptor('session_start');
+        $interceptor->registerError(E_WARNING, 'Cannot send session');
+        $interceptor->registerError(E_WARNING, 'Cannot send session');
+
+        $interceptor->execute();
+
+        $errors = $interceptor->getInterceptedErrors();
+        foreach ($errors as $error)
+            \WASP\Debug\notice("WASP.Session", "Error sending session cookie: {exception}", ['exception' => $error]);
     }
 
     /**

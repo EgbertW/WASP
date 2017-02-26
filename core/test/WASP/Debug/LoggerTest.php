@@ -194,9 +194,7 @@ class LoggerTest extends TestCase implements LogWriterInterface
         {
             try
             {
-                \WASP\call_error_exception(function () use ($a, $level, $msg) {
-                    $a->$level($msg[1], array('user' => 'Bob'));
-                });
+                $a->$level($msg[1], array('user' => 'Bob'));
             }
             catch (\Throwable $e)
             {

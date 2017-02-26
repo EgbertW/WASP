@@ -133,33 +133,6 @@ final class FunctionsTest extends TestCase
         $this->assertEquals($arr, cast_array($dict));
     }
 
-    /**
-     * @covers WASP\call_error_exception
-     */
-    public function testCallError()
-    {
-        Functions::load();
-
-        $this->expectException(IOException::class);
-        $this->expectExceptionMessage("failed to open stream: No such file");
-        call_error_exception(function () {
-            $f = fopen('/path/to/non/existing/file.data', 'w');
-        });
-    }
-
-    /**
-     * @covers WASP\call_error_exception
-     */
-    public function testCallErrorDifferentException()
-    {
-        Functions::load();
-
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage("failed to open stream: No such file");
-        call_error_exception(function () {
-            $f = fopen('/path/to/non/existing/file.data', 'w');
-        }, \RuntimeException::class);
-    }
 
     /**
      * @covers WASP\check_extension
