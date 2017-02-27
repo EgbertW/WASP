@@ -90,6 +90,14 @@ class AppRunner
     public function execute()
     {
         $tr = System::translate();
+        $suffix = $this->request->suffix;
+        $uargs = $this->request->url_args;
+        if ($suffix && count($uargs) > 0)
+        {
+            $last = $uargs->pop();
+            $uargs->push($last . $suffix);
+        }
+
         try
         {
             // No output should be produced by apps directly, so buffer
@@ -162,9 +170,79 @@ class AppRunner
 
         self::$logger->debug("Including {0}", [$path]);
         $resp = include $path;
+        die($resp);
 
         return $resp;
     }
+
+    /**
+     * Get a list of public variables of the object, and see if they
+     * match any common variables:
+     * - $template
+     * - $request -> The HTTP Request
+     * - $resolve -> The resolver object
+     * - $url_args -> The remaining URL arguments
+     * - $logger -> Create a logger instance
+     *
+     * @param object $object The object to fill
+     */
+    protected function injectVariables($object)
+    {
+        // Inject some properties when they're public
+        $vars = array_keys(get_object_vars($object));
+
+        if (in_array('template', $vars))
+            $object->template = $this->request->getTemplate();
+
+        if (in_array('request', $vars))
+            $object->request = $this->request;
+
+        if (in_array('resolve', $vars))
+            $object->resolve = $this->request->getResolver();
+
+        if (in_array('url_args', $vars))
+            $object->url_args = $this->request->url_args;
+
+        if (in_array('logger', $vars))
+            $object->logger = Logger::getLogger(get_class($object));
+    }
+    
+    /**
+     * Find the correct method in a controller to execute for the current request.
+     * The route led to this controller, so the method is the first following URL argument.
+     * Any suffix is stripped - method names may not contain dots anyway.
+     * @param object $object The object from which to find a method to call.
+     * @return callable A callable method in this object
+     */
+    protected function findController($object)
+    {
+        // Get the next URL argument
+        $urlargs = $this->request->url_args;
+        $arg = $urlargs->shift();
+
+        // Store it as controller name
+        $controller = $arg;
+        
+        // Strip any suffix
+        if (($pos = strpos($controller, '.')) !== false)
+            $controller = substr($controller, 0, $pos);
+        
+        // Check if the method exists
+        if (!method_exists($object, $controller))
+        {
+            // Fall back to an index method
+            if (method_exists($object, "index"))
+            {
+                if ($controller !== null)
+                    $urlargs->unshift($arg);
+                $controller = "index";
+            }
+            else
+                throw new HttpError(404, "Unknown controller: " . $controller);
+        }
+        return $controller;
+    }
+
     
     /**
      * If you prefer to encapsulate your controllers in classes, you can 
@@ -183,43 +261,23 @@ class AppRunner
      */
     protected function reflect($object)
     {
-        $urlargs = $this->request->url_args;
-        $controller = $urlargs->shift();
-        if (!method_exists($object, $controller) || $controller === null)
-        {
-            if (method_exists($object, "index"))
-            {
-                if ($controller !== null)
-                    $urlargs->unshift($controller);
-                $controller = "index";
-            }
-            else
-                throw new HttpError(404, "Unknown controller: " . $controller);
-        }
-
-        // Inject some properties when they're public
-        $vars = array_keys(get_object_vars($object));
-
-        if (in_array('template', $vars))
-            $object->template = $this->request->getTemplate();
-
-        if (in_array('request', $vars))
-            $object->request = $this->request;
-
-        if (in_array('resolve', $vars))
-            $object->resolve = $this->request->getResolver();
-
-        if (in_array('url_args', $vars))
-            $object->url_args = $this->request->url_args;
+        // Find the correct method in the object
+        $controller = $this->findController($object);
+        
+        // Fill public member variables of controller
+        $this->injectVariables($object);
 
         $method = new ReflectionMethod($object, $controller);
         $parameters = $method->getParameters();
 
+        // No required parameters, call the method!
         if (count($parameters) === 0)
             return call_user_func(array($object, $controller));
 
+        // Iterate over the parameters and assign a value to them
         $args = array();
         $arg_cnt = 0;
+        $urlargs = $this->request->url_args;
         foreach ($parameters as $cnt => $param)
         {
             $tp = $param->getType();
@@ -285,7 +343,7 @@ class AppRunner
             throw new HttpError(500, "Invalid parameter type: " . $tp);
         }
 
-        return call_user_func_array(array($object, $controller), $args);
+        return call_user_func_array([$object, $controller], $args);
     }
 }
 

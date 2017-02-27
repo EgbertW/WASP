@@ -26,6 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 use WASP\Template;
 use WASP\Http\Error as HttpError;
 
+var_dump($url_args);
 if ($url_args->count())
     throw new HttpError(404, "The page " . $request->url . " could not be found");
 

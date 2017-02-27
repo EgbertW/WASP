@@ -95,6 +95,12 @@ class Request
     /** The selected app path, based on the route */
     public $app;
 
+    /** 
+     * Suffix / file extension of the requested path. If this is not null, it
+     * was removed from the route and app
+     */
+    public $suffix;
+
     /** The route specified on the URL */
     public $route;
     
@@ -354,14 +360,18 @@ class Request
         // Check if a mime-type is included
         list($ext, $mime) = ResponseTypes::extractFromPath($path);
         if ($mime)
+        {
             // Override accept headers to strongly prefer this type
             $this->accept[$mime] = 2;
+            $path = substr($path, 0, -strlen($ext));
+        }
 
         $resolved = $this->resolver->app($path, $ext);
         if ($resolved !== null)
         {
             $this->route = $resolved['route'];
             $this->app = $resolved['path'];
+            $this->suffix = $ext;
             $this->url_args = new Dictionary($resolved['remainder']);
         }
         else

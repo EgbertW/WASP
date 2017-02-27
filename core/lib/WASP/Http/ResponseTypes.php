@@ -27,68 +27,74 @@ namespace WASP\Http;
 
 class ResponseTypes
 {
-    // Common HTTP data types
-    const PLAINTEXT = "text/plain";
-    const HTM  = "text/html";
-    const HTML = "text/html";
-    const JS   = "application/javascript";
-    const CSS  = "text/css";
+    public static $TYPES = array(
+        // Common HTTP data types
+        "txt"  => "text/plain",
+        "ini"  => "text/plain",
+        "htm"  => "text/html",
+        "html" => "text/html",
+        "js"   => "application/javascript",
+        "css"  => "text/css",
 
-    // Data formats
-    const CSV  = "text/csv";
-    const JSON = "application/json";
-    const XML  = "application/xml";
-    const YAML = "text/yaml";
+        // Data formats
+        "csv"  => "text/csv",
+        "json" => "application/json",
+        "xml"  => "application/xml",
+        "yaml" => "text/yaml",
 
-    // Image formats
-    const PNG  = "image/png";
-    const JPG  = "image/jpeg";
-    const JPEG = "image/jpeg";
-    const GIF  = "image/gif";
-    const SVG  = "image/svg+xml";
+        // Image formats
+        "png"  => "image/png",
+        "jpg"  => "image/jpeg",
+        "jpeg" => "image/jpeg",
+        "gif"  => "image/gif",
+        "svg"  => "image/svg+xml",
 
-    // Audio formats
-    const WAV  = "audio/wav";
-    const WEBM = "audio/webm";
-    const OGG  = "audio/ogg";
-    const MP3  = "audio/mpeg";
-    const FLAC = "audio/flac";
-    const AAC  = "audio/aac";
-    const M4A  = "audio/mp4";
-    const WMA  = "audio/x-ms-wma";
+        // Audio formats
+        "wav"  => "audio/wav",
+        "webm" => "audio/webm",
+        "ogg"  => "audio/ogg",
+        "mp3"  => "audio/mpeg",
+        "flac" => "audio/flac",
+        "aac"  => "audio/aac",
+        "m4a"  => "audio/mp4",
+        "wma"  => "audio/x-ms-wma",
 
-    // Video formats
-    const MP4  = "video/mp4";
-    const OGV  = "video/ogg";
-    const WEBV = "video/webm";
-    const AVI  = "video/avi";
-    const MKV  = "video/mkv";
-    const MOV  = "video/quicktime";
-    const WMV  = "video/x-ms-wmv";
+        // Video formats
+        "mp4"  => "video/mp4",
+        "ogv"  => "video/ogg",
+        "webv" => "video/webm",
+        "avi"  => "video/avi",
+        "mkv"  => "video/mkv",
+        "mov"  => "video/quicktime",
+        "wmv"  => "video/x-ms-wmv",
 
-    // Document formats
-    const PDF  = "application/pdf";
-    const DOC  = "application/msword";
-    const XLS  = "application/vnd.ms-excel";
-    const PPT  = "application/vnd.ms-powerpoint";
-    const DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-    const XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-    const PPTX = "application/vnd.openxmlformats-officedocument.presentationml.presentation"; 
-    const ODT  = "application/vnd.oasis.opendocument.text";
-    const ODS  = "application/vnd.oasis.opendocument.spreadsheet";
-    const ODP  = "application/vnd.oasis.opendocument.presentation";
+        // Document formats
+        "pdf"  => "application/pdf",
+        "doc"  => "application/msword",
+        "xls"  => "application/vnd.ms-excel",
+        "ppt"  => "application/vnd.ms-powerpoint",
+        "docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation", 
+        "odt"  => "application/vnd.oasis.opendocument.text",
+        "ods"  => "application/vnd.oasis.opendocument.spreadsheet",
+        "odp"  => "application/vnd.oasis.opendocument.presentation",
 
-    // Archive formats
-    const GZ   = "application/gzip";
-    const XZ   = "application/x-xz";
-    const TAR  = "application/x-tar";
-    const BZ2  = "application/x-bzip2";
-    const TGZ  = "application/gzip";
-    const TBZ2 = "application/x-bzip2";
-    const ZIP  = "application/zip";
-    const RAR  = "application/x-rar-compressed";
-    const BINARY    = "application/octet-stream";
-    const MULTIPART = "multipart/form-data";
+        // Archive formats
+        "gz"   => "application/gzip",
+        "xz"   => "application/x-xz",
+        "tar"  => "application/x-tar",
+        "bz2"  => "application/x-bzip2",
+        "tgz"  => "application/gzip",
+        "tbz2" => "application/x-bzip2",
+        "zip"  => "application/zip",
+        "rar"  => "application/x-rar-compressed",
+
+        // Binary formats
+        "bin"       => "application/octet-stream",
+        "exe"       => "application/octet-stream",
+        "multipart" => "multipart/form-data",
+    );
 
     public static function extractFromPath(string $path)
     {
@@ -99,14 +105,6 @@ class ResponseTypes
 
         $ext = substr($path, $pos); 
         return self::getMimeFromExtension($ext);
-    }
-
-    public static function getMimeFromExtension(string $ext)
-    {
-        $uext = strtoupper(ltrim($ext, '.'));
-        if (defined("static::" . $uext))
-            return array($ext, constant("static::$uext"));
-        return array(null, null);
     }
 
     public static function getFromFile(string $path)
@@ -123,6 +121,14 @@ class ResponseTypes
         return mime_content_type($path);
     }
 
+    public static function getMimeFromExtension(string $ext)
+    {
+        $lext = strtoupper(ltrim($ext, '.'));
+        if (isset(self::$TYPES[$lext]))
+            return array(self::$TYPES[$lext], $ext);
+        return array(null, null);
+    }
+
     public static function getExtension(string $mime)
     {
         $mime = strtolower($mime);
@@ -133,5 +139,26 @@ class ResponseTypes
         return $ext === false ? null : $ext;
     }
 
+    public static function isPlainText(string $mime)
+    {
+        $sc_pos = strpos($mime, ';');
+        if ($sc_pos !== false)
+            $mime = substr($mime, 0, $sc_pos);
+        
+        switch ($mime)
+        {
+            case "text/plain":
+            case "text/html":
+            case "text/html":
+            case "application/javascript":
+            case "text/css":
+            case "text/csv":
+            case "application/json":
+            case "application/xml":
+            case "text/yaml":
+                return true;
+        }
 
+        return false;
+    }
 }

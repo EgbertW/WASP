@@ -119,52 +119,32 @@ class Resolve
     /**
      * Resolve an controller / route.
      * @param $request string The incoming request
-     * @param $suffix string A filename suffix that may be cut off the last
-     *                       part
      * @return array An array containing:
      *               'path' => The file that best matches the route
      *               'route' => The part of the request that matches
      *               'module' => The source module for the controller
      *               'remainder' => Arguments object with the unmatched part of the request
      */
-    public function app(string $request, $suffix)
+    public function app(string $request)
     {
         $parts = array_filter(explode("/", $request));
 
+        // Determine the file extension
+        $last_part = end($parts);
+        $dpos = strrpos($last_part, '.');
+        if (!empty($dpos)) // If a dot exists after the first character
+            $ext = substr($last_part, $dpos);
+        else
+            $ext = "";
+
         $routes = $this->getRoutes();
-        $ptr = $routes;
-
-        $route = $routes['_'];
-        $used_parts = array();
-        $last_idx = count($parts) - 1;
-        foreach ($parts as $idx => $part)
-        {
-            $spart = null;
-            if ($suffix && $idx == $last_idx && substr($part, -(strlen($suffix))) === $suffix)
-                $spart = substr($part, 0, -strlen($suffix));
-
-            if (isset($ptr[$part]))
-                $ptr = $ptr[$part];
-            elseif ($spart !== null && isset($ptr[$spart]))
-                $ptr = $ptr[$spart];
-            else
-                break;
-
-            $route = $ptr['_'];
-            $used_parts[] = $part;
-        }
+        $route = $routes->resolve($parts, $ext);
 
         if ($route === null)
-        {
             self::$logger->info("Failed to resolve route for request to {0}", [$request]);
-            return null;
-        }
 
-        $r = '/' . implode('/', $used_parts);
-        $remain = array_slice($parts, count($used_parts));
-        
-        self::$logger->debug("Resolved route for {0} to {1} (module: {2})", [$r, $route['path'], $route['module']]);
-        return array("route" => $r, "path" => $route['path'], 'module' => $route['module'], 'remainder' => $remain);
+        self::$logger->debug("Resolved route for {route} to {path} (module: {module})", $route);
+        return $route;
     }
     
     /**
@@ -226,7 +206,7 @@ class Resolve
         if (!empty($routes))
             return $routes;
         
-        $routes = array();
+        $routes = new Route('/', 0);
         foreach ($this->modules as $module => $location)
         {
             $app_path = $location . '/app';
@@ -236,7 +216,7 @@ class Resolve
             {
                 $file = str_replace($app_path, "", $path);
                 $parts = array_filter(explode("/", $file));
-                $ptr = &$routes;
+                $ptr = $routes;
 
                 $cnt = 0;
                 $l = count($parts);
@@ -248,26 +228,29 @@ class Resolve
                         if ($part === "index.php")
                         {
                             // Only store if empty - 
-                            if (empty($ptr['_']) || substr($ptr['_']['path'], -9) !== "index.php")
-                                $ptr['_'] = array('module' => $module, 'path' => $path);
+                            $ptr->addApp($path, '', $module);
                         }
-                        elseif ($part === ".wasp")
-                            continue; // TODO: NOT IMPLEMENTED
                         else
                         {
                             $app_name = substr($part, 0, -4);
-                            if (!isset($ptr[$app_name]))
-                                $ptr[$app_name] = array("_" => array('module' => $module, 'path' => $path));
+
+                            // Strip file extension
+                            $ext = "";
+                            $ext_pos = strrpos($app_name, '.');
+                            if (!empty($ext_pos))
+                            {
+                                $ext = substr($app_name, $ext_pos);
+                                $app_name = substr($app_name, 0, $ext_pos);
+                            }
+
+                            $app = $ptr->getSubRoute($app_name);
+                            $app->addApp($path, $ext, $module);
                         }
                         break;
                     }
                 
-                    // Directory part
-                    if (!isset($ptr[$part]))
-                        $ptr[$part] = array("_" => null);
-
                     // Move the pointer deeper
-                    $ptr = &$ptr[$part];
+                    $ptr = $ptr->getSubRoute($part);
                     ++$cnt;
                 }
             }

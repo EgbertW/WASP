@@ -118,12 +118,14 @@ class DevLogger implements LogWriterInterface, ResponseHookInterface
             if (in_array('text/plain', $mime))
             {
                 fprintf($buf, "\n// DEVELOPMENT LOG\n");
-                fprintf($buf, "// Executed in: %s\n", Log::str($duration));
+                fprintf($buf, "// Executed in: %s\n", Logger::str($duration));
                 fprintf($buf, "// Route resolved: %s\n", $request->route);
                 fprintf($buf, "// App executed: %s>\n", $request->app);
                 foreach ($this->log as $no => $line)
                     fprintf($buf, "// %05d: %s\n", $no, $line);
 
+                fseek($buf, 0);
+                $output = fread($buf, 100 * 1024);
                 $response->append($output, 'text/plain');
             }
         }

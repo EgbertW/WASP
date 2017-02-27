@@ -33,13 +33,16 @@ if ($dev || $cli)
 {
     $error_description .= 
         "\nDescription: " . $exception->getMessage() . "\n" 
-        . $exception->getTraceAsString();
+        . WASP\Debug\Logger::str($exception);
 }
 
 $type_name = str_replace("/", "_" ,$type) . ".php";
 $path = $request->getResolver()->template($type_name);
 if ($path !== null)
+{
+    $this->setMimeType($type);
     require $path;
+}
 else
     require tpl('error/text_html');
 

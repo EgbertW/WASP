@@ -265,7 +265,11 @@ class ResponseBuilder
                 $mime = $this->request->getBestResponseType($mime);
         }
 
-        $this->setHeader('Content-Type', $mime);
+        $mime_charset = $mime;
+        if (ResponseTypes::isPlainText($mime))
+            $mime_charset .= '; charset=utf-8';
+
+        $this->setHeader('Content-Type', $mime_charset);
             
         // Allow the Response to transform itself into a different response,
         // e.g. the ErrorResponse will want to produce DataOutput or StringOutput
@@ -289,7 +293,10 @@ class ResponseBuilder
             catch (\Throwable $e)
             {
                 self::$logger->alert('Error while running hooks: {0}', [$e]);
+                var_dump($e);
+                die();
                 $this->response = new Error(500, "Error while running hooks", $e);
+                $this->response = $this->response->transformResponse($mime);
             }
         }
 

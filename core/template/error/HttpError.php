@@ -51,7 +51,7 @@ if ($dev || $cli)
 {
     $error_description .= 
         "\nDescription: " . $exception->getMessage() . "\n" 
-        . $exception->getTraceAsString();
+        . WASP\Debug\Logger::str($exception);
 }
 elseif (method_exists($exception, 'getUserMessage'))
 {

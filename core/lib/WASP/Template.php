@@ -281,7 +281,7 @@ namespace WASP
                 ob_start();
                 include $this->template_path;
                 $output = ob_get_contents();
-                $response = new StringResponse($output);
+                $response = new StringResponse($output, $this->mime);
             }
             catch (Response $e)
             {
