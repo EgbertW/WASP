@@ -68,6 +68,9 @@ class Session extends Dictionary
         else
             $this->config = $config;
 
+        // Make sure the PHP Session config is in order
+        $this->setPHPConfig();
+
         // Calculate the lifetime and expiry date
         $lifetime = $this->config->dget('lifetime', '30D');
         if (is_int_val($lifetime))
@@ -92,6 +95,23 @@ class Session extends Dictionary
             ->setExpires($expire)
             ->setURL($this->url)
             ->setHttpOnly($httponly);
+    }
+
+    /**
+     * Set PHP session configuration to safe defaults.
+     * Also disable cookies and headers on CLI
+     */
+    protected function setPHPConfig()
+    {
+        ini_set('session.use_strict_mode', 0);
+        ini_set('session.use_strans_sid', 0);
+
+        if (PHP_SAPI === "cli")
+        {
+            // On CLI we can't send headers, so don't even try to do so.
+            ini_set('session.use_cookies', 0);
+            session_cache_limiter("");
+        }
     }
 
     /**

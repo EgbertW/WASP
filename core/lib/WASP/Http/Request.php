@@ -354,18 +354,10 @@ class Request
         // Check if a mime-type is included
         list($ext, $mime) = ResponseTypes::extractFromPath($path);
         if ($mime)
-        {
-            foreach ($this->accept as $type => $q)
-                $this->accept[$type] *= 0.9;
-            $this->accept[$mime] = 1.0;
-                
-            $path = substr($path, 0, -(strlen($ext) + 1));
+            // Override accept headers to strongly prefer this type
+            $this->accept[$mime] = 2;
 
-            // Override accept headers
-            $this->accept = array($mime => 1);
-        }
-
-        $resolved = $this->resolver->app($path);
+        $resolved = $this->resolver->app($path, $ext);
         if ($resolved !== null)
         {
             $this->route = $resolved['route'];

@@ -119,13 +119,15 @@ class Resolve
     /**
      * Resolve an controller / route.
      * @param $request string The incoming request
+     * @param $suffix string A filename suffix that may be cut off the last
+     *                       part
      * @return array An array containing:
      *               'path' => The file that best matches the route
      *               'route' => The part of the request that matches
      *               'module' => The source module for the controller
      *               'remainder' => Arguments object with the unmatched part of the request
      */
-    public function app(string $request)
+    public function app(string $request, $suffix)
     {
         $parts = array_filter(explode("/", $request));
 
@@ -134,12 +136,20 @@ class Resolve
 
         $route = $routes['_'];
         $used_parts = array();
-        foreach ($parts as $part)
+        $last_idx = count($parts) - 1;
+        foreach ($parts as $idx => $part)
         {
-            if (!isset($ptr[$part]))
+            $spart = null;
+            if ($suffix && $idx == $last_idx && substr($part, -(strlen($suffix))) === $suffix)
+                $spart = substr($part, 0, -strlen($suffix));
+
+            if (isset($ptr[$part]))
+                $ptr = $ptr[$part];
+            elseif ($spart !== null && isset($ptr[$spart]))
+                $ptr = $ptr[$spart];
+            else
                 break;
 
-            $ptr = $ptr[$part];
             $route = $ptr['_'];
             $used_parts[] = $part;
         }

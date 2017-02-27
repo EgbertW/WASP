@@ -97,15 +97,15 @@ class ResponseTypes
         if ($pos === false)
             return array(null, null);
 
-        $ext = substr($path, $pos + 1); 
+        $ext = substr($path, $pos); 
         return self::getMimeFromExtension($ext);
     }
 
     public static function getMimeFromExtension(string $ext)
     {
-        $ext = strtoupper($ext);
-        if (defined("static::" . $ext))
-            return array($ext, constant("static::$ext"));
+        $uext = strtoupper(ltrim($ext, '.'));
+        if (defined("static::" . $uext))
+            return array($ext, constant("static::$uext"));
         return array(null, null);
     }
 
