@@ -251,7 +251,9 @@ class ResponseBuilder
         }
         elseif (is_array($mime))
         {
-            foreach ($mime as $type)
+            $types = $mime;
+            $mime = null;
+            foreach ($types as $type)
             {
                 if ($this->request->isAccepted($type))
                 {
@@ -259,10 +261,13 @@ class ResponseBuilder
                     break;
                 }
             }
-            if (is_array($mime))
-                $mime = reset($mime);
-            if (is_array($mime))
-                $mime = $this->request->getBestResponseType($mime);
+        }
+
+        // If mime is not accepted, return a 406 response
+        if (empty($mime) || !$this->request->isAccepted($mime))
+        {
+            $mime = 'text/html';
+            $this->response = new Error(406, "Not Acceptable", td('No acceptable response can be offered', 'core'));
         }
 
         $mime_charset = $mime;
