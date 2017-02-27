@@ -104,7 +104,7 @@ class ResponseTypes
             return array(null, null);
 
         $ext = substr($path, $pos); 
-        return self::getMimeFromExtension($ext);
+        $type = array(self::getMimeFromExtension($ext), $ext);
     }
 
     public static function getFromFile(string $path)
@@ -123,10 +123,10 @@ class ResponseTypes
 
     public static function getMimeFromExtension(string $ext)
     {
-        $lext = strtoupper(ltrim($ext, '.'));
+        $lext = strtolower(ltrim($ext, '.'));
         if (isset(self::$TYPES[$lext]))
-            return array(self::$TYPES[$lext], $ext);
-        return array(null, null);
+            return self::$TYPES[$lext];
+        return null;
     }
 
     public static function getExtension(string $mime)

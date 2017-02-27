@@ -90,13 +90,6 @@ class AppRunner
     public function execute()
     {
         $tr = System::translate();
-        $suffix = $this->request->suffix;
-        $uargs = $this->request->url_args;
-        if ($suffix && count($uargs) > 0)
-        {
-            $last = $uargs->pop();
-            $uargs->push($last . $suffix);
-        }
 
         try
         {
@@ -170,7 +163,6 @@ class AppRunner
 
         self::$logger->debug("Including {0}", [$path]);
         $resp = include $path;
-        die($resp);
 
         return $resp;
     }

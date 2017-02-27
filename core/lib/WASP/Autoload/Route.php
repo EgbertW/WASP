@@ -83,7 +83,7 @@ class Route implements Serializable
         }
 
         // No sub-route, so put the part back in place
-        if (!empty($part))
+        if (!empty($part) && $sub_part !== "index")
             array_unshift($parts, $part);
         $route = null;
 
@@ -100,6 +100,9 @@ class Route implements Serializable
             $route = reset($this->apps);
             $route['ext'] = null;
         }
+
+        if (!empty($route) && !empty($ext))
+            $route['ext'] = $ext;
 
         if (!empty($route) && !isset($route['remainder']))
             $route['remainder'] = $parts;

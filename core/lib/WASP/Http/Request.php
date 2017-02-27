@@ -357,21 +357,19 @@ class Request
         // Resolve the application to start
         $path = $this->vhost->getPath($this->url);
 
-        // Check if a mime-type is included
-        list($ext, $mime) = ResponseTypes::extractFromPath($path);
-        if ($mime)
-        {
-            // Override accept headers to strongly prefer this type
-            $this->accept[$mime] = 2;
-            $path = substr($path, 0, -strlen($ext));
-        }
+        $resolved = $this->resolver->app($path);
 
-        $resolved = $this->resolver->app($path, $ext);
         if ($resolved !== null)
         {
+            if ($resolved['ext'])
+            {
+                $mime = ResponseTypes::getMimeFromExtension($resolved['ext']);
+                if (!empty($mime))
+                    $this->accept[$mime] = 1.5;
+                $this->suffix = $resolved['ext'];
+            }
             $this->route = $resolved['route'];
             $this->app = $resolved['path'];
-            $this->suffix = $ext;
             $this->url_args = new Dictionary($resolved['remainder']);
         }
         else

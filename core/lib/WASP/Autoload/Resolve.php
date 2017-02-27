@@ -125,7 +125,7 @@ class Resolve
      *               'module' => The source module for the controller
      *               'remainder' => Arguments object with the unmatched part of the request
      */
-    public function app(string $request)
+    public function app(string $request, bool $retry = true)
     {
         $parts = array_filter(explode("/", $request));
 
@@ -139,6 +139,14 @@ class Resolve
 
         $routes = $this->getRoutes();
         $route = $routes->resolve($parts, $ext);
+
+        if (!empty($route) && $retry && !file_exists($route['path']))
+        {
+            // A non-existing file was found in the cache - flush the cache,
+            // but do this only once.
+            $this->cache->clear();
+            return $this->app($request, false);
+        }
 
         if ($route === null)
             self::$logger->info("Failed to resolve route for request to {0}", [$request]);
