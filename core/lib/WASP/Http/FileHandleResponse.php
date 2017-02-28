@@ -30,7 +30,7 @@ use WASP\Debug\LoggerAwareStaticTrait;
 /**
  * Output a file, given an opened file handle. 
  */
-class FileHandleOutput extends Response
+class FileHandleResponse extends Response
 {
     use LoggerAwareStaticTrait;
 
@@ -56,7 +56,7 @@ class FileHandleOutput extends Response
     public function __construct($filehandle, string $output_filename, string $mime, bool $download = false)
     {
         $this->filehandle = $filehandle;
-        $this->output_filename = $filename;
+        $this->output_filename = $output_filename;
         $this->mime[$mime] = true;
         $this->download = $download;
         $this->code = 200;
@@ -93,10 +93,10 @@ class FileHandleOutput extends Response
      */
     public function getHeaders()
     {
-        $disposition = $this->download ? "inline" : "download";
-        $h = array(
-            'Content-Disposition' => . $disposition . '; filename=' . $this->output_filename
-        );
+        $h = array();
+
+        $disposition = $this->download ? "download" : "inline";
+        $h['Content-Disposition'] = $disposition . '; filename=' . $this->output_filename;
 
         if ($this->length)
             $h['Content-Length'] = $this->length;
@@ -114,7 +114,7 @@ class FileHandleOutput extends Response
 
     public function output(string $mime)
     {
-        $bytes = fpassthru(STDOUT, $this->filehandle);
+        $bytes = fpassthru($this->filehandle);
         if (!empty($this->length) && $bytes != $this->length)
         {
             self::$logger->warning(

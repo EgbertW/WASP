@@ -53,7 +53,7 @@ class Error extends Response
 
     public function getMimeTypes()
     {
-        $types = array_keys(DataResponse::$representation_types);
+        $types = DataResponse::$representation_types;
         unset($types['text/html']);
 
         $keys = array_keys($types);
@@ -83,6 +83,7 @@ class Error extends Response
         if ($exception === null)
             $exception = $this;
 
+        $result = null;
         try
         {
             $template = $this->getRequest()->getTemplate();
@@ -90,9 +91,9 @@ class Error extends Response
             $template->assign('exception', $exception);
             $template->render();
         }
-        catch (Response $e)
+        catch (StringResponse $e)
         {
-            return $e;
+            $result = $e;
         }
         catch (Throwable $e)
         {
@@ -105,21 +106,22 @@ class Error extends Response
             $op = ob_get_contents();
             ob_end_clean();
 
-            return new StringResponse($op, $mime);
+            $result = new StringResponse($op, $mime);
         }
+        return $result;
     }
 
     private function toDataResponse(string $mime)
     {
         $status = $this->getStatusCode();
-        $msg = isset(StatusCode::$CODES[$status]) ? StatusCode::$CODES[$status] : "Internal Server Error";
+        $status_msg = isset(StatusCode::$CODES[$status]) ? StatusCode::$CODES[$status] : "Internal Server Error";
         $exception_str = Logger::str($this);
         $exception_list = explode("\n", $exception_str);
         $data = array(
-            'message' => $msg,
-            'status_code' => $this->getStatusCode(),
+            'message' => $this->getMessage(),
+            'status_code' => $status,
             'exception' => $exception_list,
-            'status' => $this->getStatusCode()
+            'status' => $status_msg
         );
 
         $dict = new Dictionary($data);

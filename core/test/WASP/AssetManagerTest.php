@@ -88,6 +88,7 @@ final class AssetManagerTest extends TestCase
         $this->assertEquals('#WASP-CSS#', $mgr->injectCSS());
 
         $mgr->setMinified(false);
+        $this->assertFalse($mgr->getMinified());
         $urls = $mgr->resolveAssets($mgr->getScripts(), 'js');
 
         $url_list = array();
@@ -104,6 +105,7 @@ final class AssetManagerTest extends TestCase
         );
 
         $mgr->setMinified(true);
+        $this->assertTrue($mgr->getMinified());
         $urls = $mgr->resolveAssets($mgr->getScripts(), 'js');
 
         $url_list = array();
@@ -258,6 +260,7 @@ final class AssetManagerTest extends TestCase
         $mgr->addCSS('test3');
         $mgr->setMinified(true);
         $mgr->setTidy(false);
+        $this->assertFalse($mgr->getTidy());
 
         $resp = new StringResponse("<html><head>" . $mgr->injectCSS() . "</head><body>" . $mgr->injectScript() . "</body></html>", 'text/html');
 
@@ -290,6 +293,7 @@ final class AssetManagerTest extends TestCase
 
         $mgr = new AssetManager(new MockAssetRequest);
         $mgr->setTidy(true);
+        $this->assertTrue($mgr->getTidy());
 
         $resp = new StringResponse("<html></head><body><h1>Foo</html>", 'text/html');
 
@@ -325,7 +329,7 @@ class MockAssetRequest extends Http\Request
     }
 }
 
-class MockAssetResolver extends Autoload\Resolve
+class MockAssetResolver extends Resolve\Resolver
 {
     public function __construct()
     {}

@@ -85,14 +85,16 @@ class ErrorInterceptor
     public function execute()
     {
         array_push(self::$interceptor_stack, $this);
+        $response = null;
         try
         {
-            return call_user_func_array($this->func, func_get_args());
+            $response = call_user_func_array($this->func, func_get_args());
         }
         finally
         {
             array_pop(self::$interceptor_stack);
         }
+        return $response;
     }
     
     /**
@@ -168,5 +170,17 @@ class ErrorInterceptor
     {
         self::$interceptor_stack = array();
         set_error_handler(array("WASP\\ErrorInterceptor", "errorHandler"), E_ALL);
+    }
+
+    /**
+     * Restore the error handler to the previous error handler
+     */
+    public static function unregisterErrorHandler()
+    {
+        if (is_array(self::$interceptor_stack))
+        {
+            self::$interceptor_stack = null;
+            restore_error_handler();
+        }
     }
 }

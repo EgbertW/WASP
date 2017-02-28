@@ -120,6 +120,17 @@ class ResponseBuilder
         return $this;
     }
 
+    /**
+     * @return WASP\Http\Response The current response object
+     */
+    public function getResponse()
+    {
+        return $this->response;
+    }
+
+    /**
+     * @return WASP\AssetManager The asset manager for scripts and CSS
+     */
     public function getAssetManager()
     {
         return $this->asset_manager;
@@ -212,10 +223,10 @@ class ResponseBuilder
     /**
      * Close all active output buffers and log their contents
      */
-    public function endAllOutputBuffers()
+    public function endAllOutputBuffers($lvl = 0)
     {
         $ob_cnt = 0;
-        while (ob_get_level())
+        while (ob_get_level() > $lvl)
         {
             ++$ob_cnt;
             $contents = ob_get_contents();
@@ -295,11 +306,9 @@ class ResponseBuilder
             {
                 $hook->executeHook($this->request, $this->response, $mime);
             }
-            catch (\Throwable $e)
+            catch (Throwable $e)
             {
                 self::$logger->alert('Error while running hooks: {0}', [$e]);
-                var_dump($e);
-                die();
                 $this->response = new Error(500, "Error while running hooks", $e);
                 $this->response = $this->response->transformResponse($mime);
             }
@@ -314,7 +323,10 @@ class ResponseBuilder
 
         // All preparational work is done, time to send stuff to the client
         $this->doOutput($mime);
+    // Bug in xdebug < 2.4.1
+    // @codeCoverageIgnoreStart
     }
+    // @codeCoverageIgnoreEnd
 
     /**
      * This method sends data to the client after all preparational work has

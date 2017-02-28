@@ -72,6 +72,15 @@ final class TemplateTest extends TestCase
         $this->assertEquals('IO Error', $tpl->title());
     }
 
+    public function testTitle()
+    {
+        $this->request->vhost = null;
+        $this->request->route = '/';
+        $tpl = new Template($this->request);
+
+        $this->assertEquals('Default - /', $tpl->title());
+    }
+
     public function testExisting()
     {
         $file = $this->resolver->template('error/HttpError');
@@ -345,7 +354,7 @@ EOT;
     }
 }
 
-class MockTemplateResolver extends \WASP\Autoload\Resolve
+class MockTemplateResolver extends \WASP\Resolve\Resolver
 {
     public function __construct()
     {}
@@ -365,16 +374,6 @@ class MockTemplateRequest extends Request
         $this->vhost = new MockTemplateVhost();
         $this->response_builder = new Http\ResponseBuilder($this);
         $this->config = new Dictionary();
-    }
-
-    public function setTemplate($tpl)
-    {
-        $this->template = $tpl;
-    }
-
-    public function setResolver($res)
-    {
-        $this->resolver = $res;
     }
 }
 

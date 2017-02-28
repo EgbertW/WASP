@@ -286,6 +286,16 @@ final class URLTest extends TestCase
 
         $url = new URL('http://example.com/index', 'https');
         $this->assertEquals((string)$url, 'http://example.com/index');
+
+        $backup = isset($_SERVER['REQUEST_SCHEME']) ? $_SERVER['REQUEST_SCHEME'] : null;
+        $_SERVER['REQUEST_SCHEME'] = null;
+
+        $url = new URL('example.com/foo/bar');
+        $this->assertEquals('example.com', $url->host);
+        $this->assertEquals('/foo/bar', $url->path);
+        $this->assertEquals('http', $url->scheme);
+
+        $_SERVER['REQUEST_SCHEME'] = $backup;
     }
 
     /**
@@ -380,5 +390,7 @@ final class URLTest extends TestCase
         $_SERVER['REQUEST_SCHEME'] = 'https';
         $url = (new URL('//example.com/foo/bar'))->toString();
         $this->assertEquals('https://example.com/foo/bar', $url);
+        $_SERVER['REQUEST_SCHEME'] = $backup;
     }
+
 }

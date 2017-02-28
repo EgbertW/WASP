@@ -23,12 +23,11 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
-namespace WASP\Autoload;
+namespace WASP\Resolve;
 
 use WASP\Debug\LoggerAwareStaticTrait;
 use WASP\Debug;
 use WASP\HttpError;
-use WASP\Autoloader;
 use WASP\Translate;
 use WASP\Cache;
 use WASP\Path;
@@ -36,7 +35,7 @@ use WASP\Path;
 /**
  * Resolve templates, routes, clases and assets from the core and modules.
  */
-class Resolve
+class Resolver
 {
     use LoggerAwareStaticTrait;
 
@@ -87,7 +86,7 @@ class Resolve
 
             if (!($has_lib || $has_template || $has_app || $has_assets))
             {
-                self::$logger->info("WASP.Autoload.Resolve", "Path {} does not contain any usable elements", $dir);
+                self::$logger->info("WASP.Resolve.Resolver", "Path {} does not contain any usable elements", $dir);
                 continue;
             }
             
@@ -384,5 +383,5 @@ class Resolve
 }
 
 // @codeCoverageIgnoreStart
-Resolve::setLogger();
+Resolver::setLogger();
 // @codeCoverageIgnoreEnd

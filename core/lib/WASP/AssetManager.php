@@ -25,7 +25,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP;
 
-use WASP\Autoload\Resolve;
 use WASP\Http\ResponseHookInterface;
 use WASP\Http\Request;
 use WASP\Http\Response;
@@ -66,10 +65,20 @@ class AssetManager implements ResponseHookInterface
         return $this;
     }
 
+    public function getMinified()
+    {
+        return $this->minified;
+    }
+
     public function setTidy(bool $tidy)
     {
         $this->tidy = $tidy;
         return $this;
+    }
+
+    public function getTidy()
+    {
+        return $this->tidy;
     }
 
     public function addScript(string $script)

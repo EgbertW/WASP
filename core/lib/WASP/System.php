@@ -25,8 +25,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP;
 
-use WASP\Autoload\Autoloader;
-use WASP\Autoload\Resolve;
+use WASP\Resolve\Autoloader;
+use WASP\Resolve\Resolver;
 use WASP\Http\Request;
 use WASP\Http\Error as HttpError;
 use WASP\IO\File;
@@ -205,7 +205,7 @@ class System
                 return $this->request;
             case "resolver":
                 if ($this->resolver === null)
-                    $this->resolver = new Resolve($this->path);
+                    $this->resolver = new Resolver($this->path);
                 return $this->resolver;
             case "translate":
                 if ($this->translate === null)

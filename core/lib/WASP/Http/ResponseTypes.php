@@ -104,7 +104,7 @@ class ResponseTypes
             return array(null, null);
 
         $ext = substr($path, $pos); 
-        $type = array(self::getMimeFromExtension($ext), $ext);
+        return array(self::getMimeFromExtension($ext), $ext);
     }
 
     public static function getFromFile(string $path)
@@ -115,10 +115,13 @@ class ResponseTypes
             $ext = substr($path, $pos + 1);
             $type = self::getMimeFromExtension($ext);
             if ($type)
-                return array($ext, $type);
+                return $type;
         }
 
+        // @codeCoverageIgnoreStart
+        // We're going to trust PHPs tests on this
         return mime_content_type($path);
+        // @codeCoverageIgnoreEnd
     }
 
     public static function getMimeFromExtension(string $ext)
@@ -131,11 +134,7 @@ class ResponseTypes
 
     public static function getExtension(string $mime)
     {
-        $mime = strtolower($mime);
-        $refl = new ReflectionClass(static::class);
-        $extensions = $refl->getConstants();
-
-        $ext = array_search($mime, $extensions, $strict);
+        $ext = array_search($mime, self::$TYPES, true);
         return $ext === false ? null : $ext;
     }
 
@@ -148,7 +147,6 @@ class ResponseTypes
         switch ($mime)
         {
             case "text/plain":
-            case "text/html":
             case "text/html":
             case "application/javascript":
             case "text/css":

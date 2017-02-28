@@ -391,6 +391,42 @@ EOT;
         }
     }
 
+    public function testAppReturnsObjectWithResponseTypeSuffix()
+    {
+        $classname = $this->classname;
+        $phpcode = <<<EOT
+<?php
+
+use WASP\Http\StringResponse;
+
+class {$classname}
+{
+    public \$request;
+
+    public function foo()
+    {
+        return new StringResponse('foobar' . \$this->request->suffix, "text/plain");
+    }
+}
+
+return new $classname();
+EOT;
+        file_put_contents($this->filename, $phpcode);
+        $this->request->suffix = '.txt';
+        $this->request->url_args[0] = 'foo.txt';
+
+        $apprunner = new AppRunner($this->request, $this->filename);
+
+        try
+        {
+            $apprunner->execute();
+        }
+        catch (StringResponse $e)
+        {
+            $this->assertEquals('foobar.txt', $e->getOutput('text/plain'));
+        }
+    }
+
     public function testAppReturnsObjectWithPublicProperties()
     {
         $classname = $this->classname;
@@ -401,7 +437,8 @@ use WASP\Http\StringResponse;
 use WASP\Http\Request;
 use WASP\Template;
 use WASP\Dictionary;
-use WASP\Autoload\Resolve;
+use WASP\Resolve\Resolver;
+use WASP\Debug\Logger;
 
 class {$classname}
 {
@@ -409,6 +446,7 @@ class {$classname}
     public \$request;
     public \$resolve;
     public \$url_args;
+    public \$logger;
 
     public function foo(Request \$arg1, Template \$arg2, Dictionary \$arg3)
     {
@@ -417,8 +455,10 @@ class {$classname}
             \$response[] = "Template";
         if (\$this->request instanceof Request)
             \$response[] = "Request";
-        if (\$this->resolve instanceof Resolve)
-            \$response[] = "Resolve";
+        if (\$this->logger instanceof Logger)
+            \$response[] = "Logger";
+        if (\$this->resolve instanceof Resolver)
+            \$response[] = "Resolver";
         else
             throw new \RuntimeException('Invalid resolve: ' . WASP\\Debug\\Logger::str(\$this->resolve));
 
@@ -444,7 +484,7 @@ EOT;
         }
         catch (StringResponse $e)
         {
-            $this->assertEquals('Foo,Template,Request,Resolve,Dictionary', $e->getOutput('text/plain'));
+            $this->assertEquals('Foo,Template,Request,Logger,Resolver,Dictionary', $e->getOutput('text/plain'));
         }
     }
 

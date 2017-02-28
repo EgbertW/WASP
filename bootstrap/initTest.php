@@ -23,7 +23,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-use WASP\Autoload\Autoloader;
+use WASP\Resolve\Autoloader;
 
 // Set up the autoloader
 $root = 
@@ -33,7 +33,7 @@ $root =
         )
     );
 
-require_once $root . "/core/lib/WASP/Autoload/Autoloader.php";
+require_once $root . "/core/lib/WASP/Resolve/Autoloader.php";
 Autoloader::registerNS('WASP', $root . '/core/lib/WASP');
 Autoloader::registerNS('Psr\\Log', $root . '/core/lib/Psr/Log');
 

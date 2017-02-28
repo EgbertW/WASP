@@ -28,7 +28,9 @@ namespace WASP\Http;
 use WASP\Dictionary;
 use WASP\Debug\Logger;
 use WASP\Debug\LoggerAwareStaticTrait;
-use function WASP\to_array;
+use WASP\DefVal;
+use Throwable;
+use InvalidArgumentException;
 
 /**
  * DataResponse represents structured data, such as JSON or XML. The
@@ -53,7 +55,7 @@ class DataResponse extends Response
         if ($dict instanceof Dictionary)
             $this->dictionary = $dict;
         else
-            $this->dictionary = new Dictionary(to_array($dict));
+            $this->dictionary = new Dictionary(\WASP\to_array($dict));
     }
 
     public function getDictionary()
@@ -68,11 +70,11 @@ class DataResponse extends Response
 
     public function output(string $mime)
     {
-        $type = isset(self::$representation_types[$mime]) ? self::$representation_types[$mime] : "HTML";
+        $type = isset(self::$representation_types[$mime]) ? self::$representation_types[$mime] : "Null";
         $classname = "WASP\\IO\\DataWriter\\" . $type . "Writer";
 
         $config = $this->getRequest()->config;
-        $pprint = $config->getBool('site', 'dev');
+        $pprint = $config->getBool('site', 'dev', new DefVal(false));
         
         $output = "";
         try 
@@ -85,7 +87,7 @@ class DataResponse extends Response
                 fclose($op);
             }
             else
-                Error::fallbackWriter($this->dictionary, $mime);
+                throw new InvalidArgumentException("Response writer $classname does not exist");
         }
         catch (Throwable $e)
         {

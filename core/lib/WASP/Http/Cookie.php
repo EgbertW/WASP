@@ -181,7 +181,7 @@ class Cookie
 
     public function getURL()
     {
-        return new URL($this->domain . '/' . $this->path);
+        return new URL($this->domain . $this->path);
     }
 
     /**
@@ -192,7 +192,7 @@ class Cookie
      */
     public function setPath(string $path)
     {
-        $this->path = $path;
+        $this->path = '/' . trim($path, '/');
         return $this;
     }
 

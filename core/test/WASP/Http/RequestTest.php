@@ -26,9 +26,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP\Http;
 
 use PHPUnit\Framework\TestCase;
-use WASP\Autoload\Resolve;
+use WASP\Resolve\Resolver;
 use WASP\System;
 use WASP\Path;
+use WASP\Template;
 use WASP\Dictionary;
 use WASP\Http\RedirectRequest;
 
@@ -83,7 +84,7 @@ final class RequestTest extends TestCase
         $this->config = new Dictionary($config);
 
         $this->path = System::path();
-        $this->resolve = new Resolve($this->path);
+        $this->resolve = new Resolver($this->path);
     }
 
     /**
@@ -137,7 +138,7 @@ final class RequestTest extends TestCase
      */
     public function testRoutingInvalid()
     {
-        $resolve = new MockRequestResolve();
+        $resolve = new MockRequestResolver();
         $this->server['SERVER_NAME'] = 'www.example.com';
         $this->server['REQUEST_URI'] = '/foo';
 
@@ -480,6 +481,37 @@ EOT;
         $this->assertEquals('text/html', $type);
     }
 
+    public function testSetTemplate()
+    {
+        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
+
+        $tpl = $req->getTemplate();
+        $tpl->setMimeType('text/plain');
+
+        $new_tpl = new Template($req);
+        $new_tpl->setMimeType('text/html');
+        $req->setTemplate($new_tpl);
+
+        $this->assertNotEquals($tpl, $req->getTemplate());
+        
+    }
+
+    public function testResolveExtension()
+    {
+        $req = new Request($this->get, $this->post, $this->cookie, $this->server, $this->config, $this->path, $this->resolve);
+
+        $resolve = new MockRequestResolver();
+        $req->setResolver($resolve);
+
+        $resolve->return_value = array('path' => '/foo/bar.php', 'route' => '/foo', 'ext' => '.json', 'module' => 'test', 'remainder' => []);
+        
+        $req->resolveApp();
+        $this->assertEquals(1.5, $req->isAccepted('application/json'));
+        $this->assertEquals('.json', $req->suffix);
+        $this->assertEquals('/foo', $req->route);
+        $this->assertEquals('/foo/bar.php', $req->app);
+    }
+
 }
 
 class MockRequestTestRequest extends Request
@@ -527,13 +559,15 @@ class MockRequestResponseBuilder extends ResponseBuilder
     }
 }
 
-class MockRequestResolve extends \WASP\Autoload\Resolve
+class MockRequestResolver extends \WASP\Resolve\Resolver
 {
+    public $return_value = null;
+
     public function __construct()
     {}
 
-    public function app(string $path)
+    public function app(string $path, bool $retry = true)
     {
-        return null;
+        return $this->return_value;
     }
 }

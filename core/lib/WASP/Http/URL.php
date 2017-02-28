@@ -57,8 +57,10 @@ class URL implements \ArrayAccess
 
     public static function parse(string $url, string $default_scheme = '')
     {
-        if (empty($default_scheme) && isset($_SERVER['REQUEST_SCHEME']))
+        if (empty($default_scheme) && !empty($_SERVER['REQUEST_SCHEME']))
             $default_scheme = $_SERVER['REQUEST_SCHEME'];
+        elseif ($default_scheme === '')
+            $default_scheme = 'http';
 
         $parts = parse_url($url);
 

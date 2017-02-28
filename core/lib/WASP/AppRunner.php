@@ -27,6 +27,7 @@ namespace WASP;
 
 use WASP\DB\DB;
 use WASP\Debug\LoggerAwareStaticTrait;
+use WASP\Debug\Logger;
 use WASP\Http\Request;
 use WASP\Http\Response;
 use WASP\Http\Error as HttpError;

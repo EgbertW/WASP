@@ -25,7 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 namespace WASP\Module;
 
-use WASP\Autoload\Resolve;
+use WASP\Resolve\Resolver;
 use WASP\Debug\LoggerAwareStaticTrait;
 
 /**
@@ -44,9 +44,9 @@ class Manager
      * Find and initialize installed modules in the module path
      *
      * @param $module_path string Where to find the modules
-     * @param Resolve $resolver The resolver that find modules
+     * @param Resolver $resolver The resolver that find modules
      */
-    public static function setup(string $module_path, Resolve $resolver)
+    public static function setup(string $module_path, Resolver $resolver)
     {
         if (self::$initialized)
             return;

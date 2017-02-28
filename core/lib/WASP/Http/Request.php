@@ -26,7 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP\Http;
 
 use WASP\Debug\LoggerAwareStaticTrait;
-use WASP\Autoload\Resolve;
+use WASP\Resolve\Resolver;
 use WASP\Dictionary;
 use WASP\Path;
 use WASP\Site;
@@ -170,7 +170,7 @@ class Request
      * @param array $server The SERVER parameters
      * @param Path $path The path configuration
      * @param Dictionary $config The site configuration
-     * @param Resolve $resolver The app, asset and template resolver
+     * @param Resolver $resolver The app, asset and template resolver
      */
     public function __construct(
         array &$get,
@@ -179,7 +179,7 @@ class Request
         array &$server,
         Dictionary $config,
         Path $path,
-        Resolve $resolver
+        Resolver $resolver
     )
     {
         $this->get = Dictionary::wrap($get);
@@ -240,6 +240,17 @@ class Request
     }
 
     /**
+     * Set the template object
+     * @param WASP\Template $tpl The template renderer to use
+     * @return WASP\Http\Request Provides fluent interface
+     */
+    public function setTemplate(Template $tpl)
+    {
+        $this->template = $tpl;
+        return $this;
+    }
+
+    /**
      * @return DateTime The start of the script
      */
     public function getStartTime()
@@ -259,11 +270,22 @@ class Request
     }
 
     /**
-     * @return WASP\Autoload\Resolve The app, template and asset resolver
+     * @return WASP\Autoload\Resolver The app, template and asset resolver
      */
     public function getResolver()
     {
         return $this->resolver;
+    }
+
+    /**
+     * Set the resolver used for resolving apps
+     * @param WASP\Resolve\Resolver The resolver
+     * @return WASP\Http\Request Provides fluent interface
+     */
+    public function setResolver(Resolver $resolver)
+    {
+        $this->resolver = $resolver;
+        return $this;
     }
 
     /**

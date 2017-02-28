@@ -26,6 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP\Http;
 
 use WASP\Debug\LoggerAwareStaticTrait;
+use WASP\DefVal;
 
 /**
  * Output a file, given its filename. The handler may decide to output the
@@ -49,7 +50,7 @@ class FileResponse extends Response
     protected $length;
 
     /** Using X-Sendfile or not? Determined in getHeaders() */
-    protected $xsendfile;
+    protected $xsendfile = false;
 
     /**
      * Create the response using the file name
@@ -59,13 +60,12 @@ class FileResponse extends Response
     public function __construct(string $filename, string $output_filename = "", bool $download = false)
     {
         $this->filename = $filename;
-        $fh = fopen($this->filename, "r");
-        $stats = fstat($fh);
-        fclose($fh);
-        $this->length = $stats['size'];
-        if ($output_filename === null)
+        $this->length = filesize($filename);
+        if (empty($output_filename))
             $output_filename = basename($this->filename);
+        $this->output_filename = $output_filename;
         $this->code = 200;
+        $this->download = $download;
     }
 
     /**
@@ -100,19 +100,19 @@ class FileResponse extends Response
     {
         $h = array();
 
-        if ($this->download)
-        {
-            $disposition = $this->download ? "inline" : "download";
-            $h['Content-Disposition'] = $disposition . '; filename=' . $this->output_filename;
-        }
+        $disposition = $this->download ? "download" : "inline";
+        $h['Content-Disposition'] = $disposition . '; filename=' . $this->output_filename;
 
         if ($this->length)
             $h['Content-Length'] = $this->length;
 
         $request = $this->getRequest();
         $config = $request->config;
-        if ($this->xsendfile = \WASP\parse_bool($config->get('io', 'use_send_file')))
+        if ($this->xsendfile = \WASP\parse_bool($config->get('io', 'use_send_file', new DefVal(false))))
+        {
             $h['X-Sendfile'] = $this->filename;
+            $this->xsendfile = true;
+        }
 
         return $h;
     }
@@ -126,8 +126,7 @@ class FileResponse extends Response
         if ($this->xsendfile)
             return;
 
-        $fh = fopen($this->filename, "r");
-        $bytes = fpassthru($fh);
+        $bytes = readfile($this->filename);
         if (!empty($this->length) && $bytes != $this->length)
         {
             self::$logger->warning(
