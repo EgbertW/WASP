@@ -142,7 +142,7 @@ class ResponseBuilder
      */
     public function addCookie(Cookie $cookie)
     {
-        $this->cookies[] = $cookie;
+        $this->cookies[$cookie->getName()] = $cookie;
         return $this;
     }
 

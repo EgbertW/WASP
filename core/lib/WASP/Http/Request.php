@@ -307,6 +307,9 @@ class Request
         catch (Throwable $e)
         {
             $rb = $this->getResponseBuilder();
+            $session_cookie = $this->session->getCookie();
+            if ($session_cookie)
+                $rb->addCookie($session_cookie);
             $rb->setThrowable($e);
             $rb->respond();
         }
