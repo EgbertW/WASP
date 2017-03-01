@@ -23,43 +23,25 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP;
+namespace WASP\Auth\Model;
 
-class User
+use WASP\Auth\UserInterface;
+use WASP\DB\DAO;
+
+use WASP\DB\SQL\QueryBuilder as Q;
+
+class User extends DAO implements UserInterface
 {
-    private $wrapped = null;
-    private static $instance = null;
-
-    private function __construct($params)
+    public function obtainFromLogin(string $username, string $password)
     {
-        if (isset($params['wrapped']))
-            $this->wrapped = $params['wrapped'];
-        else
-            ;
-
-        self::$instance = $this;
-    }
-
-    public static function createWrapped($user)
-    {
-        return new User(array('wrapped' => $user));
-    }
-
-    public function __call($func, $args)
-    {
-        if (isset($this->wrapped))
-            return call_user_func_array(array($this->wrapped, $func), $args);
-    }
-
-    public function __get($field)
-    {
-        if (isset($this->wrapped))
-            return $this->wrapped->$field;
-        return null;
-    }
-
-    public static function currentUser()
-    {
-        return self::$instance;
+        $record = $this->fetchSingle(
+            Q::where(
+                Q::or(
+                    Q::equals('username', $username),
+                    Q::equals('email', $username))
+                ),
+            )
+        );
     }
 }
+
