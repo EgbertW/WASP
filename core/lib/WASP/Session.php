@@ -193,8 +193,8 @@ class Session extends Dictionary
         // Now do the PHP session magic to initialize the $_SESSION array
         session_set_cookie_params(
             $this->lifetime, 
-            $this->session_cookie->getDomain(),
             $this->session_cookie->getPath(),
+            $this->session_cookie->getDomain(),
             $this->session_cookie->getSecure(),
             $this->session_cookie->getHttpOnly()
         );
