@@ -59,9 +59,12 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
     protected $keys = null;
     protected $iterator = null;
 
-    public function __construct(array $values = array())
+    public function __construct($values = array())
     {
-        $this->values = $values; 
+        if ($values instanceof Dictionary)
+            $this->values = $values->values;
+        else
+            $this->values = \WASP\to_array($values);
     }
 
     public static function wrap(array &$values)
