@@ -162,6 +162,23 @@ function cast_array($arg)
     }
 }
 
+function flatten_array(array $arg)
+{
+    $tgt = array();
+    foreach ($arg as $arg_l2)
+    {
+        if (is_array($arg_l2))
+        {
+            $arg_l2 = flatten_array($arg_l2);
+            foreach ($arg_l2 as $arg_l3)
+                $tgt[] = $arg_l3;
+        }
+        else
+            $tgt[] = $arg_l2;
+    }
+    return $tgt;
+}
+
 function check_extension($extension, $class = null, $function = null)
 {
     if ($class !== null && !class_exists($class, false))
