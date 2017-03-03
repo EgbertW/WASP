@@ -76,4 +76,14 @@ class ConstantExpressionTest extends TestCase
         $this->assertEquals("NULL", $sql);
         $this->assertTrue($a->isNull());
     }
+
+    public function testRegisterTablesDoesNothing()
+    {
+        $mock = $this->prophesize(Parameters::class);
+        $mock->registerTable()->shouldNotBeCalled();
+        $p = $mock->reveal();
+
+        $a = new ConstantExpression(null);
+        $sql = $a->registerTables($p);
+    }
 }
