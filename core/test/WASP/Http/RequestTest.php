@@ -521,9 +521,6 @@ class MockRequestTestRequest extends Request
         $this->response_builder = new MockRequestResponseBuilder($this);
     }
 
-    public function startSession()
-    {}
-
     public function resolveApp()
     {}
 }
