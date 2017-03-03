@@ -366,7 +366,7 @@ class Request
     {
         if ($this->session === null)
         {
-            $this->session = new Session($this->vhost, $this->config, $this->server);
+            $this->session = new Session($this->vhost->getHost(), $this->config, $this->server);
             $this->session->start();
         }
     }

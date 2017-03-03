@@ -66,7 +66,7 @@ final class ResponseBuilderTest extends TestCase
         $this->rb->addCookie($cookie);
 
         $lst = $this->rb->getCookies();
-        $this->assertEquals([$cookie], $lst);
+        $this->assertEquals(['foo' => $cookie], $lst);
 
         $this->rb->setHeader('Content-Type', 'foo/bar');
         $this->rb->setHeader('Content-type', 'bar/baz');

@@ -321,9 +321,9 @@ final class RequestTest extends TestCase
 
     public function testDispatchNoRoute()
     {
-        $request = new MockRequestTestRequest();
+        $request = new MockRequestTestRequest(new Dictionary($this->server), new Dictionary($this->config));
         $request->route = null;
-
+        
         $this->expectException(Error::class);
         $this->expectExceptionCode(404);
         $request->dispatch();
@@ -331,7 +331,7 @@ final class RequestTest extends TestCase
 
     public function testDispatchNoRouteRespond()
     {
-        $request = new MockRequestTestRequest();
+        $request = new MockRequestTestRequest(new Dictionary($this->server), new Dictionary($this->config));
         $request->route = null;
         $request->getResponseBuilder()->setTestRespond();
 
@@ -358,7 +358,7 @@ EOT;
         try
         {
             file_put_contents($filename, $phpcode);
-            $request = new MockRequestTestRequest;
+            $request = new MockRequestTestRequest(new Dictionary($this->server), new Dictionary($this->config));
             $request->app = $filename;
             $request->route = '/';
             $request->dispatch();
@@ -371,7 +371,7 @@ EOT;
 
     public function testDispatchReturn()
     {
-        $request = new MockRequestTestRequest;
+        $request = new MockRequestTestRequest(new Dictionary($this->server), new Dictionary($this->config));
         $request->getResponseBuilder()->setTestRespond();
         $request->getResponseBuilder()->setTestReturn();
         $this->assertNull($request->dispatch());
@@ -516,13 +516,20 @@ EOT;
 
 class MockRequestTestRequest extends Request
 {
-    public function __construct()
+    public function __construct(Dictionary $server, Dictionary $config)
     {
+        $this->server = $server;
+        $this->config = $config;
         $this->response_builder = new MockRequestResponseBuilder($this);
     }
 
     public function resolveApp()
     {}
+
+    public function startSession()
+    {
+        $this->session = new \WASP\Session(new URL('/'), $this->config, $this->server);
+    }
 }
 
 class MockRequestResponseBuilder extends ResponseBuilder

@@ -44,3 +44,5 @@ $config = new WASP\Dictionary();
 define('WASP_TEST', 1);
 
 WASP\System::setup($path, $config);
+ini_set('display_errors', 'on');
+

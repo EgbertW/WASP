@@ -29,6 +29,7 @@ use DateTime;
 use DateInterval;
 use WASP\Http\Cookie;
 use WASP\Http\Error as HttpError;
+use WASP\Http\URL;
 
 class Session extends Dictionary
 {
@@ -55,14 +56,12 @@ class Session extends Dictionary
 
     /**
      * Create the session based on a VirtualHost and a configuration
-     * @param WASP\VirtualHost $vhost The virtual host determining the domain
-     *                                and path for the cookie
+     * @param WASP\Http\URL $base_url The base path for the session
      * @param WASP\Dictionary $config The configuration for cookie parameters
      */
-    public function __construct(VirtualHost $vhost, Dictionary $config, Dictionary $server_vars)
+    public function __construct(URL $base_url, Dictionary $config, Dictionary $server_vars)
     {
         $this->server_vars = $server_vars;
-        $this->virtual_host = $vhost;
         if ($config->has('cookie', Dictionary::TYPE_ARRAY))
             $this->config = $config->get('cookie');
         else
@@ -87,7 +86,7 @@ class Session extends Dictionary
         // HttpOnly should basically always be set, but allow override nonetheless
         $httponly = parse_bool($this->config->dget('httponly', true));
 
-        $this->url = $this->virtual_host->getHost();
+        $this->url = new URL($base_url);
         $session_name = (string)$this->config->dget('prefix', 'wasp_') . str_replace(".", "_", $this->url->host);
 
         $this->session_cookie = new Cookie($session_name, "");

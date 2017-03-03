@@ -27,24 +27,53 @@ namespace WASP\DB\Query;
 
 use PHPUnit\Framework\TestCase;
 
-class ConstantClauseTest extends TestCase
+class ConstantExpressionTest extends TestCase
 {
-    public function testCreate()
+    public function testIntConstant()
     {
-        $a = new ConstantClause("3");
-        $this->assertFalse($a->isNull());
-
-        $a = new ConstantClause(null);
-        $this->assertTrue($a->isNull());
-
         $mock = $this->prophesize(Parameters::class);
-        $mock->assign->willReturn('foo');
-
+        $mock->assign(5)->willReturn('foo');
         $p = $mock->reveal();
 
-        $a = new ConstantClause("5");
+        $a = new ConstantExpression(5);
         $sql = $a->toSQL($p);
         $this->assertEquals(":foo", $sql);
+        $this->assertFalse($a->isNull());
+    }
 
+    public function testStringConstant()
+    {
+        $mock = $this->prophesize(Parameters::class);
+        $mock->assign("bar")->willReturn('baz');
+        $p = $mock->reveal();
+
+        $a = new ConstantExpression("bar");
+        $sql = $a->toSQL($p);
+        $this->assertEquals(":baz", $sql);
+        $this->assertFalse($a->isNull());
+    }
+
+    public function testFloatConstant()
+    {
+        $mock = $this->prophesize(Parameters::class);
+        $mock->assign(3.5)->willReturn('foobar');
+        $p = $mock->reveal();
+
+        $a = new ConstantExpression(3.5);
+        $sql = $a->toSQL($p);
+        $this->assertEquals(":foobar", $sql);
+        $this->assertFalse($a->isNull());
+    }
+
+    public function testNullConstant()
+    {
+        $mock = $this->prophesize(Parameters::class);
+        $mock->assign(null)->shouldNotBeCalled();
+        $p = $mock->reveal();
+
+        $a = new ConstantExpression(null);
+        $sql = $a->toSQL($p);
+        $this->assertEquals("NULL", $sql);
+        $this->assertTrue($a->isNull());
     }
 }

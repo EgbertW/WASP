@@ -26,6 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP;
 
 use PHPUnit\Framework\TestCase;
+use WASP\Http\URL;
 
 use DateTime;
 use DateInterval;
@@ -35,14 +36,14 @@ use DateInterval;
  */
 final class SessionTest extends TestCase
 {
-    private $vhost;
+    private $url;
     private $config;
 
     private $session_id;
 
     public function setUp()
     {
-        $this->vhost = new VirtualHost('http://www.foobar.com', null);
+        $this->url = new URL('http://www.foobar.com');
         $this->config = new Dictionary();
         $this->server_vars = new Dictionary();
         $this->server_vars['HTTP_USER_AGENT'] = 'MockUserAgent';
@@ -62,7 +63,7 @@ final class SessionTest extends TestCase
      */
     public function testSession()
     {
-        $a = new Session($this->vhost, $this->config, $this->server_vars);
+        $a = new Session($this->url, $this->config, $this->server_vars);
         $a->startHttpSession();
          
         $cookie = $a->getCookie();
@@ -82,7 +83,7 @@ final class SessionTest extends TestCase
      */
     public function testSessionReset()
     {
-        $a = new Session($this->vhost, $this->config, $this->server_vars);
+        $a = new Session($this->url, $this->config, $this->server_vars);
         $a->startHttpSession();
 
         $cookie = $a->getCookie();
@@ -107,7 +108,7 @@ final class SessionTest extends TestCase
      */
     public function testSessionDestroy()
     {
-        $a = new Session($this->vhost, $this->config, $this->server_vars);
+        $a = new Session($this->url, $this->config, $this->server_vars);
         $a->startHttpSession();
         $sid = $a->getSessionID();
         $a['pi'] = 3.14;
@@ -116,7 +117,7 @@ final class SessionTest extends TestCase
         $this->assertFalse(isset($_SESSION['pi']));
         $this->assertEquals(PHP_SESSION_NONE, session_status());
 
-        $a = new Session($this->vhost, $this->config, $this->server_vars);
+        $a = new Session($this->url, $this->config, $this->server_vars);
         $a->setSessionID($sid);
         $a->startHttpSession();
         $this->assertFalse(isset($_SESSION['pi']));
@@ -132,7 +133,7 @@ final class SessionTest extends TestCase
         $cfg = new Dictionary;
         $cfg['cookie'] = $this->config;
         $cfg->set('cookie', 'lifetime', '1D');
-        $a = new Session($this->vhost, $cfg, $this->server_vars);
+        $a = new Session($this->url, $cfg, $this->server_vars);
         $a->startHttpSession();
 
         $c = $a->getCookie();
@@ -158,7 +159,7 @@ final class SessionTest extends TestCase
         $cfg = new Dictionary;
         $cfg['cookie'] = $this->config;
         $cfg->set('cookie', 'lifetime', '86400');
-        $a = new Session($this->vhost, $cfg, $this->server_vars);
+        $a = new Session($this->url, $cfg, $this->server_vars);
         $a->startHttpSession();
 
         $c = $a->getCookie();
@@ -181,7 +182,7 @@ final class SessionTest extends TestCase
      */
     public function testCLISession()
     {
-        $a = new Session($this->vhost, $this->config, $this->server_vars);
+        $a = new Session($this->url, $this->config, $this->server_vars);
         $a->StartCLISession();
 
         $a['test'] = 3.14;
@@ -201,7 +202,7 @@ final class SessionTest extends TestCase
      */
     public function testSessionExpires()
     {
-        $a = new Session($this->vhost, $this->config, $this->server_vars);
+        $a = new Session($this->url, $this->config, $this->server_vars);
         $name = $a->getSessionName();
 
         $sid = 'foobar';
@@ -231,7 +232,7 @@ final class SessionTest extends TestCase
 
         $this->assertNull($a->get('session_mgmt', 'start_time'));
 
-        $a = new Session($this->vhost, $this->config, $this->server_vars);
+        $a = new Session($this->url, $this->config, $this->server_vars);
         $a->setSessionId($sid);
 
         $a->startHttpSession();
@@ -251,7 +252,7 @@ final class SessionTest extends TestCase
      */
     public function testSessionDestroyed()
     {
-        $a = new Session($this->vhost, $this->config, $this->server_vars);
+        $a = new Session($this->url, $this->config, $this->server_vars);
         $name = $a->getSessionName();
 
         $sid = 'foobar2';
@@ -284,7 +285,7 @@ final class SessionTest extends TestCase
         $a->close();
 
         // Start a new 'good' session
-        $a = new Session($this->vhost, $this->config, $this->server_vars);
+        $a = new Session($this->url, $this->config, $this->server_vars);
         $a->setSessionID($sid);
         $a->startHttpSession();
 
@@ -297,7 +298,7 @@ final class SessionTest extends TestCase
         $orig_ua = $this->server_vars['HTTP_USER_AGENT'];
         $this->assertNotEquals('EvilClient', $orig_ua);
         $this->server_vars['HTTP_USER_AGENT'] = "EvilClient";
-        $a = new Session($this->vhost, $this->config, $this->server_vars);
+        $a = new Session($this->url, $this->config, $this->server_vars);
         $a->setSessionID($sid);
         $a->startHttpSession();
 
