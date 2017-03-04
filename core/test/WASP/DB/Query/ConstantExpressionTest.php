@@ -36,7 +36,7 @@ class ConstantExpressionTest extends TestCase
         $p = $mock->reveal();
 
         $a = new ConstantExpression(5);
-        $sql = $a->toSQL($p);
+        $sql = $a->toSQL($p, false);
         $this->assertEquals(":foo", $sql);
         $this->assertFalse($a->isNull());
     }
@@ -48,7 +48,7 @@ class ConstantExpressionTest extends TestCase
         $p = $mock->reveal();
 
         $a = new ConstantExpression("bar");
-        $sql = $a->toSQL($p);
+        $sql = $a->toSQL($p, false);
         $this->assertEquals(":baz", $sql);
         $this->assertFalse($a->isNull());
     }
@@ -60,7 +60,7 @@ class ConstantExpressionTest extends TestCase
         $p = $mock->reveal();
 
         $a = new ConstantExpression(3.5);
-        $sql = $a->toSQL($p);
+        $sql = $a->toSQL($p, false);
         $this->assertEquals(":foobar", $sql);
         $this->assertFalse($a->isNull());
     }
@@ -72,7 +72,7 @@ class ConstantExpressionTest extends TestCase
         $p = $mock->reveal();
 
         $a = new ConstantExpression(null);
-        $sql = $a->toSQL($p);
+        $sql = $a->toSQL($p, false);
         $this->assertEquals("NULL", $sql);
         $this->assertTrue($a->isNull());
     }

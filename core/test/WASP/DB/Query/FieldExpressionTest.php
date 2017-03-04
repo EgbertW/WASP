@@ -42,7 +42,7 @@ class FieldExpressionTest extends TestCase
         $p = $param_mock->reveal();
 
         $a = new FieldExpression('foo');
-        $sql = $a->toSQL($p);
+        $sql = $a->toSQL($p, false);
         $this->assertEquals('"foo"', $sql);
         $this->assertFalse($a->isNull());
     }
@@ -58,12 +58,12 @@ class FieldExpressionTest extends TestCase
         $p = $param_mock->reveal();
 
         $table_mock = $this->prophesize(TableClause::class);
-        $table_mock->toSQL($p)->willReturn('"PLACEHOLDER"');
+        $table_mock->toSQL($p, false)->willReturn('"PLACEHOLDER"');
 
         $param_mock->getDefaultTable()->willReturn($table_mock->reveal());
 
         $a = new FieldExpression('foo');
-        $sql = $a->toSQL($p);
+        $sql = $a->toSQL($p, false);
         $this->assertEquals('"PLACEHOLDER"."foo"', $sql);
         $this->assertFalse($a->isNull());
     }
