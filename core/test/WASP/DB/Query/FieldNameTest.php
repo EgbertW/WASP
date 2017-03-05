@@ -28,43 +28,12 @@ namespace WASP\DB\Query;
 use PHPUnit\Framework\TestCase;
 use WASP\DB\Driver\Driver;
 
-class FieldExpressionTest extends TestCase
+class FieldNameTest extends TestCase
 {
     public function testFieldNoTable()
     {
-        $db_mock = $this->prophesize(Driver::class);
-        $db_mock->identQuote('foo')->willReturn('"foo"');
-        $db = $db_mock->reveal();
+        $a = new FieldName('foo');
 
-        $param_mock = $this->prophesize(Parameters::class);
-        $param_mock->getDB()->willReturn($db);
-        $param_mock->getDefaultTable()->willReturn(null);
-        $p = $param_mock->reveal();
-
-        $a = new FieldExpression('foo');
-        $sql = $a->toSQL($p);
-        $this->assertEquals('"foo"', $sql);
-        $this->assertFalse($a->isNull());
-    }
-
-    public function testFieldTable()
-    {
-        $db_mock = $this->prophesize(Driver::class);
-        $db_mock->identQuote('foo')->willReturn('"foo"');
-        $db = $db_mock->reveal();
-
-        $param_mock = $this->prophesize(Parameters::class);
-        $param_mock->getDB()->willReturn($db);
-        $p = $param_mock->reveal();
-
-        $table_mock = $this->prophesize(TableClause::class);
-        $table_mock->toSQL($p)->willReturn('"PLACEHOLDER"');
-
-        $param_mock->getDefaultTable()->willReturn($table_mock->reveal());
-
-        $a = new FieldExpression('foo');
-        $sql = $a->toSQL($p);
-        $this->assertEquals('"PLACEHOLDER"."foo"', $sql);
-        $this->assertFalse($a->isNull());
+        $this->assertEquals('foo', $a->getField());
     }
 }
