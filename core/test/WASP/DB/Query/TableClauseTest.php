@@ -29,38 +29,16 @@ use PHPUnit\Framework\TestCase;
 use WASP\DB\Driver\Driver;
 
 /**
- * @covers WASP\DB\Query\FieldName
+ * @covers WASP\DB\Query\TableClause
  */
-class FieldNameTest extends TestCase
+class TableClauseTest extends TestCase
 {
-    public function testFieldNoTable()
+    public function testCreate()
     {
-        $a = new FieldName('foo');
+        $a = new TableClause('foo');
 
-        $this->assertEquals('foo', $a->getField());
-    }
-
-    public function testFieldTableAsString()
-    {
-        $a = new FieldName('bar', 'foo');
-
-        $this->assertEquals('bar', $a->getField());
-
-        $tab = $a->getTable();
-        $this->assertInstanceOf(TableClause::class, $tab);
-        $this->assertEquals("foo", $tab->getTable());
-    }
-
-    public function testFieldTableAsClause()
-    {
-        $tab = new TableClause('foo');
-        $a = new FieldName('bar', $tab);
-
-        $this->assertEquals('bar', $a->getField());
-
-        $tab2 = $a->getTable();
-        $this->assertInstanceOf(TableClause::class, $tab);
-        $this->identicalTo($tab, $tab2);
-        $this->assertEquals("foo", $tab2->getTable());
+        $this->assertEquals('foo', $a->getTable());
+        $this->assertEquals('foo', $a->getPrefix());
+        $this->assertNull($a->getAlias());
     }
 }
