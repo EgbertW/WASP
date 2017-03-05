@@ -39,3 +39,6 @@ Autoloader::registerNS('Psr\\Log', $root . '/core/lib/Psr/Log');
 
 // Disable some testing code with a define, because they cannot be overridden.
 define('WASP_TEST', 0);
+
+if (PHP_SAPI === 'cli')
+    ini_set('display_errors', 'on');
