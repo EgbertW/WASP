@@ -25,44 +25,23 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\DB\Query;
 
-class OrderClause extends Clause
+use PHPUnit\Framework\TestCase;
+
+/**
+ * @covers WASP\DB\Query\UpdateField
+ */
+class UpdateFieldTest extends TestCase
 {
-    protected $clauses = array();
-
-    public function __construct($data = null)
+    public function testUpdateField()
     {
-        if (is_array($data))
-            $this->initFromArray($data);
-        elseif (is_string($data) || $data instanceof Direction)
-            $this->addClause($data);
-        elseif (!empty($data))
-            throw new \InvalidArgumentException("Invalid order: " . \WASP\Debug\Logger::str($data));
-    }
+        $a = new UpdateField('foo', 'bar');
 
-    public function addClause($clause)
-    {
-        if (is_string($clause))
-            $clause = new CustomSQL($clause);
-        if (!($clause instanceof Clause))
-            throw new \InvalidArgumentException("No clause provided to order by");
+        $fld = $a->getField();
+        $this->assertInstanceOf(FieldName::class, $fld);
+        $this->assertEquals('foo', $fld->getField());
 
-        $this->clauses[] = $clause;
-    }
-
-    protected function initFromArray(array $clauses)
-    {
-        foreach ($clauses as $k => $v)
-        {
-            if (is_numeric($k))
-                $this->addClause(new Direction("ASC", $v));
-            else
-                $this->addClause(new Direction($v, $k));
-        }
-    }
-
-    public function getClauses()
-    {
-        return $this->clauses;
+        $val = $a->getValue();
+        $this->assertInstanceOf(ConstantValue::class, $val);
+        $this->assertEquals('bar', $val->getValue());
     }
 }
-

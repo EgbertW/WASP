@@ -26,7 +26,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP\DB\Query;
 
 use PHPUnit\Framework\TestCase;
-use WASP\DB\Driver\Driver;
 
 /**
  * @covers WASP\DB\Query\FieldName

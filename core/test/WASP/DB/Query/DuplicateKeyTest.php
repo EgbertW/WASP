@@ -25,44 +25,32 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\DB\Query;
 
-class OrderClause extends Clause
+use PHPUnit\Framework\TestCase;
+
+/**
+ * @covers WASP\DB\Query\DuplicateKey
+ */
+class DupicateKeyTest extends TestCase
 {
-    protected $clauses = array();
-
-    public function __construct($data = null)
+    public function testDuplicateKeys()
     {
-        if (is_array($data))
-            $this->initFromArray($data);
-        elseif (is_string($data) || $data instanceof Direction)
-            $this->addClause($data);
-        elseif (!empty($data))
-            throw new \InvalidArgumentException("Invalid order: " . \WASP\Debug\Logger::str($data));
+        $field1 = new FieldName('foo');
+        $a = new DuplicateKey($field1);
+        $this->assertEquals([$field1], $a->getConflictingFields());
+        $this->assertEquals([], $a->getUpdates());
+
+        $update = new UpdateField('foo', 3);
+        $update2 = new UpdateField('bar', 'baz');
+
+        $expected = [$update, $update2];
+        
+        $field2 = new FieldName('test');
+        $a = new DuplicateKey('test', $expected);
+        $this->assertEquals([$field2], $a->getConflictingFields());
+        $this->assertEquals($expected, $a->getUpdates());
+
+        $a = new DuplicateKey([$field1, $field2], $expected);
+        $this->assertEquals([$field1, $field2], $a->getConflictingFields());
     }
 
-    public function addClause($clause)
-    {
-        if (is_string($clause))
-            $clause = new CustomSQL($clause);
-        if (!($clause instanceof Clause))
-            throw new \InvalidArgumentException("No clause provided to order by");
-
-        $this->clauses[] = $clause;
-    }
-
-    protected function initFromArray(array $clauses)
-    {
-        foreach ($clauses as $k => $v)
-        {
-            if (is_numeric($k))
-                $this->addClause(new Direction("ASC", $v));
-            else
-                $this->addClause(new Direction($v, $k));
-        }
-    }
-
-    public function getClauses()
-    {
-        return $this->clauses;
-    }
 }
-

@@ -25,44 +25,38 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\DB\Query;
 
-class OrderClause extends Clause
+use PHPUnit\Framework\TestCase;
+
+/**
+ * @covers WASP\DB\Query\Operator
+ */
+class OperatorTest extends TestCase
 {
-    protected $clauses = array();
-
-    public function __construct($data = null)
+    public function testOperator()
     {
-        if (is_array($data))
-            $this->initFromArray($data);
-        elseif (is_string($data) || $data instanceof Direction)
-            $this->addClause($data);
-        elseif (!empty($data))
-            throw new \InvalidArgumentException("Invalid order: " . \WASP\Debug\Logger::str($data));
+        $a = new MockTestOperatorOperator('foo', 'field', 'value');
+        
+        $this->assertEquals('foo', $a->getOperator());
+        
+        $lhs = $a->getLHS();
+        $rhs = $a->getRHS();
+
+        $this->assertInstanceOf(FieldName::class, $lhs);
+        $this->assertEquals('field', $lhs->getField());
+        $this->assertInstanceOf(ConstantValue::class, $rhs);
+        $this->assertEquals('value', $rhs->getValue());
     }
 
-    public function addClause($clause)
+    public function testInvalidOperator()
     {
-        if (is_string($clause))
-            $clause = new CustomSQL($clause);
-        if (!($clause instanceof Clause))
-            throw new \InvalidArgumentException("No clause provided to order by");
-
-        $this->clauses[] = $clause;
-    }
-
-    protected function initFromArray(array $clauses)
-    {
-        foreach ($clauses as $k => $v)
-        {
-            if (is_numeric($k))
-                $this->addClause(new Direction("ASC", $v));
-            else
-                $this->addClause(new Direction($v, $k));
-        }
-    }
-
-    public function getClauses()
-    {
-        return $this->clauses;
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Invalid operator");
+        $a = new MockTestOperatorOperator('baz', 'field', 'value');
+        
     }
 }
 
+class MockTestOperatorOperator extends Operator
+{
+    protected static $valid_operators = ['foo', 'bar'];
+}

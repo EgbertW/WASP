@@ -25,44 +25,23 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\DB\Query;
 
-class OrderClause extends Clause
+use PHPUnit\Framework\TestCase;
+
+/**
+ * @covers WASP\DB\Query\SQLFunction
+ */
+class SQLFunctionTest extends TestCase
 {
-    protected $clauses = array();
-
-    public function __construct($data = null)
+    public function testSQLFunction()
     {
-        if (is_array($data))
-            $this->initFromArray($data);
-        elseif (is_string($data) || $data instanceof Direction)
-            $this->addClause($data);
-        elseif (!empty($data))
-            throw new \InvalidArgumentException("Invalid order: " . \WASP\Debug\Logger::str($data));
-    }
-
-    public function addClause($clause)
-    {
-        if (is_string($clause))
-            $clause = new CustomSQL($clause);
-        if (!($clause instanceof Clause))
-            throw new \InvalidArgumentException("No clause provided to order by");
-
-        $this->clauses[] = $clause;
-    }
-
-    protected function initFromArray(array $clauses)
-    {
-        foreach ($clauses as $k => $v)
-        {
-            if (is_numeric($k))
-                $this->addClause(new Direction("ASC", $v));
-            else
-                $this->addClause(new Direction($v, $k));
-        }
-    }
-
-    public function getClauses()
-    {
-        return $this->clauses;
+        $a = new SQLFunction("MIN");
+        $this->assertEquals('MIN', $a->getFunction());
+        $args = $a->getArguments();
+        $this->assertEquals([], $args);
+        
+        $a->addArgument(new Wildcard());
+        $args = $a->getArguments();
+        $this->assertEquals(1, count($args));
+        $this->assertInstanceOf(Wildcard::class, $args[0]);
     }
 }
-

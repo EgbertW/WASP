@@ -25,44 +25,38 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\DB\Query;
 
-class OrderClause extends Clause
+use PHPUnit\Framework\TestCase;
+
+/**
+ * @covers WASP\DB\Query\Direction
+ */
+class DirectionTest extends TestCase
 {
-    protected $clauses = array();
-
-    public function __construct($data = null)
+    public function testDirection()
     {
-        if (is_array($data))
-            $this->initFromArray($data);
-        elseif (is_string($data) || $data instanceof Direction)
-            $this->addClause($data);
-        elseif (!empty($data))
-            throw new \InvalidArgumentException("Invalid order: " . \WASP\Debug\Logger::str($data));
-    }
+        $a = new Direction('ASC', 'foo');
+        $this->assertEquals('ASC', $a->getDirection());
+        $this->assertInstanceOf(FieldName::class, $a->getOperand());
 
-    public function addClause($clause)
-    {
-        if (is_string($clause))
-            $clause = new CustomSQL($clause);
-        if (!($clause instanceof Clause))
-            throw new \InvalidArgumentException("No clause provided to order by");
+        $c = new ConstantValue('foobar');
+        $a = new Direction('ASC', $c);
+        $this->assertEquals('ASC', $a->getDirection());
+        $this->assertInstanceOf(ConstantValue::class, $a->getOperand());
+        $this->identicalTo($c, $a->getOperand());
 
-        $this->clauses[] = $clause;
-    }
-
-    protected function initFromArray(array $clauses)
-    {
-        foreach ($clauses as $k => $v)
+        $valid = array('ASC', 'ASC NULLS FIRST', 'ASC NULLS LAST', 'DESC NULLS FIRST', 'DESC NULLS LAST');
+        foreach ($valid as $dir)
         {
-            if (is_numeric($k))
-                $this->addClause(new Direction("ASC", $v));
-            else
-                $this->addClause(new Direction($v, $k));
+            $a = new Direction($dir, 'foo');
+            $this->assertEquals($dir, $a->getDirection());
+            $this->assertInstanceOf(FieldName::class, $a->getOperand());
         }
     }
 
-    public function getClauses()
+    public function testInvalidDirection()
     {
-        return $this->clauses;
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid direction');
+        $a = new Direction("FOOBAR", 'foo');
     }
 }
-

@@ -25,44 +25,19 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\DB\Query;
 
-class OrderClause extends Clause
+use PHPUnit\Framework\TestCase;
+
+/**
+ * @covers WASP\DB\Query\CustomSQL
+ */
+class CustomSQLTest extends TestCase
 {
-    protected $clauses = array();
-
-    public function __construct($data = null)
+    public function testCustomSQL()
     {
-        if (is_array($data))
-            $this->initFromArray($data);
-        elseif (is_string($data) || $data instanceof Direction)
-            $this->addClause($data);
-        elseif (!empty($data))
-            throw new \InvalidArgumentException("Invalid order: " . \WASP\Debug\Logger::str($data));
-    }
+        $a = new CustomSQL('');
+        $this->assertEquals('', $a->getSQL());
 
-    public function addClause($clause)
-    {
-        if (is_string($clause))
-            $clause = new CustomSQL($clause);
-        if (!($clause instanceof Clause))
-            throw new \InvalidArgumentException("No clause provided to order by");
-
-        $this->clauses[] = $clause;
-    }
-
-    protected function initFromArray(array $clauses)
-    {
-        foreach ($clauses as $k => $v)
-        {
-            if (is_numeric($k))
-                $this->addClause(new Direction("ASC", $v));
-            else
-                $this->addClause(new Direction($v, $k));
-        }
-    }
-
-    public function getClauses()
-    {
-        return $this->clauses;
+        $a = new CustomSQL('foo');
+        $this->assertEquals('foo', $a->getSQL());
     }
 }
-

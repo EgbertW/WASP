@@ -162,12 +162,16 @@ function cast_array($arg)
     }
 }
 
-function flatten_array(array $arg)
+function flatten_array($arg)
 {
+    if (!is_array_like($arg))
+        throw new \InvalidArgumentException("Not an array");
+
+    $arg = to_array($arg);
     $tgt = array();
     foreach ($arg as $arg_l2)
     {
-        if (is_array($arg_l2))
+        if (is_array_like($arg_l2))
         {
             $arg_l2 = flatten_array($arg_l2);
             foreach ($arg_l2 as $arg_l3)

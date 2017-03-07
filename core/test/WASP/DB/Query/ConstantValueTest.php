@@ -26,6 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP\DB\Query;
 
 use PHPUnit\Framework\TestCase;
+use WASP\DB\Driver\Driver;
 
 class ConstantValueTest extends TestCase
 {
@@ -39,5 +40,64 @@ class ConstantValueTest extends TestCase
 
         $a = new ConstantValue("foo");
         $this->assertEquals("foo", $a->getValue());
+
+        $dt = new \DateTime();
+        $expected = $dt->format(\DateTime::ISO8601);
+        $a = new ConstantValue($dt);
+        $this->assertEquals($expected, $a->getValue());
+    }
+
+    public function testWithInvalidValue()
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Invalid data type for constant");
+        $a = new ConstantValue(new \StdClass);
+    }
+    
+    public function testUpdateInParameters()
+    {
+        $mock = $this->prophesize(Parameters::class);
+        $mock->set('fookey', 'foo')->shouldBeCalled();
+        $params = $mock->reveal();
+
+        $const = new ConstantValue('foo');
+        $this->assertEquals('foo', $const->getValue());
+
+        $const->bind($params, 'fookey',  null);
+
+        $mock->set('fookey', 'baz')->shouldBeCalled();
+        $const->setValue('baz');
+
+        $this->assertEquals('fookey', $const->getKey());
+    }
+
+    public function testUpdateInParametersWithFormatter()
+    {
+        $fmt = function ($val) { return 'foobarbaz'; };
+
+        $mock = $this->prophesize(Parameters::class);
+        $params = $mock->reveal();
+
+        $const = new ConstantValue('foo');
+        $this->assertEquals('foo', $const->getValue());
+
+        $mock->set('fookey', 'foobarbaz')->shouldBeCalled();
+        $const->bind($params, 'fookey',  $fmt);
+    }
+
+    public function testUpdateWithInvalidCallback()
+    {
+        $func = "funcname";
+        while (function_exists($func))
+            $func = "funcname" . random_int(1, 10000);
+
+        $mock = $this->prophesize(Parameters::class);
+        $params = $mock->reveal();
+
+        $const = new ConstantValue('foo');
+        $this->assertEquals('foo', $const->getValue());
+
+        $this->expectException(\InvalidArgumentException::class);
+        $const->bind($params, 'fookey',  $func);
     }
 }
