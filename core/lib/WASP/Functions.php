@@ -204,3 +204,66 @@ function compareDateInterval(\DateInterval $l, \DateInterval $r)
         return 1;
     return 0;
 }
+
+/**
+ * Convert any object to a string representation.
+ *
+ * @param mixed $obj The variable to convert to a string
+ * @param bool $html True to add line breaks as <br>, false to add them as \n
+ * @param int $depth The recursion counter. When this increases above 1, '...'
+ *                   is returned
+ * @return string The value converted to a string
+ */
+function str($obj, $html = false, $depth = 0)
+{
+    if ($depth > 1)
+        return '...';
+
+    if (is_null($obj))
+        return "NULL";
+
+    if (is_bool($obj))
+        return $obj ? "TRUE" : "FALSE";
+
+    if (is_scalar($obj))
+        return (string)$obj;
+
+    $str = "";
+    if ($obj instanceof Throwable)
+    {
+        $str = \WASP\Debug\Logger::exceptionToString($obj);
+    }
+    else if (is_object($obj) && method_exists($obj, '__toString'))
+    {
+        $str = (string)$obj;
+    }
+    elseif (is_array($obj))
+    {
+        $vals = [];
+        foreach ($obj as $k => $v)
+        {
+            $repr = "";
+            if (!is_int($k))
+                $repr = "'$k' => ";
+            
+            $repr .= str($v, $html, $depth + 1);
+            $vals[] = $repr;
+        }
+        return '[' . implode(', ', $vals) . ']';
+    }
+    else
+    {
+        ob_start();
+        var_dump($obj);
+        $str = ob_get_contents();
+        ob_end_clean();
+    }
+
+    if ($html)
+    {
+        $str = nl2br($str);
+        $str = str_replace('  ', '&nbsp;&nbsp;', $str);
+    }
+
+    return $str;
+}
