@@ -216,9 +216,6 @@ function compareDateInterval(\DateInterval $l, \DateInterval $r)
  */
 function str($obj, $html = false, $depth = 0)
 {
-    if ($depth > 1)
-        return '...';
-
     if (is_null($obj))
         return "NULL";
 
@@ -239,6 +236,8 @@ function str($obj, $html = false, $depth = 0)
     }
     elseif (is_array($obj))
     {
+        if ($depth > 1)
+            return '[...]';
         $vals = [];
         foreach ($obj as $k => $v)
         {
