@@ -3,7 +3,7 @@ WASP (Web Application Software Platform).
 
 # Requirements:
 
-php >= 5.6
+php >= 7.0
 php-intl
 php-imagick
 php-mbstring
@@ -20,5 +20,15 @@ License: Revised BSD
 
 * WASP\Translator
 Adapted from: Zend Framework - Zend\Translator - https://framework.zend.com
+Copyright: (c) 2005-2015 Zend Technologies USA Inc. (http://www.zend.com)
+License: New BSD License
+
+* WASP\Mail
+Adapted from: Zend Framework - Zend\Mail - https://framework.zend.com
+Copyright: (c) 2005-2015 Zend Technologies USA Inc. (http://www.zend.com)
+License: New BSD License
+
+* WASP\Mail\Mime
+Adapted from: Zend Framework - Zend\Mime - https://framework.zend.com
 Copyright: (c) 2005-2015 Zend Technologies USA Inc. (http://www.zend.com)
 License: New BSD License
