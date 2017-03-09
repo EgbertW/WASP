@@ -62,6 +62,7 @@ can specify the following options:
 * port
 * username
 * password
+* ssl (SSL or TLS)
 * auth_type (PLAIN, LOGIN, CRAM-MD5)
 
 Provide these options in an associative array:
