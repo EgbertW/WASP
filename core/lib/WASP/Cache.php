@@ -193,6 +193,21 @@ class Cache
     }
 
     /**
+     * Set a value in the cache
+     *
+     * @param $key scalar The key under which to store. Can be repeated to go deeper.
+     * @param $val mixed The value to store. Should be PHP-serializable. If
+     *                   this is null, the entry will be removed from the cache
+     * @return Cache Provides fluent interface
+     */
+    public function set($key, $val)
+    {
+        self::$repository[$this->cache_name]->set(func_get_args(), null);
+        self::$repository[$this->cache_name]['_changed'] = true;
+        return $this;
+    }
+
+    /**
      * Replace the entire contents of the cache
      *
      * @param $replacement array The replacement for the cache
