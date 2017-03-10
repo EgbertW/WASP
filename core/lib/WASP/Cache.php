@@ -161,9 +161,20 @@ class Cache
         return self::$repository[$this->cache_name]->dget(func_get_args(), null);
     }
 
-    public function has()
+    /**
+     * Return a full copy of the contents of the cache
+     */
+    public function getAll()
     {
-        return call_user_func_array(array(self::$repository[$this->cache_name], 'has'), func_get_args());
+        return self::$repository[$this->cache_name]->getAll();
+    }
+
+    /**
+     * Check if the cache contains the provided value
+     */
+    public function has(...$params)
+    {
+        return call_user_func_array(array(self::$repository[$this->cache_name], 'has'), $params);
     }
     
     /**
