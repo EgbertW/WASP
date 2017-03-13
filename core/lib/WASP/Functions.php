@@ -137,6 +137,16 @@ function is_array_like($arg)
     return $arg instanceof \ArrayAccess && $arg instanceof \Traversable;
 }
 
+function is_numeric_array($arg)
+{
+    if (!is_array_like($arg))
+        return false;
+    foreach ($arg as $key => $v)
+        if (!is_int($key))
+            return false;
+    return true;
+}
+
 function to_array($arg)
 {
     if (!is_array_like($arg))
@@ -171,7 +181,7 @@ function flatten_array($arg)
     $tgt = array();
     foreach ($arg as $arg_l2)
     {
-        if (is_array_like($arg_l2))
+        if (is_numeric_array($arg_l2))
         {
             $arg_l2 = flatten_array($arg_l2);
             foreach ($arg_l2 as $arg_l3)
