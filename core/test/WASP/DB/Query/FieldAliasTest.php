@@ -28,13 +28,13 @@ namespace WASP\DB\Query;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers WASP\DB\Query\GetClause
+ * @covers WASP\DB\Query\FieldAlias
  */
-class GetClauseTest extends TestCase
+class FieldAliasTest extends TestCase
 {
-    public function testGetClause()
+    public function testFieldAlias()
     {
-        $a = new GetClause("foo", "bar");
+        $a = new FieldAlias("foo", "bar");
 
         $expr = $a->getExpression();
         $this->assertInstanceOf(FieldName::class, $expr);

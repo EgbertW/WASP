@@ -764,7 +764,7 @@ class MockAppRunnerDAO extends \WASP\DB\DAO
         $this->name = $name . "DAO";
     }
 
-    public static function get($id)
+    public static function get($id, \WASP\DB\DB $database = null)
     {
         return new MockAppRunnerDAO($id);
     }
