@@ -213,7 +213,7 @@ class VirtualHost
     public function match($webroot)
     {
         $url = new URL($webroot);
-        if ($url->host !== $this->url->host)
+        if ($url->host !== $this->url->host || $url->scheme !== $this->url->scheme)
             return false;
 
         $path = $this->url->path;

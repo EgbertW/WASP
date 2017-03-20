@@ -148,10 +148,10 @@ class Site
      *
      * url[2] = "https:://www.foobar.com"
      * site[2] = "foobar"
-     * lang[2] = "en"
+     * language[2] = "en"
      * url[3] = "https://www.foobar.de"
      * site[3] = "foobar"
-     * lang[3] = "de"
+     * language[3] = "de"
      * 
      * This will result in two sites, default and foobar, each with two vhosts.
      * For the default vhost, these are a www. and a non-www. version. The non-www version
