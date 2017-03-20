@@ -44,4 +44,15 @@ class SQLFunctionTest extends TestCase
         $this->assertEquals(1, count($args));
         $this->assertInstanceOf(Wildcard::class, $args[0]);
     }
+
+    public function testSQLFunctionWithArguments()
+    {
+        $a = new SQLFunction("MIN", "foo", "bar");
+        
+        $args = $a->getArguments();
+        $this->assertEquals(2, count($args));
+        
+        $this->assertEquals("foo", $args[0]->getField());
+        $this->assertEquals("bar", $args[1]->getField());
+    }
 }

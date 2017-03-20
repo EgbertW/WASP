@@ -25,33 +25,41 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\DB\Query;
 
-class HavingClause extends Clause
+use PHPUnit\Framework\TestCase;
+
+/**
+ * @covers WASP\DB\Query\GroupByClause
+ */
+class GroupByClauseTest extends TestCase
 {
-    protected $condition;
-
-    public function __construct($condition)
+    public function testGroupBy()
     {
-        $this->setCondition($condition);
+        $fld = "foo";
+        $h = new HavingClause(new ComparisonOperator(">=", new SQLFunction("COUNT", "bar"), "5"));
+
+        $gb = new GroupByClause($fld, $h);
+
+        $gb_h = $gb->getHaving();
+        $this->assertEquals($h, $gb_h);
+
+        $groups = $gb->getGroups();
+        $this->assertEquals(1, count($groups));
+        $first = reset($groups);
+
+        $this->assertInstanceOf(FieldName::class, $first);
     }
 
-    public function setCondition($condition)
+    public function testEmptyConstructorThrowsException()
     {
-        if (empty($condition))
-            throw new \InvalidArgumentException("Provide HAVING condition");
-
-        if (!(is_string($condition) || $condition instanceof Expression))
-        {
-            throw new \InvalidArgumentException(
-                "Invalid HAVING condition: " . \WASP\str($condition)
-            );
-        }
-            
-        $this->condition = self::toExpression($condition, false);
-        return $this;
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Specify at least one group by condition");
+        $gb = new GroupByClause();
     }
 
-    public function getCondition()
+    public function testInvalidConstructorArgumentThrowsException()
     {
-        return $this->condition;
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Invalid parameter");
+        $gb = new GroupByClause(new \StdClass);
     }
 }

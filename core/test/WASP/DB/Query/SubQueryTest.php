@@ -25,33 +25,25 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\DB\Query;
 
-class HavingClause extends Clause
+use PHPUnit\Framework\TestCase;
+
+use WASP\DB\Query\Builder as Q;
+
+/**
+ * @covers WASP\DB\Query\SubQuery
+ */
+class SubQueryTEst extends TestCase
 {
-    protected $condition;
-
-    public function __construct($condition)
+    public function testSubQuery()
     {
-        $this->setCondition($condition);
-    }
+        $s = Q::select(
+            Q::from('foo'),
+            Q::where(
+                Q::equals('a', true)
+            )
+        );
 
-    public function setCondition($condition)
-    {
-        if (empty($condition))
-            throw new \InvalidArgumentException("Provide HAVING condition");
-
-        if (!(is_string($condition) || $condition instanceof Expression))
-        {
-            throw new \InvalidArgumentException(
-                "Invalid HAVING condition: " . \WASP\str($condition)
-            );
-        }
-            
-        $this->condition = self::toExpression($condition, false);
-        return $this;
-    }
-
-    public function getCondition()
-    {
-        return $this->condition;
+        $union = new SubQuery($s);
+        $this->assertEquals($s, $union->getQuery());
     }
 }

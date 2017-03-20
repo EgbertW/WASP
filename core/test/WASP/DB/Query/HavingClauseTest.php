@@ -25,33 +25,41 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\DB\Query;
 
-class HavingClause extends Clause
+use PHPUnit\Framework\TestCase;
+
+/**
+ * @covers WASP\DB\Query\HavingClause
+ */
+class HavingClauseTest extends TestCase
 {
-    protected $condition;
-
-    public function __construct($condition)
+    public function testHavingClause()
     {
-        $this->setCondition($condition);
+        $h = new HavingClause("foo");
+
+        $cond = $h->getCondition();
+        $this->assertInstanceOf(Expression::class, $cond);
+
+        $expected = new ComparisonOperator(">=", "foo", new FieldName("bar"));
+        $h->setCondition($expected);
+        $actual = $h->getCondition();
+        $this->assertEquals($expected, $actual);
     }
 
-    public function setCondition($condition)
+    public function testHavingClauseSetWithEmptyArgument()
     {
-        if (empty($condition))
-            throw new \InvalidArgumentException("Provide HAVING condition");
+        $h = new HavingClause("foo");
 
-        if (!(is_string($condition) || $condition instanceof Expression))
-        {
-            throw new \InvalidArgumentException(
-                "Invalid HAVING condition: " . \WASP\str($condition)
-            );
-        }
-            
-        $this->condition = self::toExpression($condition, false);
-        return $this;
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Provide HAVING condition");
+        $h->setCondition("");
     }
 
-    public function getCondition()
+    public function testHavingClauseWithInvalidArugment()
     {
-        return $this->condition;
+        $h = new HavingClause("foo");
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Invalid HAVING condition");
+        $h->setCondition(3.5);
     }
 }

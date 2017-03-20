@@ -25,33 +25,48 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\DB\Query;
 
-class HavingClause extends Clause
+use PHPUnit\Framework\TestCase;
+
+use WASP\DB\Query\Builder as Q;
+
+/**
+ * @covers WASP\DB\Query\UnionClause
+ */
+class UnionClauseTest extends TestCase
 {
-    protected $condition;
-
-    public function __construct($condition)
+    public function testUnionClause()
     {
-        $this->setCondition($condition);
+        $s = Q::select(
+            Q::from('foo'),
+            Q::where(
+                Q::equals('a', true)
+            )
+        );
+
+        $union = new UnionClause('ALL', $s);
+        $this->assertEquals('ALL', $union->getType());
+        $this->assertEquals($s, $union->getQuery());
+
+        $union = new UnionClause('', $s);
+        $this->assertEquals('DISTINCT', $union->getType());
+        $this->assertEquals($s, $union->getQuery());
+
+        $union = new UnionClause('DISTINCT', $s);
+        $this->assertEquals('DISTINCT', $union->getType());
+        $this->assertEquals($s, $union->getQuery());
     }
 
-    public function setCondition($condition)
+    public function testUnionClauseWithInvalidType()
     {
-        if (empty($condition))
-            throw new \InvalidArgumentException("Provide HAVING condition");
+        $s = Q::select(
+            Q::from('foo'),
+            Q::where(
+                Q::equals('a', true)
+            )
+        );
 
-        if (!(is_string($condition) || $condition instanceof Expression))
-        {
-            throw new \InvalidArgumentException(
-                "Invalid HAVING condition: " . \WASP\str($condition)
-            );
-        }
-            
-        $this->condition = self::toExpression($condition, false);
-        return $this;
-    }
-
-    public function getCondition()
-    {
-        return $this->condition;
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid UNION type');
+        $union = new UnionClause('FOO', $s);
     }
 }

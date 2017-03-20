@@ -41,4 +41,18 @@ class TableClauseTest extends TestCase
         $this->assertEquals('foo', $a->getPrefix());
         $this->assertNull($a->getAlias());
     }
+
+    public function testTableWithDisabledPrefixing()
+    {
+        $a = new TableClause('foo');
+
+        $a->setDisablePrefixing();
+        $this->assertTrue($a->getDisablePrefixing());
+
+        $a->setDisablePrefixing(true);
+        $this->assertTrue($a->getDisablePrefixing());
+
+        $a->setDisablePrefixing(false);
+        $this->assertFalse($a->getDisablePrefixing());
+    }
 }
