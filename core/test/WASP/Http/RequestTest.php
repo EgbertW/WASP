@@ -194,7 +194,7 @@ final class RequestTest extends TestCase
      */
     public function testRoutingRedirectHost()
     {
-        $this->server['REQUEST_SCHEME'] = 'https';
+        $this->server['REQUEST_SCHEME'] = 'http';
         $this->server['SERVER_NAME'] = 'www.example.nl';
         $this->server['REQUEST_URI'] = '/assets';
         $this->config['site'] = 

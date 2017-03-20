@@ -43,7 +43,7 @@ final class SiteTest extends TestCase
         $vhost1 = new VirtualHost('http://foobar.com', 'en');
         $s->addVirtualHost($vhost1);
 
-        $vhost2 = new VirtualHost('http://foobar.nl', 'nl');
+        $vhost2 = new VirtualHost('https://foobar.nl', 'nl');
         $s->addVirtualHost($vhost2);
 
         $this->assertEquals(['en', 'nl'], $s->getLocales());
@@ -52,10 +52,10 @@ final class SiteTest extends TestCase
         $this->assertEquals($vhost1, $actual);
 
         $actual = $s->match('https://foobar.com/');
-        $this->assertEquals($vhost1, $actual);
+        $this->assertNull($actual);
 
         $actual = $s->match('http://foobar.nl/');
-        $this->assertEquals($vhost2, $actual);
+        $this->assertNull($actual);
 
         $actual = $s->match('https://foobar.nl/');
         $this->assertEquals($vhost2, $actual);
@@ -77,15 +77,11 @@ final class SiteTest extends TestCase
         $expected = new Http\URL('https://foobar.nl/foo/bar/baz');
         $this->assertEquals($expected, $actual);
 
-        $actual = $s->checkRedirect('https://foobar.com/foo/bar');
-        $expected = new Http\URL('http://foobar.com/foo/bar');
-        $this->assertEquals($expected, $actual);
-
         $actual = $s->checkRedirect('http://foobar.com/foo/bar');
         $this->assertFalse($actual);
 
         $actual = $s->URL('/assets', 'nl');
-        $expected = new Http\URL('http://foobar.nl/assets');
+        $expected = new Http\URL('https://foobar.nl/assets');
         $this->assertEquals($expected, $actual);
 
         $actual = $s->URL('/assets', 'af');
