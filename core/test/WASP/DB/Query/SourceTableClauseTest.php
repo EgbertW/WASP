@@ -41,5 +41,10 @@ class SourceTableClauseTest extends TestCase
         $a = new SourceTableClause('bar', 'b');
         $this->assertEquals('bar', $a->getTable());
         $this->assertEquals('b', $a->getAlias());
+
+        $a = new SourceTableClause(new TableClause('foo'), 'f');
+        $this->assertEquals('foo', $a->getTable());
+        $this->assertEquals('f', $a->getAlias());
+
     }
 }
