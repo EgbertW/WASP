@@ -87,6 +87,7 @@ class OrderTest extends TestCase
         $clauses = $a->getClauses();
         $this->assertEquals(2, count($clauses));
 
+        var_Dump($clauses);
         $this->assertEquals('foo', $clauses[0]->getOperand()->getField());
         $this->assertEquals('ASC', $clauses[0]->getDirection());
 
