@@ -30,19 +30,23 @@ if ($exception instanceof WASP\Http\Error)
     $error_code = (int)$exception->getCode();
 
 $error_title = "Unexpected error";
+$error_lead = "Your request cannot be handled";
 $error_description = "The server encountered an error while processing your request";
 switch ($error_code)
 {
     case 404:
         $error_title = "Not Found";
+        $error_lead = $request->url->path . " could not be found on this server";
         $error_description = "The resource you requested can not be found";
         break;
     case 400:
         $error_title = "Bad Request";
+        $error_lead = "The request data is incompatible or incomplete";
         $error_description = "Your browser sent a request that cannot be handled";
         break;
     case 403:
         $error_title = "Forbidden";
+        $error_lead = "You are not authorized for the action you tried to perform. Make sure you are logged in correctly.";
         $error_description = "Your request cannot be handled because you are not authorized for it.";
         break;
 }
@@ -50,14 +54,14 @@ switch ($error_code)
 if ($dev || $cli)
 {
     $error_description .= 
-        "\nDescription: " . $exception->getMessage() . "\n" 
+        "\n\nDescription: " . $exception->getMessage() . "\n" 
         . WASP\Debug\Logger::str($exception);
 }
 elseif (method_exists($exception, 'getUserMessage'))
 {
     $user_message = $exception->getUserMessage();
     if (!empty($user_message))
-        $error_description .= "\nDescription: " . $user_message;
+        $error_description .= "\n\nDescription: " . $user_message;
 }
 
 $type_name = str_replace("/", "_" ,$type) . ".php";

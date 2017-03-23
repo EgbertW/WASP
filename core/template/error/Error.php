@@ -26,8 +26,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 $type = $this->request->chooseResponse(array("text/html", "text/plain"));
 
 $error_code = 500;
-$error_title = "Unexpected error";
-$error_description = "The server encountered an error while processing your request";
+$error_title = "Internal Server Error";
+$error_lead = "Something unanticipated went wrong. We'll try to fix this as soon as we can.";
+$error_description = "A PHP error occured.\n";
 
 if ($dev || $cli)
 {
