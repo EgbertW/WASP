@@ -1,4 +1,5 @@
 <?php
+
 /*
 This is part of WASP, the Web Application Software Platform.
 It is published under the MIT Open Source License.
@@ -23,14 +24,35 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\Platform;
+namespace WASP\Platform\Module;
 
 /**
- * Implement the Task interface to have a task runnable by the taskrunner
- * and the scheduler.
+ * The Module interface should be implemented by all installed modules that
+ * need initialization code. Once the module is located, a class named
+ * <ModuleName>\Module will be loaded when it exists, and if it implements
+ * this interface, it will be instantiated.
  */
-interface Task
+interface Module
 {
-    /** Execute should do whatever the task is about */
-    public function execute();
+    /**
+     * Store the name and path of the module, and run any
+     * required initialization code.
+     */
+    public function __construct($name, $path);
+
+    /**
+     * Called in order to allow the module to register tasks for the scheduler
+     * and the CLI task runner.
+     */
+    public function registerTasks();
+
+    /**
+     * @return string the name of the module
+     */
+    public function getName();
+
+    /**
+     * @return string the path of the module
+     */
+    public function getPath();
 }

@@ -23,10 +23,10 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
-namespace WASP\Module;
+namespace WASP\Platform\Module;
 
 use WASP\Resolve\Resolver;
-use WASP\Debug\LoggerAwareStaticTrait;
+use WASP\Log\LoggerAwareStaticTrait;
 
 /**
  * Find, initialize and manage modules.
@@ -61,14 +61,14 @@ class Manager
             self::$modules[$mod_name] = $path;
 
             // Create the module object, using the module implementation if available
-            $load_class = 'WASP\\Module\\BasicModule';
+            $load_class = BasicModule::class;
             $mod_class = $mod_name . '\\Module';
             if (class_exists($mod_class))
             {
-                if (is_subclass_of($mod_class, 'WASP\\Module\\Module'))
+                if (is_subclass_of($mod_class, Module::class))
                     $load_class = $mod_class;
                 else
-                    self::$logger->warn('Module {0} has class {1} but it does not implement WASP\\Module\\Module', [$mod_name, $mod_class]);
+                    self::$logger->warn('Module {0} has class {1} but it does not implement {2}', [$mod_name, $mod_class, Module::class]);
             }
 
             self::$modules[$mod_name] = new $load_class($mod_name, $path);

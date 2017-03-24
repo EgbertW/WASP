@@ -23,17 +23,23 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP;
+namespace WASP\Platform;
 
+use RuntimeException;
+use InvalidArgumentException;
+
+use Psr\Log\LogLevel;
+
+use WASP\Util\Dictionary;
+use WASP\Util\Cache;
 use WASP\Resolve\Autoloader;
 use WASP\Resolve\Resolver;
-use WASP\Http\Request;
-use WASP\Http\Error as HttpError;
+use WASP\HTTP\Request;
+use WASP\HTTP\Error as HTTPError;
 use WASP\IO\File;
 use WASP\IO\Dir;
-use WASP\Debug\{Logger, LoggerFactory, FileWriter};
+use WASP\Log\{Logger, LoggerFactory, FileWriter};
 use WASP\I18n\TranslateLogger;
-use PSR\Log\LogLevel;
 
 /**
  * @codeCoverageIgnore System is already executed before tests run
@@ -53,7 +59,7 @@ class System
     public static function setup(Path $path, Dictionary $config)
     {
         if (self::$instance !== null)
-            throw new \RuntimeException("Cannot initialize more than once");
+            throw new RuntimeException("Cannot initialize more than once");
 
         self::$instance = new System($path, $config);
 
@@ -70,7 +76,7 @@ class System
     public static function getInstance()
     {
         if (self::$instance === null)
-            throw new \RuntimeException("WASP has not been initialized yet");
+            throw new RuntimeException("WASP has not been initialized yet");
 
         return self::$instance;
     }
@@ -85,7 +91,7 @@ class System
     public function bootstrap()
     {
         if ($this->bootstrapped)
-            throw new \RuntimeException("Cannot bootstrap more than once");
+            throw new RuntimeException("Cannot bootstrap more than once");
 
         // Set character set
         ini_set('default_charset', 'UTF-8');
@@ -131,14 +137,14 @@ class System
         // Attach the dev logger when dev-mode is enabled
         if ($this->config->get('site', 'dev'))
         {
-            $devlogger = new Debug\DevLogger(LogLevel::DEBUG);
+            $devlogger = new Log\DevLogger(LogLevel::DEBUG);
             $root_logger->addLogHandler($devlogger);
         }
 
         // Log beginning of request handling
         if (isset($_SERVER['REQUEST_URI']))
         {
-            Debug\debug(
+            Log\debug(
                 "WASP.System", 
                 "*** Starting processing for {0} request to {1}", 
                 [$_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']]
@@ -222,7 +228,7 @@ class System
                 }
                 return $this->template;
         }
-        throw new \InvalidArgumentException("No such object: $parameter");
+        throw new InvalidArgumentException("No such object: $parameter");
     }
 
     /**
@@ -231,10 +237,10 @@ class System
     public function __set($parameter, $value)
     {
         if (!defined('WASP_TEST') || WASP_TEST !== 1)
-            throw new \RuntimeException("Cannot modify system objects");
+            throw new RuntimeException("Cannot modify system objects");
         
         if (!property_exists($this, $parameter))
-            throw new \InvalidArgumentException("No such object: $parameter");
+            throw new InvalidArgumentException("No such object: $parameter");
 
         $this->$parameter = $value;
     }
@@ -291,5 +297,4 @@ class System
         $handler = new TranslateLogger($this->path->log . '/translate-%s-%s.pot');
         $logger->addLogHandler($handler);
     }
-
 }

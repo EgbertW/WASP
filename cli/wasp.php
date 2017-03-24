@@ -1,8 +1,8 @@
 <?php
 
-use WASP\CLI;
-use WASP\TaskRunner;
-use WASP\Arguments;
+use WASP\Platform\CLI;
+use WASP\Platform\TaskRunner;
+use WASP\Util\Dictionary;
 use WASP\File\Resolve;
 
 require_once "../bootstrap/init.php";

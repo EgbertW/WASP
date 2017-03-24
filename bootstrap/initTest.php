@@ -37,12 +37,12 @@ require_once $root . "/core/lib/WASP/Resolve/Autoloader.php";
 Autoloader::registerNS('WASP', $root . '/core/lib/WASP');
 Autoloader::registerNS('Psr\\Log', $root . '/core/lib/Psr/Log');
 
-$path = new WASP\Path(array('root' => $root));
-$config = new WASP\Dictionary();
+$path = new WASP\Platform\Path(array('root' => $root));
+$config = new WASP\Util\Dictionary();
 
 // Enable testing code
 define('WASP_TEST', 1);
 
-WASP\System::setup($path, $config);
+WASP\Platform\System::setup($path, $config);
 ini_set('display_errors', 'on');
 

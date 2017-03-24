@@ -23,9 +23,9 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP;
+namespace WASP\Platform;
 
-use WASP\Http\URL;
+use WASP\HTTP\URL;
 
 /**
  * A VirtualHost is one site location managed by this WASP setup.
@@ -64,8 +64,8 @@ class VirtualHost
 
     /**
      * Set the site where this virtual host belongs to
-     * @param WASP\Site $site The site
-     * @return WASP\VirtualHost Provides fluent interface
+     * @param WASP\Platform\Site $site The site
+     * @return WASP\Platform\VirtualHost Provides fluent interface
      */
     public function setSite(Site $site)
     {
@@ -73,7 +73,7 @@ class VirtualHost
     }
 
     /**
-     * @return WASP\Site The site this VirtualHost belongs to
+     * @return WASP\Platform\Site The site this VirtualHost belongs to
      */
     public function getSite()
     {
@@ -109,7 +109,7 @@ class VirtualHost
     /** 
      * Set the locales supported by this VirtualHost.
      * @param mixed $locale Can be one locale or an array of locales
-     * @return WASP\VirtualHost Provides fluent interface
+     * @return WASP\Platform\VirtualHost Provides fluent interface
      */
     public function setLocale($locale)
     {
@@ -125,7 +125,7 @@ class VirtualHost
     /** 
      * Configure this VirtualHost to be a redirect to another location
      * @param mixed $hostname A string or a URL object where to redirect to. Can be empty to disable redirecting
-     * @return WASP\VirtualHost Provides fluent interface
+     * @return WASP\Platform\VirtualHost Provides fluent interface
      */
     public function setRedirect($hostname)
     {
@@ -144,7 +144,7 @@ class VirtualHost
      * @param string $path The path to resolve
      * @param mixed $current_url The current URL. If this is provided and the
      *                           host and scheme match, they are omitted in the result.
-     * @return WASP\Http\URL The resolved URL
+     * @return WASP\HTTP\URL The resolved URL
      */
     public function URL($path = '', $current_url = null)
     {
@@ -164,7 +164,7 @@ class VirtualHost
     }
 
     /**
-     * @return WASP\Http\URL The URL of this VirtualHost
+     * @return WASP\HTTP\URL The URL of this VirtualHost
      */
     public function getHost()
     {
@@ -223,7 +223,7 @@ class VirtualHost
 
     /**
      * @param string $url The visited URL
-     * @return WASP\Http\URL The URL to redirect to, or null if no redirect is needed
+     * @return WASP\HTTP\URL The URL to redirect to, or null if no redirect is needed
      */
     public function getRedirect($url)
     {

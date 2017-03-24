@@ -23,13 +23,13 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP;
+namespace WASP\Platform;
 
-use WASP\Http\ResponseHookInterface;
-use WASP\Http\Request;
-use WASP\Http\Response;
-use WASP\Http\StringResponse;
-use WASP\Debug\LoggerAwareStaticTrait;
+use WASP\HTTP\ResponseHookInterface;
+use WASP\HTTP\Request;
+use WASP\HTTP\Response;
+use WASP\HTTP\StringResponse;
+use WASP\Log\LoggerAwareStaticTrait;
 
 use JSONSerializable;
 use InvalidArgumentException;

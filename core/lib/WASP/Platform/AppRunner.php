@@ -23,15 +23,17 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP;
+namespace WASP\Platform;
 
 use WASP\DB\DB;
-use WASP\Debug\LoggerAwareStaticTrait;
-use WASP\Debug\Logger;
-use WASP\Http\Request;
-use WASP\Http\Response;
-use WASP\Http\Error as HttpError;
-use WASP\Http\StatusCode;
+use WASP\DB\DAO;
+use WASP\Util\Dictionary;
+use WASP\Log\LoggerAwareStaticTrait;
+use WASP\Log\Logger;
+use WASP\HTTP\Request;
+use WASP\HTTP\Response;
+use WASP\HTTP\Error as HTTPError;
+use WASP\HTTP\StatusCode;
 
 use ReflectionMethod;
 use Throwable;
@@ -56,7 +58,7 @@ class AppRunner
 
     /**
      * Create the AppRunner with the request and the app path
-     * @param WASP\Http\Request $request The request being answered
+     * @param WASP\HTTP\Request $request The request being answered
      * @param string $app The path to the appplication to run
      */
     public function __construct(Request $request, string $app)
@@ -86,7 +88,7 @@ class AppRunner
 
     /**
      * Run the app and make produce a response.
-     * @throws WASP\Http\Response
+     * @throws WASP\HTTP\Response
      */
     public function execute()
     {
@@ -107,7 +109,7 @@ class AppRunner
             if ($response instanceof Response)
                 throw $response;
 
-            throw new HttpError(500, "App did not produce any response");
+            throw new HTTPError(500, "App did not produce any response");
         }
         catch (Response $response)
         {
@@ -231,7 +233,7 @@ class AppRunner
                 $controller = "index";
             }
             else
-                throw new HttpError(404, "Unknown controller: " . $controller);
+                throw new HTTPError(404, "Unknown controller: " . $controller);
         }
         return $controller;
     }
@@ -278,29 +280,29 @@ class AppRunner
             {
                 ++$arg_cnt;
                 if (!$urlargs->has(0))
-                    throw new HttpError(400, "Invalid arguments - expecting argument $arg_cnt");
+                    throw new HTTPError(400, "Invalid arguments - expecting argument $arg_cnt");
 
                 $args[] = $urlargs->shift();
                 continue;
             }
 
             $tp = (string)$tp;
-            if ($tp === "WASP\\Dictionary")
+            if ($tp === Dictionary::class)
             {
                 if ($cnt !== (count($parameters) - 1))
-                    throw new HttpError(500, "Dictionary must be last parameter");
+                    throw new HTTPError(500, "Dictionary must be last parameter");
 
                 $args[] = $urlargs;
                 break;
             }
 
-            if ($tp === "WASP\\Http\\Request")
+            if ($tp === Request::class)
             {
                 $args[] = $this->request;
                 continue;
             }
 
-            if ($tp === "WASP\\Template")
+            if ($tp === Platform::class)
             {
                 $args[] = $this->request->getTemplate();
                 continue;
@@ -310,7 +312,7 @@ class AppRunner
             if ($tp === "int")
             {
                 if (!$urlargs->has(0, Dictionary::TYPE_INT))
-                    throw new HttpError(400, "Invalid arguments - missing integer as argument $cnt");
+                    throw new HTTPError(400, "Invalid arguments - missing integer as argument $cnt");
                 $args[] = (int)$urlargs->shift();
                 continue;
             }
@@ -318,22 +320,22 @@ class AppRunner
             if ($tp === "string")
             {
                 if (!$urlargs->has(0, Dictionary::TYPE_STRING))
-                    throw new HttpError(400, "Invalid arguments - missing string as argument $cnt");
+                    throw new HTTPError(400, "Invalid arguments - missing string as argument $cnt");
                 $args[]  = (string)$urlargs->shift();
                 continue;
             }
 
-            if (class_exists($tp) && is_subclass_of($tp, "WASP\DB\DAO"))
+            if (class_exists($tp) && is_subclass_of($tp, DAO::class))
             {
                 if (!$urlargs->has(0))
-                    throw new HttpError(400, "Invalid arguments - missing identifier as argument $cnt");
+                    throw new HTTPError(400, "Invalid arguments - missing identifier as argument $cnt");
                 $object_id = $urlargs->shift();    
                 $obj = call_user_func(array($tp, "get"), $object_id);
                 $args[] = $obj;
                 continue;
             }
 
-            throw new HttpError(500, "Invalid parameter type: " . $tp);
+            throw new HTTPError(500, "Invalid parameter type: " . $tp);
         }
 
         return call_user_func_array([$object, $controller], $args);

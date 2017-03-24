@@ -25,12 +25,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\Platform;
 
-/**
- * Implement the Task interface to have a task runnable by the taskrunner
- * and the scheduler.
- */
-interface Task
-{
-    /** Execute should do whatever the task is about */
-    public function execute();
-}
+class CLIException extends \RuntimeException
+{}
+

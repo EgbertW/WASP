@@ -23,7 +23,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP;
+namespace WASP\Platform;
 
 use DOMDocument;
 use DOMNode;
@@ -146,11 +146,8 @@ class SafeHTML
      *                           DOMNodes are passed as the argument.
      * @return SafeHTML Provides fluent interface
      */
-    public function addCallback($tag, $callback)
+    public function addCallback(string $tag, callable $callback)
     {
-        if (!is_callable($callback))
-            throw new \RuntimeException("Invalid callback is provided!");
-
         $this->tag_callback[$tag] = $callback;
         return $this;
     }

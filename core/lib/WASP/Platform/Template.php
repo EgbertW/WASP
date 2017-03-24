@@ -23,15 +23,16 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP
+namespace WASP\Platform
 {
     use Throwable;
+
     use WASP\Resolve\Resolver;
-    use WASP\Debug\LoggerAwareStaticTrait;
-    use WASP\Http\Request;
-    use WASP\Http\Error as HttpError;
-    use WASP\Http\Response;
-    use WASP\Http\StringResponse;
+    use WASP\Log\LoggerAwareStaticTrait;
+    use WASP\HTTP\Request;
+    use WASP\HTTP\Error as HTTPError;
+    use WASP\HTTP\Response;
+    use WASP\HTTP\StringResponse;
 
     /**
      * The Templating class implements the WASP template system. Templates are
@@ -84,7 +85,7 @@ namespace WASP
          * in the WASP system, which you can obtain using System::template().
          * Templates rendered this way template will share all assigned
          * variables.
-         * @param WASP\Http\Request $reques The request object
+         * @param WASP\HTTP\Request $reques The request object
          */
         public function __construct(Request $request)
         {
@@ -142,7 +143,7 @@ namespace WASP
         }
 
         /**
-         * $return WASP\Http\Request The associated request object
+         * $return WASP\HTTP\Request The associated request object
          */
         public function setRequest(Request $request)
         {
@@ -152,7 +153,7 @@ namespace WASP
         }
 
         /**
-         * $return WASP\Http\Request The associated request object
+         * $return WASP\HTTP\Request The associated request object
          */
         public function getRequest()
         {
@@ -236,7 +237,7 @@ namespace WASP
          * Resolve the template identified by $name.
          * @param string $name The template to resolve
          * @return string The path to the template
-         * @throws WASP\Http\Error When the template can not be found
+         * @throws WASP\HTTP\Error When the template can not be found
          */
         public function resolve($name)
         {
@@ -247,7 +248,7 @@ namespace WASP
             }
 
             if ($path === null)
-                throw new HttpError(500, "Template file could not be found: " . $name);
+                throw new HTTPError(500, "Template file could not be found: " . $name);
 
             return $path;
         }
@@ -256,7 +257,7 @@ namespace WASP
          * Renders the template. It uses renderReturn to get the return value
          * and throws it so the OutputHandler will catch it.
          *
-         * @throws WASP\Http\Response The response to the request
+         * @throws WASP\HTTP\Response The response to the request
          */
         public function render()
         {
@@ -271,7 +272,7 @@ namespace WASP
          *
          * All configured variables are assigned before running the template.
          *
-         * @return WASP\Http\Response A valid WASP HTTP Response
+         * @return WASP\HTTP\Response A valid WASP HTTP Response
          */
         public function renderReturn()
         {
@@ -304,7 +305,7 @@ namespace WASP
             {
                 self::$logger->error("Template threw exception: {0}", [$e]);
                 self::$logger->debug("*** Finished processing {0} request to {1}", [$request->method, $request->url]);
-                return new HttpError(500, "Template threw exception", "", $e);
+                return new HTTPError(500, "Template threw exception", "", $e);
             }
             finally
             {
@@ -407,8 +408,8 @@ namespace WASP
          * If a template is not available matching the exception, the same procedure it attempted
          * for its parent class until a match is found. The path of the template should match its
          * namespace, so that WASP\IOException will result in a template error/WASP/IOException.php
-         * The only exception is the WASP\Http\Error which is used frequently, and therefore should be
-         * located as error/HttpError.php, optionally specialized as error/HttpError404.php and so on.
+         * The only exception is the WASP\HTTP\Error which is used frequently, and therefore should be
+         * located as error/HTTPError.php, optionally specialized as error/HTTPError404.php and so on.
          * 
          * @param Throwable $exception The exception to find a template for
          * @return WASP\Template Provides fluent interface
@@ -424,8 +425,8 @@ namespace WASP
             while ($class)
             {
                 $path = 'error/' . str_replace('\\', '/', $class);
-                if ($class === "WASP\\Http\\Error")
-                    $path = 'error/HttpError'; 
+                if ($class === HTTPError::class)
+                    $path = 'error/HTTPError'; 
 
                 if (!empty($code))
                 {
@@ -457,7 +458,7 @@ namespace
 {
     function tpl($name)
     {
-        $tpl = WASP\System::template()->resolve($name);
+        $tpl = WASP\Platform\System::template()->resolve($name);
         return $tpl;
     }
 
@@ -468,7 +469,7 @@ namespace
 
     function URL($path)
     {
-        $vhost = WASP\System::request()->vhost;
+        $vhost = WASP\Platform\System::request()->vhost;
         return $vhost !== null ? $vhost->URL($path) : $path;
     }
 }

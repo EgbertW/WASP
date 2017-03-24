@@ -23,9 +23,10 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP;
+namespace WASP\Platform;
 
-use WASP\Debug\LoggerAwareStaticTrait;
+use WASP\Log\LoggerAwareStaticTrait;
+use WASP\Util\Dictionary;
 
 /**
  * Provide an interface for searching / replacing specifically formed code
@@ -56,8 +57,8 @@ class BBCode
         {
             if (isset($config['patterns']) && isset($config['replacements']))
             {
-                $patterns = isset($config['patterns']) ? $config['patterns'] : array();
-                $replacements = isset($config['replacements']) ? $config['replacements'] : array();
+                $patterns = $config['patterns'];
+                $replacements = $config['replacements']);
             }
             else
             {
