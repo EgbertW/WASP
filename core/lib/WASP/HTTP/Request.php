@@ -23,7 +23,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\Http;
+namespace WASP\HTTP;
 
 use WASP\Debug\LoggerAwareStaticTrait;
 use WASP\Resolve\Resolver;
@@ -37,7 +37,7 @@ use WASP\Config;
 use WASP\Session;
 use WASP\AppRunner;
 use WASP\Template;
-use WASP\Http\RedirectRequest;
+use WASP\HTTP\RedirectRequest;
 
 use Throwable;
 use DateTime;
@@ -113,7 +113,7 @@ class Request
     /** If https was used */
     public $secure;
     
-    /** Whether the request was made using XmlHttpRequest */
+    /** Whether the request was made using XMLHTTPRequest */
     public $ajax;
 
     /** The GET parameters specified as query in the URL */
@@ -242,7 +242,7 @@ class Request
     /**
      * Set the template object
      * @param WASP\Template $tpl The template renderer to use
-     * @return WASP\Http\Request Provides fluent interface
+     * @return WASP\HTTP\Request Provides fluent interface
      */
     public function setTemplate(Template $tpl)
     {
@@ -259,7 +259,7 @@ class Request
     }
 
     /**
-     * @return WASP\Http\ResponseBuilder The response builder that will produce
+     * @return WASP\HTTP\ResponseBuilder The response builder that will produce
      *                                   the final response to the client
      */
     public function getResponseBuilder()
@@ -280,7 +280,7 @@ class Request
     /**
      * Set the resolver used for resolving apps
      * @param WASP\Resolve\Resolver The resolver
-     * @return WASP\Http\Request Provides fluent interface
+     * @return WASP\HTTP\Request Provides fluent interface
      */
     public function setResolver(Resolver $resolver)
     {
@@ -580,7 +580,7 @@ class Request
      *
      * @param array $types The list of response types offered
      * @return string The preferred response type
-     * @see WASP\Http\Request::want
+     * @see WASP\HTTP\Request::want
      */
     public function chooseResponse(array $types)
     {

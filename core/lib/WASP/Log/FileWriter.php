@@ -23,37 +23,48 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\DB\Query;
+namespace WASP\Log;
 
-use WASP\Util\Functions as WF;
+use Psr\Log\LogLevel;
+use WASP\Request;
+use WASP\IO\File;
 
-class HavingClause extends Clause
+class FileWriter implements LogWriterInterface
 {
-    protected $condition;
+    private $filename;
+    private $min_level;
+    private $file = null;
 
-    public function __construct($condition)
+    public function __construct($filename, $min_level = LogLevel::DEBUG)
     {
-        $this->setCondition($condition);
+        $this->filename = $filename;
+        $this->min_level = Logger::getLevelNumeric($min_level);
     }
 
-    public function setCondition($condition)
+    public function write(string $level, $message, array $context)
     {
-        if (empty($condition))
-            throw new \InvalidArgumentException("Provide HAVING condition");
+        $lvl_num = Logger::getLevelNumeric($level);
+        if ($lvl_num < $this->min_level)
+            return;
 
-        if (!(is_string($condition) || $condition instanceof Expression))
+        $message = Logger::fillPlaceholders($message, $context);
+        $module = isset($context['_module']) ? $context['_module'] : "";
+        $fmt = "[" . date('Y-m-d H:i:s') . '][' . $module . ']';
+        $fmt .= ' ' . strtoupper($level) . ': ' . $message;
+        $this->writeLine($fmt);
+    }
+
+    private function writeLine(string $str)
+    {
+        $new_file = false;
+        if (!$this->file)
         {
-            throw new \InvalidArgumentException(
-                "Invalid HAVING condition: " . WF::str($condition)
-            );
+            $f = new File($this->filename);
+            $f->touch();
+            $this->file = fopen($this->filename, 'a');
         }
-            
-        $this->condition = self::toExpression($condition, false);
-        return $this;
-    }
 
-    public function getCondition()
-    {
-        return $this->condition;
+        if ($this->file)
+            fwrite($this->file, $str . "\n");
     }
 }

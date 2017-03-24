@@ -23,22 +23,19 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\Http;
+namespace WASP\HTTP;
 
 use WASP\Debug\LoggerAwareStaticTrait;
-use WASP\DefVal;
 
 /**
- * Output a file, given its filename. The handler may decide to output the
- * file using X-Send-File header, or by opening the file and passing the
- * contents.
+ * Output a file, given an opened file handle. 
  */
-class FileResponse extends Response
+class FileHandleResponse extends Response
 {
     use LoggerAwareStaticTrait;
 
-    /** The filename of the file to send */
-    protected $filename;
+    /** The file handle from which to read the data */
+    protected $filehandle;
 
     /** The filename for the file that is sent to the client */
     protected $output_filename;
@@ -46,34 +43,41 @@ class FileResponse extends Response
     /** Whether to sent as download or embedded */
     protected $download;
 
-    /** The size of the file in bytes */
-    protected $length;
+    /** The length in bytes of the content being served */
+    protected $length = null;
 
-    /** Using X-Sendfile or not? Determined in getHeaders() */
-    protected $xsendfile = false;
 
     /**
      * Create the response using the file name
-     * @param string $filename The file to load / send
+     * @param string $filehandle The open file handle to pass through to the client
      * @param string $output_filename The filename to use in the output
+     * @param string $mime The mime-type to use for the transfer
      */
-    public function __construct(string $filename, string $output_filename = "", bool $download = false)
+    public function __construct($filehandle, string $output_filename, string $mime, bool $download = false)
     {
-        $this->filename = $filename;
-        $this->length = filesize($filename);
-        if (empty($output_filename))
-            $output_filename = basename($this->filename);
+        $this->filehandle = $filehandle;
         $this->output_filename = $output_filename;
-        $this->code = 200;
+        $this->mime[$mime] = true;
         $this->download = $download;
+        $this->code = 200;
     }
 
     /**
-     * @return string The path of the file to sent
+     * Set the length in bytes of the response
+     * @param int $bytes The number of bytes of the download
+     * @return FileHandleResponse Provides fluent interface
      */
-    public function getFileName()
+    public function setLength(int $bytes)
     {
-        return $this->filename;
+        $this->length = $bytes;
+    }
+
+    /**
+     * @return resource The opened file handle that should be passed to the client
+     */
+    public function getFileHandle()
+    {
+        return $this->filehandle;
     }
 
     /** 
@@ -82,15 +86,6 @@ class FileResponse extends Response
     public function getOutputFileName()
     {
         return $this->output_filename;
-    }
-
-    /**
-     * @return bool True if the file should be presented as download, false if
-     *              the browser may render it directly
-     */
-    public function getDownload()
-    {
-        return $this->download;
     }
 
     /**
@@ -105,32 +100,25 @@ class FileResponse extends Response
 
         if ($this->length)
             $h['Content-Length'] = $this->length;
-
-        $request = $this->getRequest();
-        $config = $request->config;
-        if ($this->xsendfile = \WASP\parse_bool($config->get('io', 'use_send_file', new DefVal(false))))
-        {
-            $h['X-Sendfile'] = $this->filename;
-            $this->xsendfile = true;
-        }
-
         return $h;
     }
 
     /**
-     * Serve the file to the user
+     * @return bool True if the file should be presented as download, false if
+     *              the browser may render it directly
      */
+    public function getDownload()
+    {
+        return $this->download;
+    }
+
     public function output(string $mime)
     {
-        // Nothing to output, the webserver will handle it
-        if ($this->xsendfile)
-            return;
-
-        $bytes = readfile($this->filename);
+        $bytes = fpassthru($this->filehandle);
         if (!empty($this->length) && $bytes != $this->length)
         {
             self::$logger->warning(
-                "FileResponse promised to send {0} bytes but {1} were actually transfered of file {2}", 
+                "FileHandleResponse was specified to send {0} bytes but {1} were actually transfered of file {2}", 
                 [$this->length, $bytes, $this->output_filename]
             );
         }
@@ -138,5 +126,5 @@ class FileResponse extends Response
 }
 
 // @codeCoverageIgnoreStart
-FileResponse::setLogger();
+FileHandleResponse::setLogger();
 // @codeCoverageIgnoreEnd

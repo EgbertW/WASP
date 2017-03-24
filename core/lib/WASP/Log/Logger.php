@@ -23,9 +23,10 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\Debug;
+namespace WASP\Log;
 
 use Throwable;
+use WASP\Util\Functions as WF;
 use Psr\Log\LogLevel;
 use Psr\Log\AbstractLogger;
 
@@ -167,16 +168,11 @@ class Logger extends AbstractLogger
             $strval = null;
             while (($pos = strpos($message, $placeholder)) !== false)
             {
-                $strval = $strval ?: self::str($value);
+                $strval = $strval ?: WF::str($value);
                 $message = substr($message, 0, $pos) . $strval . substr($message, $pos + strlen($placeholder));
             }
         }
         return $message;
-    }
-
-    public static function html($obj)
-    {
-        return self::str($obj, true);
     }
 
     public static function printIndent($buf, string $text, int $indent = 4)
@@ -185,81 +181,6 @@ class Logger extends AbstractLogger
         $indent = str_repeat(' ', $indent);
         foreach ($parts as $p)
             fprintf($buf, "%s%s\n", $indent, $p);
-    }
-
-    public static function exceptionToString(Throwable $ex, $buf = null, $depth = 0)
-    {
-        $buf_created = false;
-        if ($buf === null)
-        {
-            $buf_created = true;
-            $buf = fopen("php://memory", "rw");
-        }
-
-        if ($depth >= 5)
-            fprintf($buf, "    ** Recursion limit reached at Exception of class " . get_class($ex) . " **\n");
-
-        fprintf($buf, "Exception: %s [%d] %s\n", get_class($ex), $ex->getCode(), $ex->getMessage());
-        fprintf($buf, "In %s(%d)\n", $ex->getFile(), $ex->getLine());
-        self::printIndent($buf, $ex->getTraceAsString(), 4);
-
-        $prev = $ex->getPrevious();
-        if ($prev !== null)
-        {
-            fprintf($buf, "\nCaused by: \n");
-            self::exceptionToString($prev, $buf, $depth + 1);
-        }
-
-
-        if ($buf_created)
-        {
-            $length = ftell($buf);
-            fseek($buf, 0);
-            $contents = fread($buf, $length);
-            return $contents;
-        }
-
-        return $buf;
-    }
-
-    public static function str($obj, $html = false)
-    {
-        if (is_null($obj))
-            return "NULL";
-
-        if (is_string($obj))
-            return $obj;
-
-        if (is_bool($obj))
-            return $obj ? "TRUE" : "FALSE";
-
-        if (is_numeric($obj))
-            return (string)$obj;
-
-        $str = "";
-        if ($obj instanceof Throwable)
-        {
-            $str = self::exceptionToString($obj);
-        }
-        else if (is_object($obj) && method_exists($obj, '__toString'))
-        {
-            $str = (string)$obj;
-        }
-        else
-        {
-            ob_start();
-            var_dump($obj);
-            $str = ob_get_contents();
-            ob_end_clean();
-        }
-
-        if ($html)
-        {
-            $str = nl2br($str);
-            $str = str_replace('  ', '&nbsp;&nbsp;', $str);
-        }
-
-        return $str;
     }
 
     public static function logModule($level, $module, $message, array $context = array())

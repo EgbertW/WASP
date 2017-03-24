@@ -23,13 +23,13 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\Http;
+namespace WASP\HTTP;
 
-use WASP\is_array_like;
 use WASP\Template;
 use WASP\Dictionary;
-use WASP\Debug\Logger;
-use WASP\Debug\LoggerAwareStaticTrait;
+use WASP\Log\Logger;
+use WASP\Log\LoggerAwareStaticTrait;
+use WASP\Util\Functions as WF;
 
 use Throwable;
 
@@ -143,7 +143,7 @@ class Error extends Response
 
     public static function outputPlainText($data, int $indent, bool $html)
     {
-        if (!\WASP\is_array_like($data))
+        if (!WF::is_array_like($data))
         {
             printf("%s\n", Logger::str($data, $html));
             return;
@@ -163,7 +163,7 @@ class Error extends Response
         $cntwidth = strlen((string)count($data));
         foreach ($data as $key => $value)
         {
-            if (\WASP\is_array_like($value))
+            if (WF::is_array_like($value))
             {
                 printf("%s%s = {%s", $indentstr, $key, $nl);
                 self::outputPlainText($value, $indent + 4, $html);

@@ -25,7 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\IO\DataWriter;
 
-use WASP\check_extension;
+use WASP\Util\Functions as WF;
 
 class YAMLWriter extends DataWriter
 {
@@ -36,4 +36,4 @@ class YAMLWriter extends DataWriter
     }
 }
 
-\WASP\check_extension('yaml', null, 'yaml_emit');
+WF::check_extension('yaml', null, 'yaml_emit');

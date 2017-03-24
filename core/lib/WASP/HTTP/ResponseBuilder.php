@@ -23,7 +23,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\Http;
+namespace WASP\HTTP;
 
 use WASP\AssetManager;
 use WASP\Debug\Logger;
@@ -90,9 +90,9 @@ class ResponseBuilder
 
     /**
      * Set the response by any throwable object. Any non-Response objects are wrapped
-     * in a WASP\Http\Error with status code 500.
+     * in a WASP\HTTP\Error with status code 500.
      *
-     * @return WASP\Http\ResponseBuilder Provides fluent interface
+     * @return WASP\HTTP\ResponseBuilder Provides fluent interface
      */
     public function setThrowable(Throwable $exception)
     {
@@ -121,7 +121,7 @@ class ResponseBuilder
     }
 
     /**
-     * @return WASP\Http\Response The current response object
+     * @return WASP\HTTP\Response The current response object
      */
     public function getResponse()
     {
@@ -184,7 +184,7 @@ class ResponseBuilder
      * Set the HTTP Response code
      *
      * @param int $code The HTTP response code
-     * @return WASP\Http\ResponseBuilder Provides fluent interface
+     * @return WASP\HTTP\ResponseBuilder Provides fluent interface
      */
     public function setResponseCode(int $code)
     {
@@ -359,7 +359,7 @@ class ResponseBuilder
                     $cookie->getPath(),
                     $cookie->getDomain(),
                     $cookie->getSecure(),
-                    $cookie->getHttpOnly()
+                    $cookie->getHTTPOnly()
                 );
             }
         }

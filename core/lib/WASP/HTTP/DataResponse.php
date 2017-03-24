@@ -23,12 +23,13 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\Http;
+namespace WASP\HTTP;
 
 use WASP\Dictionary;
-use WASP\Debug\Logger;
-use WASP\Debug\LoggerAwareStaticTrait;
+use WASP\Log\Logger;
+use WASP\Log\LoggerAwareStaticTrait;
 use WASP\DefVal;
+use WASP\Util\Functions as WF;
 use Throwable;
 use InvalidArgumentException;
 
@@ -55,7 +56,7 @@ class DataResponse extends Response
         if ($dict instanceof Dictionary)
             $this->dictionary = $dict;
         else
-            $this->dictionary = new Dictionary(\WASP\to_array($dict));
+            $this->dictionary = new Dictionary(WF::to_array($dict));
     }
 
     public function getDictionary()

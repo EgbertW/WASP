@@ -23,7 +23,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\Debug;
+namespace WASP\Log;
 
 use Psr\Log\NullLogger;
 
@@ -54,7 +54,7 @@ class LoggerFactory
 
     /** 
      * The default implementation simply defers to the getLogger method
-     * of the WASP\Debug\Logger class
+     * of the WASP\Log\Logger class
      */
     public function get(array $context = array())
     {

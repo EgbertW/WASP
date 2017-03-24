@@ -23,19 +23,12 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP;
+namespace WASP\HTTP;
 
-class DefVal
+/**
+ * This hook can be implemented to execute tasks on a response before outputting it
+ */
+interface ResponseHookInterface
 {
-    public $value;
-
-    public function __construct($value)
-    {
-        $this->value = $value;
-    }
-
-    public function getValue()
-    {
-        return $this->value;
-    }
+    public function executeHook(Request $request, Response $response, string $mime);
 }

@@ -23,16 +23,11 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP;
+namespace WASP\Util;
 
-use WASP\Debug;
-use WASP\Debug\LoggerAwareStaticTrait;
-use WASP\IO\DataReader\PHPSReader;
-use WASP\IO\DataWriter\PHPSWriter;
-
-/// /** Cache requires Dictionary and Path, so always load it */
-/// require_once 'Dictionary.php';
-/// require_once 'Path.php';
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
+use WASP\Log\LoggerFactory;
 
 /**
  * Provides automatic persistent caching facilities. You can store and retrieve
@@ -43,8 +38,7 @@ use WASP\IO\DataWriter\PHPSWriter;
  */ 
 class Cache
 {
-    use LoggerAwareStaticTrait;
-
+    private static $logger = null;
     private static $repository = array();
     private static $expiry = null;
     private $cache_name = 3600;
@@ -83,7 +77,7 @@ class Cache
 
         if (time() >= $expires || $timeout === 0)
         {
-            self::$logger->debug("Cache for {0} expired - clearing", [$name]);
+            self::getLogger()->debug("Cache for {0} expired - clearing", [$name]);
             self::$repository[$name] = new Dictionary();
             self::$repository[$name]['_timestamp'] = time();
         }
@@ -103,27 +97,27 @@ class Cache
         {
             if (!is_readable($cache_file))
             {
-                self::$logger->error("Cannot read cache from {0}", [$cache_file]);
+                self::getLogger()->error("Cannot read cache from {0}", [$cache_file]);
                 return;
             }
 
             try
             {
-                $reader = new PHPSReader;
-                self::$repository[$name] = Dictionary::loadFile($cache_file, $reader);
+                $contents = file_get_contents($cache_file);
+                self::$repository[$name] = unserialize($contents, array('allowed_classes' => [Dictionary::class]));
                 self::$repository[$name]['_changed'] = false;
                 self::checkExpiry($name);
                 return;
             }
             catch (\Throwable $t)
             {
-                self::$logger->error("Failure loading cache {0} - removing", [$name]);
-                self::$logger->error("Error: {0}", [$t]);
+                self::getLogger()->error("Failure loading cache {0} - removing", [$name]);
+                self::getLogger()->error("Error: {0}", [$t]);
                 if (is_writable($cache_file))
                     unlink($cache_file);
             }
         }
-        self::$logger->debug("Cache {0} does not exist - creating", [$cache_file]);
+        self::getLogger()->debug("Cache {0} does not exist - creating", [$cache_file]);
         self::$repository[$name] = new Dictionary();
     }
 
@@ -135,7 +129,6 @@ class Cache
     {
         $path = System::path();
         $cache_dir = $path->cache;
-        $writer = new PHPSWriter;
         foreach (self::$repository as $name => $cache)
         {
             if (empty($cache['_changed']))
@@ -143,7 +136,7 @@ class Cache
 
             unset($cache['_changed']);
             $cache_file = $cache_dir . '/' . $name . '.cache';
-            $cache->saveFile($cache_file, $writer);
+            file_put_contents($cache_file, serialize($cache));
         }
     }
 
@@ -232,8 +225,29 @@ class Cache
         $data['_changed'] = true;
         $data['_timestamp'] = time();
     }
-}
 
-// @codeCoverageIgnoreStart
-Cache::setLogger();
-// @codeCoverageIgnoreEnd
+    /**
+     * Get a logger instance. If not set, it will be instantiated. If
+     * WASP\Log\LoggerFactory is available it is used.
+     */
+    protected static function getLogger()
+    {
+        if (self::$logger === null)
+        {
+            if (class_exists(LoggerFactory::class))
+                self::$logger = LoggerFactory::getLogger([static::class]);
+            else
+                self::$logger = new NullLogger();
+        }
+        return self::$logger;
+    }
+
+    /**
+     * Set a logger instance
+     * @param Psr\Log\LoggerInterface $logger The logger to set
+     */
+    public static function setLogger(LoggerInterface $logger)
+    {
+        self::$logger = $logger;
+    }
+}

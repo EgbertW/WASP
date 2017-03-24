@@ -23,7 +23,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\Http;
+namespace WASP\HTTP;
 
 use DateTime;
 use DateInterval;
@@ -53,7 +53,7 @@ class Cookie
     /** Secure cookies are transferred using HTTPS only */
     private $secure;
 
-    /** The HttpOnly flag determines if the cookie is sent using Http only or
+    /** The HTTPOnly flag determines if the cookie is sent using HTTP only or
      * is also available to javascript */
     private $httponly;
 
@@ -72,7 +72,7 @@ class Cookie
     /**
      * Set the name of the cookie
      * @param string $name The name of the cookie
-     * @return WASP\Http\Cookie Provides fluent interface
+     * @return WASP\HTTP\Cookie Provides fluent interface
      */
     public function setName(string $name)
     {
@@ -91,7 +91,7 @@ class Cookie
     /**
      * Set the value for the cookie
      * @param string $value The value
-     * @return WASP\Http\Cookie Provides fluent interface
+     * @return WASP\HTTP\Cookie Provides fluent interface
      */
     public function setValue(string $value)
     {
@@ -108,22 +108,22 @@ class Cookie
     }
 
     /**
-     * Set the HttpOnly flag: whether to sent this cookie only on HTTP requests
+     * Set the HTTPOnly flag: whether to sent this cookie only on HTTP requests
      * or also expose it to scripts.
-     * @param bool $httponly Value for HttpOnly
-     * @return WASP\Http\Cookie Provides fluent interface
+     * @param bool $httponly Value for HTTPOnly
+     * @return WASP\HTTP\Cookie Provides fluent interface
      */
-    public function setHttpOnly(bool $httponly)
+    public function setHTTPOnly(bool $httponly)
     {
         $this->httponly = $httponly;
         return $this;
     }
 
     /**
-     * @return bool The HttpOnly flag: whether to sent this cookie only on HTTP
+     * @return bool The HTTPOnly flag: whether to sent this cookie only on HTTP
      * requests or also expose it to scripts.
      */
-    public function getHttpOnly()
+    public function getHTTPOnly()
     {
         return $this->httponly;
     }
@@ -131,7 +131,7 @@ class Cookie
     /**
      * Set the secure flag: whether to transfer the cookie over HTTPS only
      * @param bool $secure The secure flag
-     * @return WASP\Http\Cookie Provides fluent interface
+     * @return WASP\HTTP\Cookie Provides fluent interface
      */
     public function setSecure(bool $secure)
     {
@@ -150,7 +150,7 @@ class Cookie
      * Set the cookie domain: hostnames where the cookie should be sent by the
      * client. It will also be sent to subdomains.
      * @param string $domain The cookie domain
-     * @return WASP\Http\Cookie Provides fluent interface
+     * @return WASP\HTTP\Cookie Provides fluent interface
      */ 
     public function setDomain(string $domain)
     {
@@ -169,7 +169,7 @@ class Cookie
 
     /**
      * Set the domain and path using a URL
-     * @param WASP\Http\URL The URI to use as the cookie domain
+     * @param WASP\HTTP\URL The URI to use as the cookie domain
      */
     public function setURL(URL $url)
     {
@@ -188,7 +188,7 @@ class Cookie
      * Set the Cookie path: the path at or under which the client should sent
      * this cookie. Paths with a different prefix will not receive the cookie. 
      * @param string $path The cookie path
-     * @return WASP\Http\Cookie Provides fluent interface
+     * @return WASP\HTTP\Cookie Provides fluent interface
      */
     public function setPath(string $path)
     {
@@ -209,7 +209,7 @@ class Cookie
     /**
      * Set expiry date by a DateInterval, relative to the current time
      * @param DateInterval $interval After how much time the cookie should expire
-     * @return WASP\Http\Cookie Provides fluent interface
+     * @return WASP\HTTP\Cookie Provides fluent interface
      */
     public function setExpiresIn(DateInterval $interval)
     {
@@ -221,7 +221,7 @@ class Cookie
     /**
      * Set the expiry date by a DateTime, the moment when the cookie will expire
      * @param DateTime The date to use as expiry date
-     * @return WASP\Http\Cookie Provides fluent interface
+     * @return WASP\HTTP\Cookie Provides fluent interface
      */
     public function setExpires(DateTime $date)
     {

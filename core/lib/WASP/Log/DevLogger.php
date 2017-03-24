@@ -23,48 +23,62 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\Debug;
+namespace WASP\Log;
 
-use Psr\Log\LogLevel;
-use WASP\Request;
-use WASP\IO\File;
-
-class FileWriter implements LogWriterInterface
+/**
+ * Log all output of the current script to memory, and attach a log to the end
+ * of the response
+ */
+class DevLogger implements LogWriterInterface 
 {
-    private $filename;
-    private $min_level;
-    private $file = null;
+    /** The last constructed instance */
+    protected static $instance = null;
 
-    public function __construct($filename, $min_level = LogLevel::DEBUG)
+    /** Minimum logger level */
+    private $min_level;
+
+    /** The log storage */
+    private $log = array();
+
+    /**
+     * Create the logwriter
+     * @param string $level The minimum level of messages to store
+     */
+    public function __construct(string $level)
     {
-        $this->filename = $filename;
-        $this->min_level = Logger::getLevelNumeric($min_level);
+        $this->min_level = Logger::getLevelNumeric($level);
+        self::$instance = $this;
     }
 
+    /**
+     * Log a line to the memory log, if its level is high enough
+     * @param string $level The level of the message
+     * @param string $message The message
+     * @param array $context The variables to fill in the message
+     */
     public function write(string $level, $message, array $context)
     {
-        $lvl_num = Logger::getLevelNumeric($level);
-        if ($lvl_num < $this->min_level)
+        $levnum = Logger::getLevelNumeric($level);
+        if ($levnum < $this->min_level)
             return;
 
         $message = Logger::fillPlaceholders($message, $context);
-        $module = isset($context['_module']) ? $context['_module'] : "";
-        $fmt = "[" . date('Y-m-d H:i:s') . '][' . $module . ']';
-        $fmt .= ' ' . strtoupper($level) . ': ' . $message;
-        $this->writeLine($fmt);
+        $this->log[] = sprintf("%10s: %s", strtoupper($level), $message);
     }
 
-    private function writeLine(string $str)
+    /**
+     * Return the collected log lines
+     */
+    public function getLog()
     {
-        $new_file = false;
-        if (!$this->file)
-        {
-            $f = new File($this->filename);
-            $f->touch();
-            $this->file = fopen($this->filename, 'a');
-        }
+        return $this->log;
+    }
 
-        if ($this->file)
-            fwrite($this->file, $str . "\n");
+    /**
+     * Get a DevLogger instance, if available
+     */
+    public static function getInstance()
+    {
+        return self::$instance;
     }
 }

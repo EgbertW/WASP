@@ -23,58 +23,23 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\Debug;
+namespace WASP\HTTP;
 
-use WASP\Http\Request;
-use WASP\Http\ResponseHookInterface;
-use WASP\Http\Response;
-use WASP\Http\Error;
-use WASP\Http\DataResponse;
-use WASP\Http\StringResponse;
+use WASP\Log\DevLogger;
 
 /**
  * Log all output of the current script to memory, and attach a log to the end
  * of the response
  */
-class DevLogger implements LogWriterInterface, ResponseHookInterface
+class DevLoggerHook implements ResponseHookInterface
 {
-    /** Minimum logger level */
-    private $min_level;
+    protected $devlogger = null;
 
-    /** The log storage */
-    private $log = array();
-
-    /**
-     * Create the logwriter
-     * @param string $level The minimum level of messages to store
-     */
-    public function __construct(string $level)
+    public function __construct()
     {
-        $this->min_level = Logger::getLevelNumeric($level);
-    }
-
-    /**
-     * Log a line to the memory log, if its level is high enough
-     * @param string $level The level of the message
-     * @param string $message The message
-     * @param array $context The variables to fill in the message
-     */
-    public function write(string $level, $message, array $context)
-    {
-        $levnum = Logger::getLevelNumeric($level);
-        if ($levnum < $this->min_level)
-            return;
-
-        $message = Logger::fillPlaceholders($message, $context);
-        $this->log[] = sprintf("%10s: %s", strtoupper($level), $message);
-    }
-
-    /**
-     * Return the collected log lines
-     */
-    public function getLog()
-    {
-        return $this->log;
+        $this->devlogger = DevLogger::getInstance();
+        if ($this->devlogger === null)
+            $this->devlogger = new DevLogger(Psr\Log\LogLevel::INFO);
     }
 
     /**
@@ -130,4 +95,4 @@ class DevLogger implements LogWriterInterface, ResponseHookInterface
             }
         }
     }
-}
+

@@ -23,13 +23,12 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP;
+namespace WASP\HTTP;
 
 use DateTime;
 use DateInterval;
-use WASP\Http\Cookie;
-use WASP\Http\Error as HttpError;
-use WASP\Http\URL;
+use WASP\HTTP\Error as HTTPError;
+use WASP\Util\Dictionary;
 
 class Session extends Dictionary
 {
@@ -56,8 +55,8 @@ class Session extends Dictionary
 
     /**
      * Create the session based on a VirtualHost and a configuration
-     * @param WASP\Http\URL $base_url The base path for the session
-     * @param WASP\Dictionary $config The configuration for cookie parameters
+     * @param WASP\HTTP\URL $base_url The base path for the session
+     * @param WASP\Util\Dictionary $config The configuration for cookie parameters
      */
     public function __construct(URL $base_url, Dictionary $config, Dictionary $server_vars)
     {
@@ -83,7 +82,7 @@ class Session extends Dictionary
         // Store the amount of seconds
         $this->lifetime = $expire->getTimestamp() - $now->getTimestamp();
 
-        // HttpOnly should basically always be set, but allow override nonetheless
+        // HTTPOnly should basically always be set, but allow override nonetheless
         $httponly = parse_bool($this->config->dget('httponly', true));
 
         $this->url = new URL($base_url);
@@ -93,7 +92,7 @@ class Session extends Dictionary
         $this->session_cookie
             ->setExpires($expire)
             ->setURL($this->url)
-            ->setHttpOnly($httponly);
+            ->setHTTPOnly($httponly);
     }
 
     /**
@@ -125,7 +124,7 @@ class Session extends Dictionary
         else
         {
             // @codeCoverageIgnoreStart
-            $this->startHttpSession();
+            $this->startHTTPSession();
             // @codeCoverageIgnoreEnd
         }
 
@@ -181,13 +180,13 @@ class Session extends Dictionary
     /** 
      * Set up a HTTP session using cookies and the PHP session machinery
      */
-    public function startHttpSession()
+    public function startHTTPSession()
     {
         if (session_status() === PHP_SESSION_DISABLED)
-            throw new HttpError(500, "Sesssions are disabled");
+            throw new HTTPError(500, "Sesssions are disabled");
 
         if (session_status() === PHP_SESSION_ACTIVE)
-            throw new HttpError(500, "Repeated session initialization");
+            throw new HTTPError(500, "Repeated session initialization");
 
         // Now do the PHP session magic to initialize the $_SESSION array
         session_set_cookie_params(
@@ -195,7 +194,7 @@ class Session extends Dictionary
             $this->session_cookie->getPath(),
             $this->session_cookie->getDomain(),
             $this->session_cookie->getSecure(),
-            $this->session_cookie->getHttpOnly()
+            $this->session_cookie->getHTTPOnly()
         );
         session_name($this->session_cookie->getName());
 
@@ -315,7 +314,7 @@ class Session extends Dictionary
     /** 
      * Should be called when the session ID should be changed, for example
      * after logging in or out.
-     * @return WASP\Session Provides fluent interface
+     * @return WASP\HTTP\Session Provides fluent interface
      */
     public function resetID()
     {
@@ -367,7 +366,7 @@ class Session extends Dictionary
 
         $errors = $interceptor->getInterceptedErrors();
         foreach ($errors as $error)
-            \WASP\Debug\notice("WASP.Session", "Error sending session cookie: {exception}", ['exception' => $error]);
+            \WASP\Log\notice("WASP.Util.Session", "Error sending session cookie: {exception}", ['exception' => $error]);
     }
 
     /**
@@ -398,7 +397,7 @@ class Session extends Dictionary
 
     /** 
      * Should be called when the session should be cleared and destroyed.
-     * @return WASP\Session Provides fluent interface
+     * @return WASP\HTTP\Session Provides fluent interface
      */
     public function destroy()
     {
@@ -410,7 +409,7 @@ class Session extends Dictionary
 
     /** 
      * Get the session cookie to be sent to the client
-     * @return WASP\Http\Cookie The session cookie
+     * @return WASP\HTTP\Cookie The session cookie
      */
     public function getCookie()
     {

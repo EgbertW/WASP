@@ -22,7 +22,9 @@ COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
 IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
-namespace WASP;
+namespace WASP\Util;
+
+use ErrorException;
 
 /**
  * ErrorInterceptor registers itself to receive all PHP errors. Any errors
@@ -69,7 +71,7 @@ class ErrorInterceptor
      *
      * @param int $errno The error type to register
      * @param string $errstr A part of the expected error message
-     * @return WASP\ErrorInterceptor Provides fluent interface
+     * @return WASP\Util\ErrorInterceptor Provides fluent interface
      */
     public function registerError($errno, $errstr)
     {
@@ -155,12 +157,7 @@ class ErrorInterceptor
             }
         }
 
-        Debug\error(
-            "WASP.ErrorInterceptor", 
-            "PHP Error {0}: {1} on {2}({3})",
-            [$errno, $errstr, $errfile, $errline]
-        );
-        throw new \ErrorException($errstr, 0, $errno, $errfile, $errline);
+        throw new ErrorException($errstr, 0, $errno, $errfile, $errline);
     }
 
     /**
@@ -169,7 +166,7 @@ class ErrorInterceptor
     public static function registerErrorHandler()
     {
         self::$interceptor_stack = array();
-        set_error_handler(array("WASP\\ErrorInterceptor", "errorHandler"), E_ALL);
+        set_error_handler(array("WASP\\Util\\ErrorInterceptor", "errorHandler"), E_ALL);
     }
 
     /**

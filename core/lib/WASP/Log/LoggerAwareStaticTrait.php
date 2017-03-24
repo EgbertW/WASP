@@ -1,6 +1,6 @@
 <?php
 
-namespace WASP\Debug;
+namespace WASP\Log;
 
 /**
  * Static variant of LoggerAwareTrait

@@ -1,12 +1,12 @@
 <?php
 
-namespace WASP;
+namespace WASP\Util;
 
 use DateTime;
 use DateTimeImmutable;
 use DateInterval;
 use InvalidArgumentException;
-use WASP\Debug\Logger;
+use WASP\Util\Functions as WF;
 
 class Date
 {
@@ -33,7 +33,7 @@ class Date
             return $int;
         }
 
-        throw new InvalidArgumentException("Invalid argument: " . Logger::str($str));
+        throw new InvalidArgumentException("Invalid argument: " . WF::str($str));
     }
 
     public static function compareInterval(DateInterval $l, DateInterval $r)

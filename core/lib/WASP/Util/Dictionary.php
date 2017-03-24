@@ -23,9 +23,9 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP;
+namespace WASP\Util;
 
-use WASP\Debug\LoggerAwareStaticTrait;
+use WASP\Util\Functions as WF;
 use WASP\IO\File;
 use WASP\IO\DataWriter\DataWriter;
 use WASP\IO\DataWriter\DataWriterFactory;
@@ -44,8 +44,6 @@ use WASP\IO\DataReader\DataReaderFactory;
  */
 class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, \JsonSerializable
 {
-    use LoggerAwareStaticTrait;
-
     const EXISTS = -1;
     const TYPE_BOOL = -2;
     const TYPE_NUMERIC = -3;
@@ -64,7 +62,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
         if ($values instanceof Dictionary)
             $this->values = $values->values;
         else
-            $this->values = \WASP\to_array($values);
+            $this->values = WF::to_array($values);
     }
 
     public static function wrap(array &$values)
@@ -93,7 +91,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
         $val = $this->values;
         foreach ($args as $arg)
         {
-            if (!is_array_like($val) || !isset($val[$arg]))
+            if (!WF::is_array_like($val) || !isset($val[$arg]))
                 return false;
             $val = $val[$arg];
         }
@@ -280,7 +278,7 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
         $val = $this->dget(func_get_args());
         if ($val instanceof Dictionary)
             return $val;
-        $val = cast_array($val);
+        $val = WF::cast_array($val);
         return Dictionary::wrap($val);
     }
 
@@ -374,8 +372,8 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
      */
     public function addAll($values)
     {
-        if (!is_array_like($values))
-            throw new \DomainException("Invalid value to merge: " . Debug\Logger::str($values));
+        if (!WF::is_array_like($values))
+            throw new \DomainException("Invalid value to merge: " . Log\Logger::str($values));
         foreach ($values as $key => $val)
             $this->set($key, $val);
         return $this;
@@ -564,68 +562,4 @@ class Dictionary implements \Iterator, \ArrayAccess, \Countable, \Serializable, 
         uasort($this->values, "strnatcmp");
         return $this;
     }
-
-    public static function loadFile($filename, $reader = null)
-    {
-        if (!is_readable($filename))
-            throw new IOException("File not readable: $filename");
-
-        if ($reader !== null && !($reader instanceof DataReader))
-            throw new \InvalidArgumentException("Reader should be an instance of WASP\\IO\\DataReader\\DataReader");
-
-        if ($reader === null)
-            $reader = DataReaderFactory::factory($filename);
-
-        $data = $reader->readFile($filename);
-        if (empty($data))
-            throw new IOException("Didn't read anything from $filename");
-
-        self::debug("Read data from {0} using {1}", [$filename, get_class($reader)]);
-        return new Dictionary($data);
-    }
-
-    public function saveFile($filename, $writer = null)
-    {
-        if ($writer !== null && !($writer instanceof DataWriter))
-            throw new \InvalidArgumentException("Writer should be an instance of WASP\\IO\\DataWriter\\DataWriter");
-
-        $f = $filename;
-        $d = dirname($f);
-        if (!is_dir($d))
-            throw new IOException("Cannot save to $d - directory does not exist");
-
-        if (file_exists($f) && !is_writable($f))
-            throw new IOException("Cannot save to $f - file is not writable");
-
-        if (!file_exists($f) && !is_writable($d))
-            throw new IOException("Cannot save to $f - directory is not writable");
-        
-        if ($writer === null)
-            $writer = DataWriterFactory::factory($filename);
-
-        $bytes = $writer->write($this->values, $filename);
-        self::debug("Wrote {0} bytes to {1} using {2}", [$bytes, $filename, get_class($writer)]);
-
-        $f = new File($filename);
-        $f->setPermissions();
-    }
-
-    /**
-     * @codeCoverageIgnore Logging need not be tested, and cannot be called externally
-     */
-    private static function debug()
-    {
-        if (self::$logger === null && class_exists("WASP\\Debug\\Logger", false))
-            self::$logger = \WASP\Debug\Logger::getLogger("WASP.Dictionary");
-
-        if (self::$logger === null)
-            return;
-
-        call_user_func_array(array(self::$logger, "debug"), func_get_args());
-    }
 }
-
-// @codeCoverageIgnoreStart
-Functions::load();
-Dictionary::setLogger();
-// @codeCoverageIgnoreEnd

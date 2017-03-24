@@ -23,7 +23,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\Http;
+namespace WASP\HTTP;
 
 use Exception;
 use WASP\TerminateRequest;
@@ -58,7 +58,7 @@ class RedirectRequest extends Response
     /**
      * Set the URL to redirect to
      * @param URL $url The target URL
-     * @return WASP\Http\RedirectRequest Provides fluent interface
+     * @return WASP\HTTP\RedirectRequest Provides fluent interface
      */
     public function setURL(URL $url)
     {
