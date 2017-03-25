@@ -25,7 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\Platform;
 
-use WASP\Log\LoggerAwareStaticTrait;
+use WASP\Util\LoggerAwareStaticTrait;
 use WASP\Util\Dictionary;
 
 /**
@@ -53,6 +53,7 @@ class BBCode
         if ($config instanceof Dictionary && $config->has('bbcode', Dictionary::TYPE_ARRAY))
             $config = $config->get('bbcode');
 
+        self::getLogger();
         if (is_array($config) || $config instanceof Dictionary)
         {
             if (isset($config['patterns']) && isset($config['replacements']))
@@ -161,7 +162,3 @@ class BBCode
         return self::$default;
     }
 }
-
-// @codeCoverageIgnoreStart
-BBCode::setLogger();
-// @codeCoverageIgnoreEnd

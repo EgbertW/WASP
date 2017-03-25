@@ -28,7 +28,7 @@ namespace WASP\Platform
     use Throwable;
 
     use WASP\Resolve\Resolver;
-    use WASP\Log\LoggerAwareStaticTrait;
+    use WASP\Util\LoggerAwareStaticTrait;
     use WASP\HTTP\Request;
     use WASP\HTTP\Error as HTTPError;
     use WASP\HTTP\Response;
@@ -89,6 +89,7 @@ namespace WASP\Platform
          */
         public function __construct(Request $request)
         {
+            self::getLogger();
             $this->request = $request;
             $this->path = $request->path;
             $this->setRequest($request);
@@ -447,11 +448,6 @@ namespace WASP\Platform
             return $this;
         }
     }
-
-
-    // @codeCoverageIgnoreStart
-    Template::setLogger();
-    // @codeCoverageIgnoreEnd
 }
 
 namespace 

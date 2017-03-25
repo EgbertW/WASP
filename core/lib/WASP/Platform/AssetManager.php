@@ -29,7 +29,7 @@ use WASP\HTTP\ResponseHookInterface;
 use WASP\HTTP\Request;
 use WASP\HTTP\Response;
 use WASP\HTTP\StringResponse;
-use WASP\Log\LoggerAwareStaticTrait;
+use WASP\Util\LoggerAwareStaticTrait;
 
 use JSONSerializable;
 use InvalidArgumentException;
@@ -50,6 +50,7 @@ class AssetManager implements ResponseHookInterface
 
     public function __construct(Request $request)
     {
+        self::getLogger();
         $this->request = $request;
         $this->resolver = $request->getResolver();
     }
@@ -233,7 +234,3 @@ class AssetManager implements ResponseHookInterface
         }
     }
 }
-
-// @codeCoverageIgnoreStart
-AssetManager::setLogger();
-// @codeCoverageIgnoreEnd

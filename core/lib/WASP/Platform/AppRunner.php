@@ -28,7 +28,7 @@ namespace WASP\Platform;
 use WASP\DB\DB;
 use WASP\DB\DAO;
 use WASP\Util\Dictionary;
-use WASP\Log\LoggerAwareStaticTrait;
+use WASP\Util\LoggerAwareStaticTrait;
 use WASP\Log\Logger;
 use WASP\HTTP\Request;
 use WASP\HTTP\Response;
@@ -63,6 +63,7 @@ class AppRunner
      */
     public function __construct(Request $request, string $app)
     {
+        self::getLogger();
         $this->app = $app;
         $this->request = $request;
     }
@@ -341,7 +342,3 @@ class AppRunner
         return call_user_func_array([$object, $controller], $args);
     }
 }
-
-// @codeCoverageIgnoreStart
-AppRunner::setLogger();
-// @codeCoverageIgnoreEnd

@@ -26,7 +26,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP\Platform\Module;
 
 use WASP\Resolve\Resolver;
-use WASP\Log\LoggerAwareStaticTrait;
+use WASP\Util\LoggerAwareStaticTrait;
 
 /**
  * Find, initialize and manage modules.
@@ -51,7 +51,7 @@ class Manager
         if (self::$initialized)
             return;
 
-        self::setLogger();
+        self::getLogger();
         $modules = $resolver->listModules($module_path);
 
         foreach ($modules as $mod_name => $path)

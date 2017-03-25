@@ -23,44 +23,19 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\Log;
+namespace WASP\Util;
 
-use Psr\Log\NullLogger;
-use WASP\Util\Hook;
-
-/**
- * This class is used by all loggers to obtain their logger
- */
-class LoggerFactory
+class HookInterrupted extends \Exception
 {
-    private static $logger_factory = null;
+    protected $response;
 
-    /**
-     * Set the factory used to provide loggers
-     */
-    public static function setLoggerFactory(LoggerFactory $factory)
+    public function __construct(array $response = null)
     {
-        self::$logger_factory = $factory;
+        $this->response = $response;
     }
 
-    /** 
-     * This function is subscribed to the WASP.Util.GetLogger hook to obtain their logger.
-     */
-    public static function getLogger(array &$context = array())
+    public function getResponse()
     {
-        if (self::$logger_factory === null)
-            return new NullLogger();
-        return self::$logger_factory->get(array($context['class']));
-    }
-
-    /** 
-     * The default implementation simply defers to the getLogger method
-     * of the WASP\Log\Logger class
-     */
-    public function get(array $context = array())
-    {
-        return Logger::getLogger($context[0]);
+        return $this->response;
     }
 }
-
-Hook::subscribe("WASP.Util.GetLogger", array(LoggerFactory::class, "getLogger"));
