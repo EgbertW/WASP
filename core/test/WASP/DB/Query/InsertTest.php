@@ -58,10 +58,6 @@ class InsertTest extends TestCase
         $t = $i->getTable();
         $this->assertInstanceOf(TableClause::class, $t);
         $this->assertEquals($table, $t->getTable());
-
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage("Refusing to insert with predefined ID");
-        $i->setIDField("baz");
     }
 
     public function testInsertId()
@@ -69,10 +65,10 @@ class InsertTest extends TestCase
         $table = "test_table";
         $record = array('foo' => 'bar');
 
-        $i = new Insert($table, $record);
+        $i = new Insert($table, $record, ['id' => 'id']);
         $expected = 5;
         $i->setInsertId($expected);
-        $this->assertEquals($expected, $i->getInsertId());
+        $this->assertEquals(['id' => $expected], $i->getInsertId());
     }
 
     public function testInsertWithOnDuplicate()
@@ -132,9 +128,8 @@ class InsertTest extends TestCase
         $table = "test_table";
         $record = ['foo' => 'bar', 'baz' => 3];
         
-        $i = new Insert($table, $record, "id");
+        $i = new Insert($table, $record, ["id"]);
 
-        $this->assertEquals('id', $i->getIDField());
-
+        $this->assertEquals(['id'], $i->getPrimaryKey());
     }
 }
