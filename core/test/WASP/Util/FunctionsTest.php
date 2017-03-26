@@ -23,9 +23,11 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP;
+namespace WASP\Util;
 
 use PHPUnit\Framework\TestCase;
+
+use WASP\Util\Functions as WF;
 
 /**
  * @covers WASP\Functions
@@ -37,15 +39,14 @@ final class FunctionsTest extends TestCase
      */
     public function testIsInt()
     {
-        Functions::load();
-        $this->assertTrue(is_int_val(1));
-        $this->assertTrue(is_int_val("1"));
-        $this->assertTrue(is_int_val("5"));
+        $this->assertTrue(WF::is_int_val(1));
+        $this->assertTrue(WF::is_int_val("1"));
+        $this->assertTrue(WF::is_int_val("5"));
 
-        $this->assertFalse(is_int_val("5.0"));
-        $this->assertFalse(is_int_val(" 5"));
-        $this->assertFalse(is_int_val("5 "));
-        $this->assertFalse(is_int_val(true));
+        $this->assertFalse(WF::is_int_val("5.0"));
+        $this->assertFalse(WF::is_int_val(" 5"));
+        $this->assertFalse(WF::is_int_val("5 "));
+        $this->assertFalse(WF::is_int_val(true));
     }
 
     /**
@@ -53,29 +54,28 @@ final class FunctionsTest extends TestCase
      */
     public function testParseBool()
     {
-        Functions::load();
-        $this->assertTrue(parse_bool('true'));
-        $this->assertTrue(parse_bool('yes'));
-        $this->assertTrue(parse_bool('positive'));
-        $this->assertTrue(parse_bool('on'));
-        $this->assertTrue(parse_bool('enabled'));
-        $this->assertTrue(parse_bool('enable'));
-        $this->assertTrue(parse_bool('random_string'));
-        $this->assertTrue(parse_bool(1));
-        $this->assertTrue(parse_bool(0.1));
-        $this->assertTrue(parse_bool(new DummyBoolA()));
-        $this->assertTrue(parse_bool([0]));
+        $this->assertTrue(WF::parse_bool('true'));
+        $this->assertTrue(WF::parse_bool('yes'));
+        $this->assertTrue(WF::parse_bool('positive'));
+        $this->assertTrue(WF::parse_bool('on'));
+        $this->assertTrue(WF::parse_bool('enabled'));
+        $this->assertTrue(WF::parse_bool('enable'));
+        $this->assertTrue(WF::parse_bool('random_string'));
+        $this->assertTrue(WF::parse_bool(1));
+        $this->assertTrue(WF::parse_bool(0.1));
+        $this->assertTrue(WF::parse_bool(new DummyBoolA()));
+        $this->assertTrue(WF::parse_bool([0]));
 
-        $this->assertFalse(parse_bool('false'));
-        $this->assertFalse(parse_bool('no'));
-        $this->assertFalse(parse_bool('negative'));
-        $this->assertFalse(parse_bool('off'));
-        $this->assertFalse(parse_bool('disabled'));
-        $this->assertFalse(parse_bool('disable'));
-        $this->assertFalse(parse_bool(0));
-        $this->assertFalse(parse_bool(0.1, 0.2));
-        $this->assertFalse(parse_bool(new DummyBoolB()));
-        $this->assertFalse(parse_bool([]));
+        $this->assertFalse(WF::parse_bool('false'));
+        $this->assertFalse(WF::parse_bool('no'));
+        $this->assertFalse(WF::parse_bool('negative'));
+        $this->assertFalse(WF::parse_bool('off'));
+        $this->assertFalse(WF::parse_bool('disabled'));
+        $this->assertFalse(WF::parse_bool('disable'));
+        $this->assertFalse(WF::parse_bool(0));
+        $this->assertFalse(WF::parse_bool(0.1, 0.2));
+        $this->assertFalse(WF::parse_bool(new DummyBoolB()));
+        $this->assertFalse(WF::parse_bool([]));
     }
 
     /**
@@ -83,14 +83,12 @@ final class FunctionsTest extends TestCase
      */
     public function testIsArrayLike()
     {
-        Functions::load();
-
-        $this->assertTrue(is_array_like(array()));
-        $this->assertTrue(is_array_like(new Dictionary()));
-        $this->assertTrue(is_array_like(new \ArrayObject()));
-        $this->assertFalse(is_array_like("string"));
-        $this->assertFalse(is_array_like(3.5));;
-        $this->assertFalse(is_array_like(null));;
+        $this->assertTrue(WF::is_array_like(array()));
+        $this->assertTrue(WF::is_array_like(new Dictionary()));
+        $this->assertTrue(WF::is_array_like(new \ArrayObject()));
+        $this->assertFalse(WF::is_array_like("string"));
+        $this->assertFalse(WF::is_array_like(3.5));;
+        $this->assertFalse(WF::is_array_like(null));;
     }
 
     /**
@@ -98,19 +96,17 @@ final class FunctionsTest extends TestCase
      */
     public function testToArray()
     {
-        Functions::load();
-
         $arr = array(1, 2, 'a' => true);
         $dict = new Dictionary($arr);
         $arr_object = new \ArrayObject($arr);
 
-        $this->assertEquals($arr, to_array($arr));
-        $this->assertEquals($arr, to_array($dict));
-        $this->assertEquals($arr, to_array($arr_object));
+        $this->assertEquals($arr, WF::to_array($arr));
+        $this->assertEquals($arr, WF::to_array($dict));
+        $this->assertEquals($arr, WF::to_array($arr_object));
 
         $this->expectException(\DomainException::class);
         $this->expectExceptionMessage('Cannot convert argument to array');
-        to_array("string");
+        WF::to_array("string");
     }
 
     /**
@@ -118,19 +114,17 @@ final class FunctionsTest extends TestCase
      */
     public function testCastArray()
     {
-        Functions::load();
-
         $arr = array(1, 2, 'a' => true);
         $str = "string";
         $integer = 3;
         $floating = 6.4;
         $dict = new Dictionary($arr);
 
-        $this->assertEquals($arr, cast_array($arr));
-        $this->assertEquals([$str], cast_array($str));
-        $this->assertEquals([$integer], cast_array($integer));
-        $this->assertEquals([$floating], cast_array($floating));
-        $this->assertEquals($arr, cast_array($dict));
+        $this->assertEquals($arr, WF::cast_array($arr));
+        $this->assertEquals([$str], WF::cast_array($str));
+        $this->assertEquals([$integer], WF::cast_array($integer));
+        $this->assertEquals([$floating], WF::cast_array($floating));
+        $this->assertEquals($arr, WF::cast_array($dict));
     }
 
 
@@ -139,10 +133,8 @@ final class FunctionsTest extends TestCase
      */
     public function testCheckExtensionClass()
     {
-        Functions::load();
-
-        $this->expectException(Http\Error::class);
-        check_extension('non_existing_extension', 'non_existing_namespace\\non_existing_class');
+        $this->expectException(\RuntimeException::class);
+        WF::check_extension('non_existing_extension', 'non_existing_namespace\\non_existing_class');
     }
 
     /**
@@ -150,10 +142,8 @@ final class FunctionsTest extends TestCase
      */
     public function testCheckExtensionFunction()
     {
-        Functions::load();
-
-        $this->expectException(Http\Error::class);
-        check_extension('non_existing_extension', null, 'non_existing_namespace\\non_existing_function');
+        $this->expectException(\RuntimeException::class);
+        WF::check_extension('non_existing_extension', null, 'non_existing_namespace\\non_existing_function');
     }
 
     /**
@@ -161,13 +151,11 @@ final class FunctionsTest extends TestCase
      */
     public function testCheckExtensionExists()
     {
-        Functions::load();
-
         $exception = false;
         try
         {
-            check_extension('PHP', null, 'substr');
-            check_extension('PHP', 'ArrayObject');
+            WF::check_extension('PHP', null, 'substr');
+            WF::check_extension('PHP', 'ArrayObject');
         }
         catch (\Throwable $e)
         {

@@ -23,20 +23,20 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP;
+namespace WASP\Util;
 
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers WASP\ErrorInterceptor
+ * @covers WASP\Util\ErrorInterceptor
  */
 final class ErrorInterceptorTest extends TestCase
 {
     /**
-     * @covers WASP\ErrorInterceptor::__construct
-     * @covers WASP\ErrorInterceptor::registerError
-     * @covers WASP\ErrorInterceptor::getInterceptedErrors
-     * @covers WASP\ErrorInterceptor::intercept
+     * @covers WASP\Util\ErrorInterceptor::__construct
+     * @covers WASP\Util\ErrorInterceptor::registerError
+     * @covers WASP\Util\ErrorInterceptor::getInterceptedErrors
+     * @covers WASP\Util\ErrorInterceptor::intercept
      */
     public function testInterceptUserNotice()
     {
@@ -52,10 +52,10 @@ final class ErrorInterceptorTest extends TestCase
     }
 
     /**
-     * @covers WASP\ErrorInterceptor::__construct
-     * @covers WASP\ErrorInterceptor::registerError
-     * @covers WASP\ErrorInterceptor::getInterceptedErrors
-     * @covers WASP\ErrorInterceptor::intercept
+     * @covers WASP\Util\ErrorInterceptor::__construct
+     * @covers WASP\Util\ErrorInterceptor::registerError
+     * @covers WASP\Util\ErrorInterceptor::getInterceptedErrors
+     * @covers WASP\Util\ErrorInterceptor::intercept
      */
     public function testInterceptWithUnregisteredError()
     {
@@ -70,12 +70,12 @@ final class ErrorInterceptorTest extends TestCase
     }
 
     /**
-     * @covers WASP\ErrorInterceptor::__construct
+     * @covers WASP\Util\ErrorInterceptor::__construct
      */
     public function testInvalidCallable()
     {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage("Argument should be a valid callable");
+        $this->expectException(\TypeError::class);
+        $this->expectExceptionMessage("must be callable");
         $a = new ErrorInterceptor("1foo");
     }
 

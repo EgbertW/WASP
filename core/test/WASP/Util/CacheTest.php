@@ -23,23 +23,24 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP;
+namespace WASP\Util;
 
 use PHPUnit\Framework\TestCase;
 
 use WASP\IO\Dir;
+use WASP\Platform\System;
 
 /**
- * @covers WASP\Cache
+ * @covers WASP\Util\Cache
  */
 final class CacheTest extends TestCase
 {
     /**
-     * @covers WASP\Cache::__construct
-     * @covers WASP\Cache::loadCache
-     * @covers WASP\Cache::get
-     * @covers WASP\Cache::put
-     * @covers WASP\Cache::saveCache
+     * @covers WASP\Util\Cache::__construct
+     * @covers WASP\Util\Cache::loadCache
+     * @covers WASP\Util\Cache::get
+     * @covers WASP\Util\Cache::put
+     * @covers WASP\Util\Cache::saveCache
      */
     public function testConstruct()
     {
@@ -76,16 +77,16 @@ final class CacheTest extends TestCase
         $dataunser = unserialize($dataser);
         unset($dataunser['_timestamp']); // Added by cache
         unset($emptyarr['_timestamp']);
-        $this->assertEquals($dataunser, $emptyarr);
+        $this->assertEquals($emptyarr, $dataunser);
 
         unlink($file);
     }
 
     /**
-     * @covers WASP\Cache::__construct
-     * @covers WASP\Cache::loadCache
-     * @covers WASP\Cache::setHook
-     * @covers WASP\Cache::get
+     * @covers WASP\Util\Cache::__construct
+     * @covers WASP\Util\Cache::loadCache
+     * @covers WASP\Util\Cache::setHook
+     * @covers WASP\Util\Cache::get
      */
     public function testHook()
     {
@@ -99,9 +100,9 @@ final class CacheTest extends TestCase
     }
 
     /**
-     * @covers WASP\Cache::__construct
-     * @covers WASP\Cache::loadCache
-     * @covers WASP\Cache::get
+     * @covers WASP\Util\Cache::__construct
+     * @covers WASP\Util\Cache::loadCache
+     * @covers WASP\Util\Cache::get
      */
     public function testUnreadable()
     {
@@ -129,9 +130,9 @@ final class CacheTest extends TestCase
     }
 
     /**
-     * @covers WASP\Cache::__construct
-     * @covers WASP\Cache::loadCache
-     * @covers WASP\Cache::get
+     * @covers WASP\Util\Cache::__construct
+     * @covers WASP\Util\Cache::loadCache
+     * @covers WASP\Util\Cache::get
      */
     public function testInvalidCache()
     {
@@ -155,8 +156,8 @@ final class CacheTest extends TestCase
     }
 
     /**
-     * @covers WASP\Cache::__construct
-     * @covers WASP\Cache::loadCache
+     * @covers WASP\Util\Cache::__construct
+     * @covers WASP\Util\Cache::loadCache
      */
     public function testNewCache()
     {
@@ -181,10 +182,10 @@ final class CacheTest extends TestCase
     }
 
     /**
-     * @covers WASP\Cache::__construct
-     * @covers WASP\Cache::get
-     * @covers WASP\Cache::put
-     * @covers WASP\Cache::clear
+     * @covers WASP\Util\Cache::__construct
+     * @covers WASP\Util\Cache::get
+     * @covers WASP\Util\Cache::put
+     * @covers WASP\Util\Cache::clear
      */
     public function testClearCache()
     {
