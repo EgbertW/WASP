@@ -32,13 +32,14 @@ use Psr\Log\LogLevel;
 
 use WASP\Util\Dictionary;
 use WASP\Util\Cache;
+use WASP\Util\ErrorInterceptor;
 use WASP\Resolve\Autoloader;
 use WASP\Resolve\Resolver;
 use WASP\HTTP\Request;
 use WASP\HTTP\Error as HTTPError;
 use WASP\IO\File;
 use WASP\IO\Dir;
-use WASP\Log\{Logger, LoggerFactory, FileWriter};
+use WASP\Log\{Logger, LoggerFactory, FileWriter, DevLogger};
 use WASP\I18n\TranslateLogger;
 
 /**
@@ -122,7 +123,7 @@ class System
 
         // Autoloader requires manual logger setup to avoid depending on external files
         LoggerFactory::setLoggerFactory(new LoggerFactory());
-        Autoloader::setLogger(LoggerFactory::getLogger([Autoloader::class]));
+        Autoloader::setLogger(LoggerFactory::getLogger(['class' => Autoloader::class]));
 
         // Set up root logger
         $root_logger = Logger::getLogger();
@@ -137,7 +138,7 @@ class System
         // Attach the dev logger when dev-mode is enabled
         if ($this->config->get('site', 'dev'))
         {
-            $devlogger = new Log\DevLogger(LogLevel::DEBUG);
+            $devlogger = new DevLogger(LogLevel::DEBUG);
             $root_logger->addLogHandler($devlogger);
         }
 
@@ -168,9 +169,6 @@ class System
 
         // Find installed modules and initialize them
         Module\Manager::setup($this->path->modules, $this->get('resolver'));
-
-        // Load utility functions
-        Functions::load();
 
         // Do not run again
         $this->bootstrapped = true;
