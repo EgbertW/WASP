@@ -160,11 +160,9 @@ class System
         }
 
 
-        // Make sure xdebug does not overload var_dump
-        ini_set('xdebug.overload_var_dump', 'off');
-
         // Save the cache if configured so
-        Cache::setHook($this->config);
+        Cache::setCachePath($this->path->cache);
+        Cache::setHook($this->config->dget('cache', 'expiry', 60));
 
         // Find installed modules and initialize them
         Module\Manager::setup($this->path->modules, $this->get('resolver'));
@@ -213,7 +211,7 @@ class System
             case "translate":
                 if ($this->translate === null)
                 {
-                    $this->translate = new I18n\Translate($this->path);
+                    $this->translate = new I18n\Translate;
                     $this->translate->registerTextDomain('core', $this->path->core . '/language');
                 }
                 return $this->translate;
