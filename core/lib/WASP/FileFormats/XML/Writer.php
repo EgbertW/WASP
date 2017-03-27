@@ -23,11 +23,12 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\IO\DataWriter;
+namespace WASP\FileFormats\XML;
 
-use WASP\Log\Logger;
+use WASP\Util\Functions as WF;
+use WASP\FileFormats\AbstractWriter;
 
-class XMLWriter extends DataWriter
+class Writer extends AbstractWriter
 {
     private $root_node = "Response";
 
@@ -69,7 +70,7 @@ class XMLWriter extends DataWriter
                 if (is_array($value))
                     $this->formatRecursive($writer, $value);
                 else
-                    $this->text(Logger::str($value));
+                    $this->text(WF::str($value));
                 $writer->endElement();
             }
         }

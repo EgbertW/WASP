@@ -23,50 +23,43 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\IO\DataReader;
+namespace WASP\FileFormats;
 
-use ErrorException;
+use WASP\Util\Hook;
 
-use WASP\Util\Functions as WF;
-use WASP\IOException;
-
-class YAMLReader extends DataReader
+class WriterFactory
 {
-    public function readFile(string $file_name)
+    public static function factory(string $file_name)
     {
-        try
-        {
-            return yaml_parse_file($file_name);
-        }
-        catch (ErrorException $e)
-        {
-            throw new IOException($e);
-        }
-    }
+        $ext_pos = strpos($file_name, ".");
+        if ($ext_pos === false)
+            throw new \RuntimeException("File has no extension: $file_name");
 
-    public function readFileHandle($file_handle)
-    {
-        if (!is_resource($file_handle))
-            throw new \InvalidArgumentException("No file handle was provided");
+        $ext = strtolower(substr($file_name, $ext_pos + 1));
 
-        $contents = "";
-        while (!feof($file_handle))
-            $contents .= fread($file_handle, 8192);
+        $result = Hook::execute(
+            "WASP.FileFormats.CreateWriter",
+            ["writer" => null, "filename" => $file_name, "ext" => $ext]
+        );
 
-        return $this->readString($contents);
-    }
+        if ($result['writer'] instanceof AbstractWriter)
+            return $result['writer'];
 
-    public function readString(string $data)
-    {
-        try
+        switch ($ext)
         {
-            return yaml_parse($data);
+            case "csv":
+                return new CSV\Writer;
+            case "ini":
+                return new INI\Writer;
+            case "json":
+                return new JSON\Writer;
+            case "phps":
+                return new PHPS\Writer;
+            case "xml":
+                return new XML\Writer;
+            case "yaml":
+                return new YAML\Writer;
         }
-        catch (ErrorException $e)
-        {
-            throw new IOException($e);
-        }
+        throw new \DomainException("Unsupported file format: $ext");
     }
 }
-
-WF::check_extension('yaml', null, 'yaml_parse');

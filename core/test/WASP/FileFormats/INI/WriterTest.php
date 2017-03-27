@@ -23,35 +23,35 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\IO\DataWriter;
+namespace WASP\FileFormats\INI;
 
-use WASP\System;
-use WASP\IO\Dir;
+use WASP\Platform\System;
+use WASP\IO\Path;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers WASP\IO\DataWriter\INIWriter
+ * @covers WASP\FileFormats\INI\Writer
  */
-class INIWriterTest extends TestCase
+class WriterTest extends TestCase
 {
     private $path;
 
     public function setUp()
     {
         $path = System::path(); 
-        Dir::setRequiredPrefix($path->root);
+        Path::setRequiredPrefix($path->root);
         $this->path = $path->var . '/test';
-        Dir::mkdir($this->path);
+        Path::mkdir($this->path);
     }
 
     public function tearDown()
     {
-        Dir::rmtree($this->path);
+        Path::rmtree($this->path);
     }
 
     /**
-     * @covers WASP\IO\DataWriter\INIWriter::format
-     * @covers WASP\IO\DataWriter\INIWriter::writeParameter
+     * @covers WASP\FileFormats\INI\Writer::format
+     * @covers WASP\FileFormats\INI\Writer::writeParameter
      */
     public function testIniWriterException()
     {
@@ -59,13 +59,13 @@ class INIWriterTest extends TestCase
         $file = $this->path . '/test.ini';
         $this->expectException(\DomainException::class);
 
-        $writer = new INIWriter();
+        $writer = new Writer();
         $writer->write($cfg, $file);
     }
 
     /**
-     * @covers WASP\IO\DataWriter\INIWriter::write
-     * @covers WASP\IO\DataWriter\INIWriter::writeParameter
+     * @covers WASP\FileFormats\INI\Writer::write
+     * @covers WASP\FileFormats\INI\Writer::writeParameter
      */
     public function testIniWriterHierarchical()
     {
@@ -91,7 +91,7 @@ class INIWriterTest extends TestCase
         );
 
         $file = $this->path . '/test.ini';
-        $writer = new INIWriter();
+        $writer = new Writer();
         $writer->rewrite($cfg, $file);
 
         $ini = file_get_contents($file);
@@ -121,8 +121,8 @@ EOT;
     }
 
     /**
-     * @covers WASP\IO\DataWriter\INIWriter::write
-     * @covers WASP\IO\DataWriter\INIWriter::writeParameter
+     * @covers WASP\FileFormats\INI\Writer::write
+     * @covers WASP\FileFormats\INI\Writer::writeParameter
      */
     public function testIniWriterComments()
     {
@@ -175,7 +175,7 @@ EOT;
         
         $cfg['sec3']['var5'] = 'value5';
         unset($cfg['sec4']);
-        $writer = new INIWriter();
+        $writer = new Writer();
         $writer->rewrite($cfg, $file);
 
         $ini_out = file_get_contents($file);

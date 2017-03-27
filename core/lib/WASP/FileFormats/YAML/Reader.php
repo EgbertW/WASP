@@ -23,12 +23,51 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\IO\DataWriter;
+namespace WASP\FileFormats\YAML;
 
-class PHPSWriter extends DataWriter
+use ErrorException;
+
+use WASP\FileFormats\AbstractReader;
+use WASP\Util\Functions as WF;
+use WASP\IO\IOException;
+
+class Reader extends AbstractReader
 {
-    public function format($data, $file_handle)
+    public function readFile(string $file_name)
     {
-        fwrite($file_handle, serialize($data));
+        try
+        {
+            return yaml_parse_file($file_name);
+        }
+        catch (ErrorException $e)
+        {
+            throw new IOException($e);
+        }
+    }
+
+    public function readFileHandle($file_handle)
+    {
+        if (!is_resource($file_handle))
+            throw new \InvalidArgumentException("No file handle was provided");
+
+        $contents = "";
+        while (!feof($file_handle))
+            $contents .= fread($file_handle, 8192);
+
+        return $this->readString($contents);
+    }
+
+    public function readString(string $data)
+    {
+        try
+        {
+            return yaml_parse($data);
+        }
+        catch (ErrorException $e)
+        {
+            throw new IOException($e);
+        }
     }
 }
+
+WF::check_extension('yaml', null, 'yaml_parse');

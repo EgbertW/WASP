@@ -23,12 +23,12 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\IO\DataWriter;
+namespace WASP\FileFormats;
 
-use WASP\IO\File;
-use function WASP\is_array_like;
+use WASP\Util\Functions as WF;
+use WASP\Util\Hook;
 
-abstract class DataWriter
+abstract class Writer
 {
     protected $pretty_print;
 
@@ -40,6 +40,7 @@ abstract class DataWriter
     public function setPrettyPrint(bool $pprint)
     {
         $this->pretty_print = $pprint;
+        return $this;
     }
 
     public function getPrettyPrint()
@@ -49,7 +50,7 @@ abstract class DataWriter
 
     public function write($data, $file_handle = null)
     {
-        if (!is_array_like($data))
+        if (!WF::is_array_like($data))
             throw new InvalidArgumentException("Data should be array or array-like");
 
         if ($file_handle === null)
@@ -83,8 +84,7 @@ abstract class DataWriter
             if ($file_name)
             {
                 fclose($file_handle);
-                $f = new File($file_name);
-                $f->setPermissions();
+                Hook::execute("WASP.IO.FileCreated", ['filename' => $file_name]);
             }
             else
             {

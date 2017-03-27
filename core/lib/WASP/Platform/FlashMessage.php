@@ -25,6 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP\Platform;
 
 use WASP\Util\Dictionary;
+use WASP\Util\Functions as WF;
 
 class FlashMessage
 {
@@ -49,7 +50,7 @@ class FlashMessage
 
     public function __construct($msg, $type = FlashMessage::INFO)
     {
-        if (is_array_like($msg))
+        if (WF::is_array_like($msg))
         {
             $this->msg = $msg[0];
             $this->type = $msg[1];

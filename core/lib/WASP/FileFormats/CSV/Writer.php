@@ -23,19 +23,19 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\IO\DataWriter;
+namespace WASP\FileFormats\CSV;
 
-use WASP\is_array_like;
-use WASP\cast_array;
+use WASP\Util\Function as WF;
+use WASP\FileFormats\AbstractWriter;
 
-class CSVWriter extends DataWriter
+class Writer extends AbstractWriter
 {
     protected $delimiter = ',';
     protected $enclosure = '"';
     protected $escape_char = '\\';
     protected $print_header = true;
 
-    public function setDelimiter($delimiter)
+    public function setDelimiter(string $delimiter)
     {
         $this->delimiter = $delimiter;
         return $this;
@@ -46,7 +46,7 @@ class CSVWriter extends DataWriter
         return $this->delimiter;
     }
 
-    public function setEnclosure($enclosure)
+    public function setEnclosure(string $enclosure)
     {
         $this->enclosure = $enclosure;
         return $this;
@@ -87,7 +87,7 @@ class CSVWriter extends DataWriter
         $header = false;
         foreach ($data as $idx => $row)
         {
-            $row = cast_array($row);
+            $row = WF::cast_array($row);
             $this->validateRow($row);
 
             if (!$header && $this->print_header)
@@ -109,7 +109,7 @@ class CSVWriter extends DataWriter
     {
         foreach ($row as $k => $v)
         {
-            if (is_array_like($v))
+            if (WF::is_array_like($v))
                 throw new InvalidArgumentException("CSVWriter does not support nested arrays");
         }
     }

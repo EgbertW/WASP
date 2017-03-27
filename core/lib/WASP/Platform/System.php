@@ -37,8 +37,7 @@ use WASP\Resolve\Autoloader;
 use WASP\Resolve\Resolver;
 use WASP\HTTP\Request;
 use WASP\HTTP\Error as HTTPError;
-use WASP\IO\File;
-use WASP\IO\Dir;
+use WASP\IO\Path;
 use WASP\Log\{Logger, LoggerFactory, FileWriter, DevLogger};
 use WASP\I18n\TranslateLogger;
 
@@ -270,14 +269,14 @@ class System
     private function setCreatePermissions()
     {
         if ($this->config->has('io', 'group'))
-            File::setFileGroup($this->config->get('io', 'group'));
+            Path::setDefaultFileGroup($this->config->get('io', 'group'));
 
         $file_mode = (int)$this->config->get('io', 'file_mode');
         if ($file_mode)
         {
             $of = $file_mode;
             $file_mode = octdec(sprintf("%04d", $file_mode));
-            File::setFileMode($file_mode);
+            Path::setDefaultFileMode($file_mode);
         }
 
         $dir_mode = (int)$this->config->get('io', 'dir_mode');
@@ -285,7 +284,7 @@ class System
         {
             $of = $dir_mode;
             $dir_mode = octdec(sprintf("%04d", $dir_mode));
-            File::setDirMode($dir_mode);
+            Path::setDefaultDirMode($dir_mode);
         }
     }
 

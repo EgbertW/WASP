@@ -23,9 +23,11 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\IO\DataWriter;
+namespace WASP\FileFormats;
 
-class DataWriterFactory
+use WASP\Util\Hook;
+
+class ReaderFactory
 {
     public static function factory(string $file_name)
     {
@@ -35,20 +37,28 @@ class DataWriterFactory
 
         $ext = strtolower(substr($file_name, $ext_pos + 1));
 
+        $result = Hook::execute(
+            "WASP.FileFormats.CreateReader", 
+            ['reader' => null, 'filename' => $file_name, 'ext' => $ext]
+        );
+
+        if ($result['reader'] instanceof AbstractReader)
+            return $result['reader'];
+
         switch ($ext)
         {
             case "csv":
-                return new CSVWriter;
+                return new CSV\Reader;
+            case "ini";
+                return new INI\Reader;
             case "json":
-                return new JSONWriter;
+                return new JSON\Reader;
             case "phps":
-                return new PHPSWriter;
+                return new PHPS\Reader;
             case "xml":
-                return new XMLWriter;
+                return new XML\Reader;
             case "yaml":
-                return new YAMLWriter;
-            case "ini":
-                return new INIWriter;
+                return new YAML\Reader;
         }
         throw new \DomainException("Unsupported file format: $ext");
     }

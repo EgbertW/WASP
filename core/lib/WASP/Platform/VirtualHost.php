@@ -25,6 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\Platform;
 
+use WASP\Util\Functions as WF;
 use WASP\HTTP\URL;
 
 /**
@@ -113,7 +114,7 @@ class VirtualHost
      */
     public function setLocale($locale)
     {
-        $locale = cast_array($locale);
+        $locale = WF::cast_array($locale);
         foreach ($locale as $l)
             $this->locales[] = \Locale::canonicalize($l);
 

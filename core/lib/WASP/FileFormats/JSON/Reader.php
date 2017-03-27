@@ -23,17 +23,38 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\IO\DataWriter;
+namespace WASP\FileFormats\JSON;
 
-use WASP\Util\Functions as WF;
+use WASP\IO\IOException;
+use WASP\FileFormats\AbstractReader;
 
-class YAMLWriter extends DataWriter
+class Reader extends AbstractReader
 {
-    public function format($data, $file_handle)
+    public function readFile(string $file_name)
     {
-        // YAML is always 'pretty printed' as it relies on indentation and whitespace
-        return fwrite($file_handle, yaml_emit($data));
+        $contents = file_get_contents($file_name);
+        if ($contents === false)
+            throw new IOException("Failed to read file $file_name");
+
+        return $this->readString($contents);
+    }
+
+    public function readFileHandle($file_handle)
+    {
+        if (!is_resource($file_handle))
+            throw new \InvalidArgumentException("No file handle was provided");
+
+        $contents = "";
+        while (!feof($file_handle))
+            $contents .= fread($file_handle, 8192);
+
+        return $this->readString($contents);
+    }
+
+    public function readString(string $data)
+    {
+        $json = json_decode($data, true);
+
+        return $json;
     }
 }
-
-WF::check_extension('yaml', null, 'yaml_emit');

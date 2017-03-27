@@ -23,11 +23,12 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\IO\DataReader;
+namespace WASP\FileFormats\CSV;
 
 use Iterator;
 
-use WASP\IOException;
+use WASP\FileFormats\AbstractReader;
+use WASP\IO\IOException;
 
 /**
  * Read CSV files. This provides a direct CSV reader that converts a CSV file
@@ -36,7 +37,7 @@ use WASP\IOException;
  * using foreach. This allows to handle large files without loading everything
  * into memory.
  */
-class CSVReader extends DataReader implements Iterator
+class Reader extends AbstractReader implements Iterator
 {
     protected $file_handle;
     protected $line_number;

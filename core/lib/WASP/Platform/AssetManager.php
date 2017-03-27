@@ -25,11 +25,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\Platform;
 
+use WASP\Util\LoggerAwareStaticTrait;
+use WASP\Util\Function as WF;
 use WASP\HTTP\ResponseHookInterface;
 use WASP\HTTP\Request;
 use WASP\HTTP\Response;
 use WASP\HTTP\StringResponse;
-use WASP\Util\LoggerAwareStaticTrait;
 
 use JSONSerializable;
 use InvalidArgumentException;
@@ -107,9 +108,9 @@ class AssetManager implements ResponseHookInterface
     public function addVariable(string $name, $value)
     {
         // Convert value to something usable in the output
-        if (is_array_like($value))
+        if (WF::is_array_like($value))
         {
-            $value = to_array($value);
+            $value = WF::to_array($value);
         }
         elseif (is_subclass_of($value, JSONSerializable::class))
         {

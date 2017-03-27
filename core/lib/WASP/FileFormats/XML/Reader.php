@@ -23,16 +23,18 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\IO\DataReader;
+namespace WASP\FileFormats\XML;
 
-use XMLReader as PHPXMLReader;
-use WASP\IOException;
+use XMLReader;
 
-class XMLReader extends DataReader
+use WASP\FileFormats\AbstractReader;
+use WASP\IO\IOException;
+
+class Reader extends AbstractReader
 {
     public function readFile(string $file_name)
     {
-        $reader = new PHPXMLReader;
+        $reader = new XMLReader;
         $reader->open($file_name);
 
         $data = $this->toArray($reader);
@@ -55,7 +57,7 @@ class XMLReader extends DataReader
 
     public function readString(string $data)
     {
-        $reader = new PHPXMLReader;
+        $reader = new XMLReader;
         $reader->XML($data);
 
         $contents = $this->toArray($reader);
@@ -64,7 +66,7 @@ class XMLReader extends DataReader
         return $contents;
     }
 
-    public function toArray(PHPXMLReader $reader)
+    public function toArray(XMLReader $reader)
     {
         $data = array();
 
@@ -73,7 +75,7 @@ class XMLReader extends DataReader
 
         while ($reader->read())
         {
-            if ($reader->nodeType === PHPXMLReader::ELEMENT)
+            if ($reader->nodeType === XMLReader::ELEMENT)
             {
                 if ($parent === null)
                 {
@@ -102,11 +104,11 @@ class XMLReader extends DataReader
                 }
 
             }
-            else if ($reader->nodeType === PHPXMLReader::END_ELEMENT)
+            else if ($reader->nodeType === XMLReader::END_ELEMENT)
             {
                 $cur = $cur->parent;
             }
-            else if ($reader->nodeType === PHPXMLReader::TEXT)
+            else if ($reader->nodeType === XMLReader::TEXT)
             {
                 $cur->content = $reader->value;
             }

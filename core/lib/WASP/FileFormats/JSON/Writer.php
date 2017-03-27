@@ -23,12 +23,13 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\IO\DataWriter;
+namespace WASP\FileFormats\JSON;
 
 use WASP\Util\Encoding;
 use WASP\Util\Functions as WF;
+use WASP\FileFormats\AbstractWriter;
 
-class JSONWriter extends DataWriter
+class Writer extends AbstractWriter
 {
     protected $json_callback = null;
 
@@ -158,7 +159,7 @@ class JSONWriter extends DataWriter
                 fwrite($buf, ': ');
             } 
 
-            if (is_array_like($sub) || is_object($sub))
+            if (WF::is_array_like($sub) || is_object($sub))
                 self::pprintJSON($sub, $indent, null, $buf);
             else
                 self::writeJSON($sub, $buf);

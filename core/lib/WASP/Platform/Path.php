@@ -25,8 +25,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\Platform;
 
-use WASP\IO\File;
-use WASP\IO\Dir;
+use WASP\IO\Path;
 
 final class Path
 {
@@ -110,13 +109,13 @@ final class Path
         foreach (array('var', 'cache', 'log') as $write_dir)
         {
             $path = $this->$write_dir;
-            Dir::mkdir($path);
+            Path::mkdir($path);
 
             if (!is_dir($path))
                 throw new IOException("Path " . $path . " is not a directory");
 
             if (!is_writable($path)) // We can try to make it writable, if we own the file
-                File::makeWritable($path);
+                Path::makeWritable($path);
         }
         $this->path_checked = true;
     }

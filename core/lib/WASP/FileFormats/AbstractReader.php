@@ -23,40 +23,11 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\IO\DataReader;
+namespace WASP\FileFormats;
 
-use WASP\IOException;
-use ErrorException;
-
-class PHPSReader extends DataReader
+abstract class Reader
 {
-    public function readFile(string $file_name)
-    {
-        $file_handle = fopen($file_name , "r");
-        return $this->readFileHandle($file_handle);
-    }
-
-    public function readFileHandle($file_handle)
-    {
-        if (!is_resource($file_handle))
-            throw new \InvalidArgumentException("No file handle was provided");
-
-        $contents = "";
-        while (!feof($file_handle))
-            $contents .= fread($file_handle, 8192);
-
-        return $this->readString($contents);
-    }
-
-    public function readString(string $data)
-    {
-        try
-        {
-            return unserialize($data);
-        }
-        catch (ErrorException $e)
-        {
-            throw new IOException($e);
-        }
-    }
+    abstract public function readFile(string $file_name);
+    abstract public function readString(string $data);
+    abstract public function readFileHandle($file_handle);
 }

@@ -23,18 +23,17 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\IO\DataWriter;
+namespace WASP\FileFormats\INI;
 
-use function WASP\to_array;
-use function WASP\is_array_like;
-use function WASP\is_int_val;
+use WASP\Util\Functions as WF;
+use WASP\FileFormats\AbstractWriter;
 
 /**
  * The INI-file class writes INI-files. If the INI-file exists,
  * it will be read to extract the comments and re-adds these comments
  * to the same section in the output file
  */
-class INIWriter extends DataWriter
+class Writer extends AbstractWriter
 {
     private $previous_contents;
 
@@ -120,7 +119,7 @@ class INIWriter extends DataWriter
             else
                 fwrite($file_handle, "\n");
 
-            $parameters = to_array($parameters);
+            $parameters = WF::to_array($parameters);
 
             fwrite($file_handle, "[" . $section . "]\n");
             $comments = isset($section_comments[$section]) ? $section_comments[$section] : array();
@@ -152,7 +151,7 @@ class INIWriter extends DataWriter
             throw new \DomainException("Cannot nest arrays more than once in INI-file");
 
         $str = "";
-        if (is_array_like($parameter))
+        if (WF::is_array_like($parameter))
         {
             foreach ($parameter as $key => $val)
             {
@@ -164,7 +163,7 @@ class INIWriter extends DataWriter
             fwrite($file_handle, "$name = " . ($parameter ? "true" : "false") . "\n");
         elseif (is_null($parameter))
             fwrite($file_handle, "$name = null\n");
-        elseif (is_float($parameter) && is_int_val((string)$parameter))
+        elseif (is_float($parameter) && WF::is_int_val((string)$parameter))
             fwrite($file_handle, "$name = " . sprintf("%.1f", $parameter) . "\n");
         elseif (is_float($parameter))
             fwrite($file_handle, "$name = " . $parameter . "\n");
