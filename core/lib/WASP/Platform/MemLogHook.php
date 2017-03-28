@@ -25,19 +25,47 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\HTTP;
 
-use WASP\Log\DevLogger;
+use WASP\Util\Hook;
+use WASP\Util\Date;
+use WASP\Util\Functions as WF;
+
+use WASP\Log\MemLogger;
 
 /**
  * Log all output of the current script to memory, and attach a log to the end
  * of the response
  */
-class DevLoggerHook implements ResponseHookInterface
+class MemLogHook implements ResponseHookInterface
 {
-    protected $devlogger = null;
+    protected $memlog = null;
+    protected $dispatcher = null;
 
-    public function __construct(DevLogger $logger)
+    public function __construct(MemLogger $logger, Dispatcher $dispatcher)
     {
-        $this->devlogger = $logger;
+        $this->memlog = $logger;
+        $this->dispatcher = $dispatcher;
+    }
+
+    public function getDispatcher()
+    {
+        return $this->dispatcher;
+    }
+
+    public function setDispatcher(Dispatcher $dispatcher)
+    {
+        $this->dispatcher = $dispatcher;
+        return $this;
+    }
+
+    public function getMemLog()
+    {
+        return $this->memlog;
+    }
+
+    public function setMemLog(MemLogger $logger)
+    {
+        $this->memlog = $logger;
+        return $this;
     }
 
     /**
@@ -45,18 +73,24 @@ class DevLoggerHook implements ResponseHookInterface
      * JSON/XML request Do note that this should only be used for development
      * as the log may expose sensitive information to the client.
      * 
-     * @param Request $request The request being answerd
-     * @param Response $response The response so far
+     * @param array $params Expected to contain 'responder', the Responder object
      */
-    public function executeHook(Request $request, Response $response, string $mime)
+    public function __invoke(array $params)
     {
-        $now = microtime(true);
-        $start = $request->getStartTime();
-        $duration = round($now - $start, 3);
+        $responder = $params['responder'];
+        $request = $responder->getRequest();
+        $response = $responder->getResponse();
 
+        // Calculate elapsed time
+        $now = Date::now();
+        $start = $request->getStartTime();;
+        $duration = round(Date::diff($now, $start), 3);
+
+        // Add log
+        $log = $this->memlog->getLog();
         if ($response instanceof DataResponse)
         {
-            $response->getDictionary()->set('devlog', $this->log);
+            $response->getDictionary()->set('devlog', $log);
         }
         elseif ($response instanceof StringResponse)
         {
@@ -67,10 +101,10 @@ class DevLoggerHook implements ResponseHookInterface
             {
                 fprintf($buf, "\n<!-- DEVELOPMENT LOG-->\n");
                 fprintf($buf, "<!-- Executed in: %s s -->\n", $duration);
-                fprintf($buf, "<!-- Route resolved: %s -->\n", $request->route);
-                fprintf($buf, "<!-- App executed: %s -->\n", $request->app);
+                fprintf($buf, "<!-- Route resolved: %s -->\n", $this->dispather->getRoute());
+                fprintf($buf, "<!-- App executed: %s -->\n", $this->dispatcher->getApp());
                 $width = strlen((string)count($this->log)) + 1;
-                foreach ($this->log as $no => $line)
+                foreach ($log as $no => $line)
                     fprintf($buf, "<!-- %0" . $width . "d: %s -->\n", $no, htmlentities($line));
 
                 fseek($buf, 0);
@@ -81,10 +115,10 @@ class DevLoggerHook implements ResponseHookInterface
             if (in_array('text/plain', $mime))
             {
                 fprintf($buf, "\n// DEVELOPMENT LOG\n");
-                fprintf($buf, "// Executed in: %s\n", Logger::str($duration));
-                fprintf($buf, "// Route resolved: %s\n", $request->route);
-                fprintf($buf, "// App executed: %s>\n", $request->app);
-                foreach ($this->log as $no => $line)
+                fprintf($buf, "// Executed in: %s\n", $duration);
+                fprintf($buf, "// Route resolved: %s\n", $this->dispatcher->getRoute());
+                fprintf($buf, "// App executed: %s>\n", $this->dispatcher->getApp());
+                foreach ($log as $no => $line)
                     fprintf($buf, "// %05d: %s\n", $no, $line);
 
                 fseek($buf, 0);
@@ -93,4 +127,5 @@ class DevLoggerHook implements ResponseHookInterface
             }
         }
     }
+}
 

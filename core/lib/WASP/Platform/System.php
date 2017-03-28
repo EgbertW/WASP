@@ -38,7 +38,7 @@ use WASP\Resolve\Resolver;
 use WASP\HTTP\Request;
 use WASP\HTTP\Error as HTTPError;
 use WASP\IO\Path;
-use WASP\Log\{Logger, LoggerFactory, FileWriter, DevLogger};
+use WASP\Log\{Logger, LoggerFactory, FileWriter, MemLogger};
 use WASP\I18n\TranslateLogger;
 
 /**
@@ -137,7 +137,7 @@ class System
         // Attach the dev logger when dev-mode is enabled
         if ($this->config->get('site', 'dev'))
         {
-            $devlogger = new DevLogger(LogLevel::DEBUG);
+            $devlogger = new MemLogger(LogLevel::DEBUG);
             $root_logger->addLogHandler($devlogger);
         }
 

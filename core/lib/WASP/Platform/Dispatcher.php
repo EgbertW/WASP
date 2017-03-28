@@ -30,6 +30,8 @@ use DateTime;
 
 use WASP\Util\LoggerAwareStaticTrait;
 
+use WASP\Log\MemLogger;
+
 use WASP\Resolve\Resolver;
 
 use WASP\Util\Dictionary;
@@ -160,6 +162,20 @@ class Dispatcher
                 $this->prepareErrorResponse($e);
 
             $rb = new Responder($this->request);
+
+            if ($this->config->get('dev'))
+            {
+                $memlogger = MemLogger::getInstance();
+                if ($memlogger)
+                {
+                    $loghook = new MemLogHook($memlogger, $this);
+                    Hook::subscribe(
+                        "WASP.HTTP.Responder.Respond", 
+                        new MemLogHook($memlogger, $this),
+                        Hook::RUN_LAST
+                    );
+                }
+            }
             $session_cookie = $this->session !== null ? $this->session->getCookie() : null;
             if ($session_cookie)
                 $rb->addCookie($session_cookie);

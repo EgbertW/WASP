@@ -27,7 +27,6 @@ namespace WASP\Platform;
 
 use WASP\Util\LoggerAwareStaticTrait;
 use WASP\Util\Function as WF;
-use WASP\HTTP\ResponseHookInterface;
 use WASP\HTTP\Request;
 use WASP\HTTP\Response;
 use WASP\HTTP\StringResponse;
@@ -35,7 +34,7 @@ use WASP\HTTP\StringResponse;
 use JSONSerializable;
 use InvalidArgumentException;
 
-class AssetManager implements ResponseHookInterface
+class AssetManager
 {
     use LoggerAwareStaticTrait;
 
