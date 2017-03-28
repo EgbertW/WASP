@@ -30,16 +30,23 @@ use InvalidArgumentException;
 
 use Psr\Log\LogLevel;
 
+use WASP\IO\Path;
+
+
 use WASP\Util\Dictionary;
 use WASP\Util\Cache;
 use WASP\Util\ErrorInterceptor;
+
+use WASP\Log\{Logger, LoggerFactory, FileWriter, MemLogger};
+use WASP\Log;
+
 use WASP\Resolve\Autoloader;
 use WASP\Resolve\Resolver;
+
 use WASP\HTTP\Request;
 use WASP\HTTP\Error as HTTPError;
-use WASP\IO\Path;
-use WASP\Log\{Logger, LoggerFactory, FileWriter, MemLogger};
-use WASP\I18n\TranslateLogger;
+
+use WASP\I18n;
 
 /**
  * @codeCoverageIgnore System is already executed before tests run
@@ -49,14 +56,15 @@ class System
     private static $instance = null;
 
     private $bootstrapped = false;
-    private $path;
+    private $path_config;
     private $config;
     private $request;
     private $resolver;
+    private $dispatcher;
     private $translate;
     private $template;
 
-    public static function setup(Path $path, Dictionary $config)
+    public static function setup(PathConfig $path, Dictionary $config)
     {
         if (self::$instance !== null)
             throw new RuntimeException("Cannot initialize more than once");
@@ -81,9 +89,9 @@ class System
         return self::$instance;
     }
 
-    private function __construct(Path $path, Dictionary $config)
+    private function __construct(PathConfig $path_config, Dictionary $config)
     {
-        $this->path = $path;
+        $this->path_config = $path_config;
         $this->config = $config;
         $this->bootstrap();
     }
@@ -103,9 +111,9 @@ class System
         $test = WASP_TEST === 1 ? "-test" : "";
 
         if (PHP_SAPI === 'cli')
-            ini_set('error_log', $this->path->log . '/error-php-cli' . $test . '.log');
+            ini_set('error_log', $this->path_config->log . '/error-php-cli' . $test . '.log');
         else
-            ini_set('error_log', $this->path->log . '/error-php' . $test . '.log');
+            ini_set('error_log', $this->path_config->log . '/error-php' . $test . '.log');
 
         // Set default permissions for files and directories
         $this->setCreatePermissions();
@@ -113,7 +121,7 @@ class System
         // Make sure permissions are adequate
         try
         {
-            $this->path->checkPaths();
+            $this->path_config->checkPaths();
         }
         catch (PermissionError $e)
         {
@@ -127,7 +135,7 @@ class System
         // Set up root logger
         $root_logger = Logger::getLogger();
         $root_logger->setLevel(LogLevel::DEBUG);
-        $logfile = $this->path->log . '/wasp' . $test . '.log';
+        $logfile = $this->path_config->log . '/wasp' . $test . '.log';
         $root_logger->addLogHandler(new FileWriter($logfile, LogLevel::INFO));
 
         //
@@ -161,11 +169,11 @@ class System
 
 
         // Save the cache if configured so
-        Cache::setCachePath($this->path->cache);
+        Cache::setCachePath($this->path_config->cache);
         Cache::setHook($this->config->dget('cache', 'expiry', 60));
 
         // Find installed modules and initialize them
-        Module\Manager::setup($this->path->modules, $this->get('resolver'));
+        Module\Manager::setup($this->path_config->modules, $this->get('resolver'));
 
         // Do not run again
         $this->bootstrapped = true;
@@ -188,8 +196,8 @@ class System
         {
             case "config":
                 return $this->config;
-            case "path":
-                return $this->path;
+            case "pathConfig":
+                return $this->path_config;
             case "request":
                 if ($this->request === null)
                 {
@@ -197,30 +205,32 @@ class System
                         $_GET,
                         $_POST,
                         $_COOKIE,
-                        $_SERVER,
-                        $this->config,
-                        $this->path, 
-                        $this->resolver
+                        $_SERVER
                     );
                 }
                 return $this->request;
             case "resolver":
                 if ($this->resolver === null)
-                    $this->resolver = new Resolver($this->path);
+                    $this->resolver = new Resolver($this->path_config->core);
                 return $this->resolver;
             case "translate":
                 if ($this->translate === null)
                 {
                     $this->translate = new I18n\Translate;
-                    $this->translate->registerTextDomain('core', $this->path->core . '/language');
+                    $this->translate->registerTextDomain('core', $this->path_config->core . '/language');
                 }
                 return $this->translate;
+            case "dispatcher":
+                if ($this->dispatcher === null)
+                {
+                    $this->dispatcher = new Dispatcher($this->get('request'), $this->get('resolver'));
+                    $this->dispatcher->configureSites($this->config);
+                    $this->dispatcher->determineVirtualHost();
+                }
+                return $this->dispatcher;
             case "template":
                 if ($this->template === null)
-                {
-                    $r = $this->__get('request');
-                    $this->template = $r->getTemplate();
-                }
+                    $this->template = $this->get('dispatcher')->getTemplate();
                 return $this->template;
         }
         throw new InvalidArgumentException("No such object: $parameter");
@@ -289,7 +299,7 @@ class System
     private function setupTranslateLog()
     {
         $logger = Logger::getLogger('WASP.I18n.Translator.Translator');
-        $handler = new TranslateLogger($this->path->log . '/translate-%s-%s.pot');
+        $handler = new I18n\TranslateLogger($this->path_config->log . '/translate-%s-%s.pot');
         $logger->addLogHandler($handler);
     }
 }

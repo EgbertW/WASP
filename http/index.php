@@ -27,13 +27,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 require "../bootstrap/init.php";
 
 $root = dirname(dirname(__FILE__));
-$path = new WASP\Path(array('root' => $root));
+$path = new WASP\Platform\PathConfig(array('root' => $root));
 
 // Dispatch the request
-$config = WASP\Dictionary::loadFile($root . '/config/main.ini');
+$ini_file = $root . '/config/main.ini';
+$reader = WASP\FileFormats\ReaderFactory::factory($ini_file);
+$config = new WASP\Util\Dictionary($reader->readFile($ini_file));
 
-$wasp = WASP\System::setup($path, $config);
-$request = $wasp->request;
-$request->dispatch();
+$wasp = WASP\Platform\System::setup($path, $config);
+$dispatcher = $wasp->get('dispatcher');
+$dispatcher->dispatch();
 
 die();

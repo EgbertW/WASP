@@ -26,8 +26,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 namespace WASP\Platform;
 
 use WASP\IO\Path;
+use WASP\IO\IOException;
 
-final class Path
+final class PathConfig
 {
     private $root;
     private $config;

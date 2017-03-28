@@ -23,7 +23,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-$type = $this->request->chooseResponse(array("text/html", "text/plain"));
+$type = $request->chooseResponse(array("text/html", "text/plain"));
 
 $error_code = 500;
 $error_title = "Internal Server Error";
@@ -34,11 +34,11 @@ if ($dev || $cli)
 {
     $error_description .= 
         "\nDescription: " . $exception->getMessage() . "\n" 
-        . WASP\Debug\Logger::str($exception);
+        . WASP\Util\Functions::str($exception);
 }
 
 $type_name = str_replace("/", "_" ,$type) . ".php";
-$path = $request->getResolver()->template($type_name);
+$path = $this->getResolver()->template($type_name);
 if ($path !== null)
 {
     $this->setMimeType($type);

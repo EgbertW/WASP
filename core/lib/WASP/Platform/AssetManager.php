@@ -25,14 +25,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 namespace WASP\Platform;
 
+use JSONSerializable;
+use InvalidArgumentException;
+
 use WASP\Util\LoggerAwareStaticTrait;
-use WASP\Util\Function as WF;
+use WASP\Util\Functions as WF;
+
 use WASP\HTTP\Request;
 use WASP\HTTP\Response;
 use WASP\HTTP\StringResponse;
 
-use JSONSerializable;
-use InvalidArgumentException;
+use WASP\Resolve\Resolver;
 
 class AssetManager
 {
@@ -42,22 +45,39 @@ class AssetManager
     protected $css = array();
     protected $minified = true;
     protected $tidy = false;
-    protected $request;
+    protected $vhost;
     protected $resolver;
 
     protected $inline_variables = array();
     protected $inline_style = array();
 
-    public function __construct(Request $request)
+    public function __construct(VirtualHost $vhost, Resolver $resolver)
     {
         self::getLogger();
-        $this->request = $request;
-        $this->resolver = $request->getResolver();
+        $this->vhost = $vhost;
+        $this->resolver = $resolver;
     }
 
-    public function getRequest()
+    public function getVirtualHost()
     {
-        return $this->request;
+        return $this->vhost;
+    }
+
+    public function setVirtualHost(VirtualHost $vhost)
+    {
+        $this->vhost = $vhost;
+        return $this;
+    }
+
+    public function getResolver()
+    {
+        return $this->resolver;
+    }
+
+    public function setResolver(Resolver $resolver)
+    {
+        $this->resolver = $resolver;
+        return $this;
     }
     
     public function setMinified(bool $minified)
@@ -185,15 +205,18 @@ class AssetManager
             }
 
             $asset['path'] = $asset_path;
-            $asset['url'] = $this->request->vhost->URL($asset_path);
+            $asset['url'] = $this->vhost->URL($asset_path);
             $urls[] = $asset;
         }
 
         return $urls;
     }
 
-    public function executeHook(Request $request, Response $response, string $mime)
+    public function executeHook(array $params)
     {
+        $response = $params['response'] ?? null;
+        $mime = $params['mime'] ?? null;
+
         if ($response instanceof StringResponse && $mime === "text/html")
         {
             $output = $response->getOutput($mime);

@@ -30,9 +30,9 @@ namespace WASP\Platform
     use WASP\Resolve\Resolver;
     use WASP\Util\LoggerAwareStaticTrait;
     use WASP\HTTP\Request;
-    use WASP\HTTP\Error as HTTPError;
-    use WASP\HTTP\Response;
-    use WASP\HTTP\StringResponse;
+    use WASP\HTTP\Response\Error as HTTPError;
+    use WASP\HTTP\Response\Response;
+    use WASP\HTTP\Response\StringResponse;
 
     /**
      * The Templating class implements the WASP template system. Templates are
@@ -53,12 +53,6 @@ namespace WASP\Platform
     class Template
     {
         use LoggerAwareStaticTrait;
-
-        /** The request this template is in response to */
-        protected $request;
-
-        /** The path configuration of WASP */
-        protected $path;
 
         /** The arguments provided for the template */
         protected $arguments = array();
@@ -85,14 +79,12 @@ namespace WASP\Platform
          * in the WASP system, which you can obtain using System::template().
          * Templates rendered this way template will share all assigned
          * variables.
-         * @param WASP\HTTP\Request $reques The request object
+         * @param WASP\Resolve\Resolver $resolver The template and asset resolver
          */
-        public function __construct(Request $request)
+        public function __construct(Resolver $resolver)
         {
             self::getLogger();
-            $this->request = $request;
-            $this->path = $request->path;
-            $this->setRequest($request);
+            $this->setResolver($resolver);
         }
 
         /**
@@ -126,8 +118,8 @@ namespace WASP\Platform
 
         /**
          * Set the asset manager used by this object
-         * @param WASP\AssetManager $mgr The asset manager to set
-         * @return WASP\Template Provides fluent interface
+         * @param WASP\Platform\AssetManager $mgr The asset manager to set
+         * @return WASP\Platform\Template Provides fluent interface
          */
         public function setAssetManager(AssetManager $mgr)
         {
@@ -144,21 +136,22 @@ namespace WASP\Platform
         }
 
         /**
-         * $return WASP\HTTP\Request The associated request object
+         * Set the resolver instance used to resolve templates and assets
+         * @param WASP\Resolve\Resolver The resolver instance
+         * @return WASP\Platform\Template Provides fluent interface
          */
-        public function setRequest(Request $request)
+        public function setResolver(Resolver $resolver)
         {
-            $this->request = $request;
-            $this->setAssetManager($request->getResponseBuilder()->getAssetManager());
-            $this->resolver = $request->getResolver();
+            $this->resolver = $resolver;
+            return $this;
         }
 
         /**
-         * $return WASP\HTTP\Request The associated request object
+         * @return WASP\Resolve\Resolver The resolver instance
          */
-        public function getRequest()
+        public function getResolver()
         {
-            return $this->request;
+            return $this->resolver;
         }
 
         /**
@@ -196,21 +189,7 @@ namespace WASP\Platform
         public function title()
         {
             if ($this->title === null)
-            {
-                if ($this->request->vhost !== null)
-                {
-                    $site = $this->request->vhost->getSite();
-                    $name = $site->getName();
-                }
-                else
-                    $name = "Default";
-
-                $route = $this->request->route;
-                if ($name !== "default")
-                    $this->title = $name . " - " . $route;
-                else
-                    $this->title = $this->request->route;
-            }
+                $this->title = "Unnamed Page";
 
             return $this->title;
         }
@@ -278,9 +257,6 @@ namespace WASP\Platform
         public function renderReturn()
         {
             extract($this->arguments);
-            $request = $this->request;
-            $language = $request->language;
-            $config = $request->config;
             $dev = $config === null ? false : $config->get('site', 'dev');
             $cli = Request::CLI();
 
@@ -465,7 +441,7 @@ namespace
 
     function URL($path)
     {
-        $vhost = WASP\Platform\System::request()->vhost;
+        $vhost = WASP\Platform\System::dispatcher()->vhost;
         return $vhost !== null ? $vhost->URL($path) : $path;
     }
 }

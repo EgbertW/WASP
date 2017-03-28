@@ -23,7 +23,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-namespace WASP\HTTP;
+namespace WASP\Platform;
 
 use Throwable;
 use DateTime;
@@ -34,6 +34,7 @@ use WASP\Log\MemLogger;
 
 use WASP\Resolve\Resolver;
 
+use WASP\Util\Hook;
 use WASP\Util\Dictionary;
 use WASP\Util\Functions as WF;
 
@@ -42,6 +43,7 @@ use WASP\HTTP\Responder;
 use WASP\HTTP\Response\Response;
 use WASP\HTTP\Response\Error as HTTPError;
 use WASP\HTTP\StatusCode;
+use WASP\HTTP\URL;
 
 use WASP\FileFormats\WriterFactory;
 
@@ -94,6 +96,7 @@ class Dispatcher
     public function configureSites(Dictionary $config)
     {
         $this->setSites(Site::setupSites($config->getSection('site')));
+        $this->config = $config;
     }
 
     public function setSites(array $sites)
@@ -145,12 +148,12 @@ class Dispatcher
         try
         {
             $this->resolveApp();
-            $this->request->startSession();
+            $this->request->startSession($this->vhost->getHost(), $this->config);
 
             if ($this->route === null)
                 throw new HTTPError(404, 'Could not resolve ' . $this->url);
 
-            $app = new AppRunner($this, $this->app);
+            $app = new AppRunner($this->request, $this->app);
             $app->execute();
         }
         catch (Throwable $e)
@@ -176,12 +179,29 @@ class Dispatcher
                     );
                 }
             }
-            $session_cookie = $this->session !== null ? $this->session->getCookie() : null;
+            $session_cookie = $this->request->session !== null ? $this->request->session->getCookie() : null;
             if ($session_cookie)
                 $rb->addCookie($session_cookie);
             $rb->setResponse($e);
             $rb->respond();
         }
+    }
+
+    public function getTemplate()
+    {
+        if ($this->template === null)
+        {
+            $this->template = new Template($this->resolver);
+            $asset_manager = new AssetManager($this->vhost, $this->resolver);
+            Hook::subscribe('WASP.HTTP.Responder.Respond', array($asset_manager, 'executeHook'));
+            $this->template
+                ->setAssetManager(new AssetManager($this->vhost, $this->resolver))
+                ->assign('request', $this->request)
+                ->assign('config', $this->config)
+                ->assign('dev', true);//$this->config->dget('site', 'dev'));
+        }
+
+        return $this->template;
     }
 
     /** 
@@ -200,15 +220,17 @@ class Dispatcher
         array_unshift($mime_types, 'text/html');
         $preferred_type = $this->request->getBestResponseType($mime_types);
 
-        if ($mime_type === 'text/html')
+        if ($preferred_type === 'text/html')
         {
-            $template = new Template($request);
             $ex = $error->getPrevious() ?: $error;
+            $template = $this->getTemplate();
+            $template->assign('exception', $ex);
+
             $template->setExceptionTemplate($ex);
             
             $error->setResponse($template->renderReturn());
         }
-        elseif ($mime_type !== 'text/plain')
+        elseif ($preferred_type !== 'text/plain')
         {
             $status = $error->getStatusCode();
             $status_msg = isset(StatusCode::$CODES[$status]) ? StatusCode::$CODES[$status] : "Internal Server Error";
@@ -222,7 +244,7 @@ class Dispatcher
             );
 
             $dict = new Dictionary($data);
-            $error->setResponse(new DataResponse($dict);
+            $error->setResponse(new DataResponse($dict));
         }
         // text/plain is handled by Error directly
     }
@@ -236,14 +258,14 @@ class Dispatcher
      *                   unknown hosts, RedirectRequest when a redirect to a different
      *                   host is requested, RuntimeException when unexpected things happen.
      */
-    protected function determineVirtualHost()
+    public function determineVirtualHost()
     {
         // Determine the proper VirtualHost
         $cfg = $this->config->getSection('site');
-        $vhost = self::findVirtualHost($this->webroot, $this->sites);
+        $vhost = self::findVirtualHost($this->request->webroot, $this->sites);
         if ($vhost === null)
         {
-            $result = $this->handleUnknownHost($this->webroot, $this->sites, $cfg);
+            $result = $this->handleUnknownHost($this->request->webroot, $this->sites, $cfg);
             
             // Handle according to the outcome
             if ($result === null)
@@ -265,7 +287,7 @@ class Dispatcher
         else
         {
             // Check if the VirtualHost we matched wants to redirect somewhere else
-            $target = $vhost->getRedirect($this->url);
+            $target = $vhost->getRedirect($this->request->url);
             if ($target)
                 throw new RedirectRequest($target, 301);
         }
@@ -281,7 +303,7 @@ class Dispatcher
         $this->determineVirtualHost();
 
         // Resolve the application to start
-        $path = $this->vhost->getPath($this->url);
+        $path = $this->vhost->getPath($this->request->url);
 
         $resolved = $this->resolver->app($path);
 
