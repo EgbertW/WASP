@@ -23,12 +23,12 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-use WASP\Http\Request;
-use WASP\Http\Error as HttpError;
-use WASP\Autoload\Resolve;
-use WASP\Http\FileResponse;
+use WASP\HTTP\Request;
+use WASP\HTTP\CachePolicy;
+use WASP\HTTP\Response\Error as HTTPError;
+use WASP\HTTP\Response\FileResponse;
 
-$path = implode("/", $request->url_args->getAll());
+$path = implode("/", $url_args->getAll());
 
 $qpos = strpos($path, "?");
 $query = null;
@@ -71,8 +71,13 @@ if ($full_path)
     else
         $mime = mime_content_type($full_path);
 
+    $cache = new CachePolicy;
+    $cache->setCachePolicy(CachePolicy::CACHE_PUBLIC);
+    $cache->setExpiresInSeconds(86400);
+
     $response = new FileResponse($full_path);
     $response->addMimeType($mime);
+    $response->setCachePolicy($cache);
     throw $response;
 }
 

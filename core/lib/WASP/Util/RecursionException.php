@@ -23,28 +23,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-$type = $request->chooseResponse(array("text/html", "text/plain"));
+namespace WASP\Util;
 
-$error_code = 500;
-$error_title = "Internal Server Error";
-$error_lead = "Something unanticipated went wrong. We'll try to fix this as soon as we can.";
-$error_description = "A PHP error occured.\n";
-
-if ($dev || $cli)
-{
-    $error_description .= 
-        "\nDescription: " . $exception->getMessage() . "\n" 
-        . WASP\Util\Functions::str($exception);
-}
-
-$type_name = str_replace("/", "_" ,$type) . ".php";
-$path = $this->getResolver()->template($type_name);
-if ($path !== null)
-{
-    $this->setMimeType($type);
-    require $path;
-}
-else
-    require tpl('error/text_html');
-
-?>
+class RecursionException extends \RuntimeException
+{}

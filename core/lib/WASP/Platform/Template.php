@@ -257,7 +257,6 @@ namespace WASP\Platform
         public function renderReturn()
         {
             extract($this->arguments);
-            $dev = $config === null ? false : $config->get('site', 'dev');
             $cli = Request::CLI();
 
             try
@@ -441,7 +440,7 @@ namespace
 
     function URL($path)
     {
-        $vhost = WASP\Platform\System::dispatcher()->vhost;
+        $vhost = WASP\Platform\System::dispatcher()->getVirtualHost();
         return $vhost !== null ? $vhost->URL($path) : $path;
     }
 }

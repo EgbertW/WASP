@@ -40,10 +40,12 @@ use WASP\Util\Functions as WF;
 
 use WASP\HTTP\Request;
 use WASP\HTTP\Responder;
-use WASP\HTTP\Response\Response;
+use WASP\HTTP\Response\{Response, DataResponse, StringResponse};
 use WASP\HTTP\Response\Error as HTTPError;
 use WASP\HTTP\StatusCode;
 use WASP\HTTP\URL;
+
+use WASP\IO\MimeTypes;
 
 use WASP\FileFormats\WriterFactory;
 
@@ -61,22 +63,16 @@ class Dispatcher
     private static $default_language = 'en';
 
     /** The site configuration */
-    public $config;
-
-    /** The path configuration */
-    public $path;
+    protected $config;
 
     /** The arguments after the selected route */
-    public $url_args;
+    protected $url_args;
 
     /** The configured sites */
-    public $sites = array();
+    protected $sites = array();
 
     /** The selected VirtualHost for this request */
-    public $vhost = null;
-
-    /** The response builder */
-    protected $response_builder = null;
+    protected $vhost = null;
 
     /** The file / asset resolver */
     protected $resolver = null;
@@ -87,16 +83,34 @@ class Dispatcher
     /** The request being served */
     protected $request;
 
-    public function __construct(Request $request, Resolver $resolver)
+    public function __construct(Request $request, Resolver $resolver, Dictionary $config)
     {
         $this->request = $request;
         $this->resolver = $resolver;
+        $this->setConfig($config);
     }
 
-    public function configureSites(Dictionary $config)
+    public function getConfig()
     {
-        $this->setSites(Site::setupSites($config->getSection('site')));
+        return $this->config;
+    }
+
+    public function setConfig(Dictionary $config)
+    {
         $this->config = $config;
+        $this->configureSites();
+        return $this;
+    }
+
+    public function configureSites()
+    {
+        $this->setSites(Site::setupSites($this->config->getSection('site')));
+        return $this;
+    }
+
+    public function getSites()
+    {
+        return $this->sites;
     }
 
     public function setSites(array $sites)
@@ -113,12 +127,45 @@ class Dispatcher
         return $this;
     }
 
+    public function setVirtualHost(VirtualHost $vhost)
+    {
+        $this->vhost = $vhost;
+        return $this;
+    }
+
+    public function getVirtualHost()
+    {
+        if ($this->vhost === null)
+            $this->determineVirtualHost();
+        return $this->vhost;
+    }
+
+    public function getURLArgs()
+    {
+        return $this->url_args;
+    }
+
+    public function setURLArgs(Dictionary $url_args)
+    {
+        $this->url_args = $url_args;
+        return $this;
+    }
+
     /**
      * @return WASP\HTTP\Request the request being served
      */
     public function getRequest()
     {
         return $this->request;
+    }
+
+    public function setRequest(Request $request)
+    {
+        $this->request = $request;
+        $this->app = null;
+        $this->vhost = null;
+        $this->route = null;
+        return $this;
     }
 
     /**
@@ -140,6 +187,40 @@ class Dispatcher
         return $this;
     }
 
+    public function getTemplate()
+    {
+        if ($this->template === null)
+        {
+            echo "-- aTTACHING HOOK FOR ASSET MANAGER\n";
+            $this->template = new Template($this->resolver);
+            $asset_manager = new AssetManager($this->vhost, $this->resolver);
+            Hook::subscribe('WASP.HTTP.Responder.Respond', array($asset_manager, 'executeHook'));
+            echo "-- aTTACHED HOOK FOR ASSET MANAGER\n";
+            $this->template
+                ->setAssetManager($asset_manager)
+                ->assign('request', $this->request)
+                ->assign('config', $this->config)
+                ->assign('dev', true);//$this->config->dget('site', 'dev'));
+        }
+
+        return $this->template;
+    }
+
+    public function setTemplate(Template $template)
+    {
+        $this->template = $template;
+    }
+
+    public function getApp()
+    {
+        return $this->app;
+    }
+
+    public function getRoute()
+    {
+        return $this->route;
+    }
+
     /**
      * Run the selected application
      */
@@ -153,13 +234,13 @@ class Dispatcher
             if ($this->route === null)
                 throw new HTTPError(404, 'Could not resolve ' . $this->url);
 
-            $app = new AppRunner($this->request, $this->app);
+            $app = new AppRunner($this, $this->app);
             $app->execute();
         }
         catch (Throwable $e)
         {
             if (!($e instanceof Response))
-                $e = new HTTPError(500, $e);
+                $e = new HTTPError(500, "Exception thrown", null, $e);
 
             if ($e instanceof HTTPError)
                 $this->prepareErrorResponse($e);
@@ -187,23 +268,6 @@ class Dispatcher
         }
     }
 
-    public function getTemplate()
-    {
-        if ($this->template === null)
-        {
-            $this->template = new Template($this->resolver);
-            $asset_manager = new AssetManager($this->vhost, $this->resolver);
-            Hook::subscribe('WASP.HTTP.Responder.Respond', array($asset_manager, 'executeHook'));
-            $this->template
-                ->setAssetManager(new AssetManager($this->vhost, $this->resolver))
-                ->assign('request', $this->request)
-                ->assign('config', $this->config)
-                ->assign('dev', true);//$this->config->dget('site', 'dev'));
-        }
-
-        return $this->template;
-    }
-
     /** 
      * Prepare error response: to give a better error output,
      * a template must be executed or it must be wrapped in a 
@@ -228,7 +292,12 @@ class Dispatcher
 
             $template->setExceptionTemplate($ex);
             
-            $error->setResponse($template->renderReturn());
+            $response = $template->renderReturn();
+
+            if ($response instanceof HTTPError)
+                $error->setResponse(new StringResponse(WF::str($response), "text/plain"));
+            else
+                $error->setResponse($response);
         }
         elseif ($preferred_type !== 'text/plain')
         {
@@ -311,7 +380,7 @@ class Dispatcher
         {
             if ($resolved['ext'])
             {
-                $mime = ResponseTypes::getMimeFromExtension($resolved['ext']);
+                $mime = MimeTypes::getMimeFromExtension($resolved['ext']);
                 if (!empty($mime))
                     $this->accept[$mime] = 1.5;
                 $this->suffix = $resolved['ext'];

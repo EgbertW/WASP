@@ -223,7 +223,7 @@ class System
             case "dispatcher":
                 if ($this->dispatcher === null)
                 {
-                    $this->dispatcher = new Dispatcher($this->get('request'), $this->get('resolver'));
+                    $this->dispatcher = new Dispatcher($this->get('request'), $this->get('resolver'), $this->config);
                     $this->dispatcher->configureSites($this->config);
                     $this->dispatcher->determineVirtualHost();
                 }

@@ -31,7 +31,7 @@ use WASP\Util\Dictionary;
 use WASP\Util\LoggerAwareStaticTrait;
 use WASP\Log\Logger;
 use WASP\HTTP\Request;
-use WASP\HTTP\Response;
+use WASP\HTTP\Response\Response;
 use WASP\HTTP\Error as HTTPError;
 use WASP\HTTP\StatusCode;
 
@@ -50,6 +50,9 @@ class AppRunner
     /** The request being handled */
     private $request;
 
+    /** The dispatcher instance */
+    private $dispatcher;
+
     /** The application to execute */
     private $app;
 
@@ -61,11 +64,12 @@ class AppRunner
      * @param WASP\HTTP\Request $request The request being answered
      * @param string $app The path to the appplication to run
      */
-    public function __construct(Request $request, string $app)
+    public function __construct(Dispatcher $dispatcher, string $app)
     {
         self::getLogger();
+        $this->request = $dispatcher->getRequest();
+        $this->dispatcher = $dispatcher;
         $this->app = $app;
-        $this->request = $request;
     }
 
     private function logScriptOutput()
@@ -155,14 +159,24 @@ class AppRunner
     {
         // Prepare some variables that come in handy in apps
         $request = $this->request;
-        $resolver = $this->request->getResolver();
-        $tpl = $template = $this->request->getTemplate();
-        $config = $request->config;
+        $resolver = $this->dispatcher->getResolver();
+        $tpl = $template = $this->dispatcher->getTemplate();
+        $config = $this->dispatcher->getConfig();
         $url = $request->url;
-        $db = DB::get();
+
+        try
+        {
+            $db = DB::getDefault();
+        }
+        catch (\RuntimeException $e)
+        {
+            // Running without database
+            $db = null;
+        }
+
         $get = $request->get;
         $post = $request->post;
-        $url_args = $request->url_args;
+        $url_args = $this->dispatcher->getURLArgs();
         $path = $this->app;
 
         self::$logger->debug("Including {0}", [$path]);
@@ -188,13 +202,13 @@ class AppRunner
         $vars = array_keys(get_object_vars($object));
 
         if (in_array('template', $vars))
-            $object->template = $this->request->getTemplate();
+            $object->template = $this->dispatcher->getTemplate();
 
         if (in_array('request', $vars))
             $object->request = $this->request;
 
         if (in_array('resolve', $vars))
-            $object->resolve = $this->request->getResolver();
+            $object->resolve = $this->dispatcher->getResolver();
 
         if (in_array('url_args', $vars))
             $object->url_args = $this->request->url_args;
@@ -303,9 +317,9 @@ class AppRunner
                 continue;
             }
 
-            if ($tp === Platform::class)
+            if ($tp === Template::class)
             {
-                $args[] = $this->request->getTemplate();
+                $args[] = $this->dispatcher->getTemplate();
                 continue;
             }
             
